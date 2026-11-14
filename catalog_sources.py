@@ -315,18 +315,29 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         localized = metadata.get("localized") or {}
         if not isinstance(localized, dict):
             localized = {}
-        english = localized.get("en-US") or localized.get("en") or {}
-        if not isinstance(english, dict):
-            english = {}
+        # Index-v2 represents localized fields as field -> locale -> text;
+        # older variants may represent locale -> field -> text.
+        locale_record = localized.get("en-US") or localized.get("en")
+        if not isinstance(locale_record, dict):
+            locale_record = {}
+
+        def localized_text(field: str) -> Any:
+            if field in locale_record:
+                return locale_record.get(field)
+            value = localized.get(field)
+            if isinstance(value, dict):
+                return value.get("en-US") or value.get("en") or next(iter(value.values()), None)
+            return value
+
         categories = metadata.get("categories") or []
         if isinstance(categories, str):
             categories = [categories]
         if not isinstance(categories, list):
             categories = []
 
-        summary = english.get("summary") or english.get("short_description") or metadata.get("summary")
-        description = english.get("description") or english.get("full_description") or metadata.get("description")
-        icon = english.get("icon")
+        summary = localized_text("summary") or localized_text("short_description") or metadata.get("summary")
+        description = localized_text("description") or localized_text("full_description") or metadata.get("description")
+        icon = localized_text("icon")
         icon_url = None
         if isinstance(icon, dict):
             icon_name = icon.get("name")
@@ -337,7 +348,7 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
         record = _record(
             "fdroid", package_id, "android",
-            english.get("name") or english.get("title") or metadata.get("name") or package_id,
+            localized_text("name") or localized_text("title") or metadata.get("name") or package_id,
             f"https://f-droid.org/packages/{package_id}/",
             developer=metadata.get("authorName") or metadata.get("author"),
             summary=summary, description=description,
