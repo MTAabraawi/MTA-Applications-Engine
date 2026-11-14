@@ -91,20 +91,30 @@ async def fetch_flathub(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         payload = await _get_json(client, "https://flathub.org/api/v2/appstream",
                                   params={"filter": "apps", "sort": "alphabetical"})
         if isinstance(payload, dict):
-            items = payload.get("items") or payload.get("apps") or payload.get("data") or []
+            items = payload.get("items") or payload.get("apps") or payload.get("data") or payload.get("results") or []
+            if isinstance(items, dict):
+                items = [
+                    ({"id": key, **value} if isinstance(value, dict) else {"id": key})
+                    for key, value in items.items()
+                ]
         else:
             items = payload
         if not isinstance(items, list):
-            log.warning("Flathub returned an unrecognised catalogue shape")
+            log.warning("Flathub returned an unrecognised catalogue shape: %s", type(items).__name__)
             return []
+        log.info("Flathub catalogue response: %d candidate entries; sample=%r", len(items), items[:1])
     except (httpx.HTTPError, ValueError) as exc:
         log.warning("Flathub catalogue fetch failed: %s", exc)
         return []
 
     ids = []
     for item in items:
-        if isinstance(item, dict) and item.get("id"):
-            ids.append(str(item["id"]))
+        if isinstance(item, str):
+            ids.append(item)
+        elif isinstance(item, dict):
+            app_id = item.get("id") or item.get("app_id") or item.get("appId") or item.get("flatpak_id")
+            if app_id:
+                ids.append(str(app_id))
     ids = list(dict.fromkeys(ids))[:FLATHUB_MAX_APPS]
     sem = asyncio.Semaphore(CONCURRENCY)
 
