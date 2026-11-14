@@ -113,12 +113,22 @@ async function curated() {
 }
 async function upsert(db,records) {
   const counts={inserted:0,updated:0,unchanged:0,skipped:0};
+  const columns=["platform","name","developer","summary","description","category","license","source_url","app_url","icon_url"];
   for(const r of records){
     if(!r?.source_key||!r.external_id||!r.name||!r.source_url){counts.skipped++;continue;}
-    const result=await db.unsafe(
-      "INSERT INTO apps (source_key,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb) ON CONFLICT (source_key,external_id) DO UPDATE SET platform=EXCLUDED.platform,name=EXCLUDED.name,developer=EXCLUDED.developer,summary=EXCLUDED.summary,description=EXCLUDED.description,category=EXCLUDED.category,license=EXCLUDED.license,source_url=EXCLUDED.source_url,app_url=EXCLUDED.app_url,icon_url=EXCLUDED.icon_url,metadata=EXCLUDED.metadata,updated_at=now() WHERE (apps.platform,apps.name,apps.developer,apps.summary,apps.description,apps.category,apps.license,apps.source_url,apps.app_url,apps.icon_url,apps.metadata) IS DISTINCT FROM (EXCLUDED.platform,EXCLUDED.name,EXCLUDED.developer,EXCLUDED.summary,EXCLUDED.description,EXCLUDED.category,EXCLUDED.license,EXCLUDED.source_url,EXCLUDED.app_url,EXCLUDED.icon_url,EXCLUDED.metadata) RETURNING (xmax = 0) AS was_inserted",
-      [r.source_key,r.external_id,r.platform,r.name,r.developer,r.summary,r.description,r.category,r.license,r.source_url,r.app_url,r.icon_url,JSON.stringify(r.metadata_json||{})]);
-    if(!result.length)counts.unchanged++;else if(result[0].was_inserted)counts.inserted++;else counts.updated++;
+    const values=[r.platform,r.name,r.developer,r.summary,r.description,r.category,r.license,r.source_url,r.app_url,r.icon_url];
+    const found=await db.unsafe("SELECT id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata FROM apps WHERE source_key=$1 AND external_id=$2 LIMIT 1",[r.source_key,r.external_id]);
+    if(found.length){
+      const old=found[0],same=columns.every((key,i)=>(old[key]??null)===(values[i]??null))&&JSON.stringify(old.metadata||{})===JSON.stringify(r.metadata_json||{});
+      if(same){counts.unchanged++;continue;}
+      await db.unsafe("UPDATE apps SET platform=$1,name=$2,developer=$3,summary=$4,description=$5,category=$6,license=$7,source_url=$8,app_url=$9,icon_url=$10,metadata=$11::json,updated_at=now() WHERE id=$12",
+        [...values,JSON.stringify(r.metadata_json||{}),old.id]);
+      counts.updated++;
+    }else{
+      await db.unsafe("INSERT INTO apps (source_key,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::json) ON CONFLICT (source_key,external_id) DO NOTHING",
+        [r.source_key,r.external_id,...values.slice(0,10),JSON.stringify(r.metadata_json||{})]);
+      counts.inserted++;
+    }
   }
   return counts;
 }
