@@ -28,7 +28,7 @@ WINGET_SEARCH_TERMS = [x.strip() for x in os.getenv(
     "browser,office,photo,video,education,security,finance,communication,developer,utilities",
 ).split(",") if x.strip()]
 APPLE_LIMIT = max(1, min(int(os.getenv("APPLE_LIMIT", "100")), 200))
-WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "100")), 200))
+WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "24")), 24))
 FLATHUB_MAX_APPS = max(1, min(int(os.getenv("FLATHUB_MAX_APPS", "1000")), 5000))
 CONCURRENCY = max(1, min(int(os.getenv("CATALOG_CONCURRENCY", "6")), 12))
 TIMEOUT = httpx.Timeout(30.0, connect=10.0)
@@ -212,7 +212,7 @@ async def fetch_winget_community(client: httpx.AsyncClient) -> list[dict[str, An
         try:
             payload = await _get_json(
                 client, "https://api.winget.run/v2/packages",
-                params={"query": term, "take": WINGET_LIMIT, "skip": 0},
+                params={"query": term, "take": WINGET_LIMIT, "page": 0},
             )
         except (httpx.HTTPError, ValueError) as exc:
             log.warning("WinGet community search failed for %r: %s", term, exc)
