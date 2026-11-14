@@ -92,6 +92,8 @@ async def fetch_flathub(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                                   params={"filter": "apps", "sort": "alphabetical"})
         if isinstance(payload, dict):
             items = payload.get("items") or payload.get("apps") or payload.get("data") or payload.get("results") or []
+            if isinstance(items, dict) and any(key in items for key in ("items", "apps", "results")):
+                items = items.get("items") or items.get("apps") or items.get("results") or []
             if isinstance(items, dict):
                 items = [
                     ({"id": key, **value} if isinstance(value, dict) else {"id": key})
@@ -325,6 +327,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
+            "fdroid": fetch_fdroid(client),
             "flathub": fetch_flathub(client),
             "homebrew-cask": fetch_homebrew_cask(client),
             "apple-itunes": fetch_apple_itunes(client),
