@@ -69,3 +69,36 @@ def test_record_requires_https_source_and_deduplicates():
     item = _record("x", "1", "web", "Example", "https://example.org")
     assert item is not None
     assert len(_unique([item, item])) == 1
+
+
+def test_cloudflare_hyperdrive_binding_builds_postgres_session():
+    from types import SimpleNamespace
+    from starlette.requests import Request
+    from app import get_db
+
+    hyperdrive = SimpleNamespace(
+        host="db.example.internal",
+        port="5432",
+        user="mta_worker",
+        password="not-a-real-password",
+        database="mta_catalogue",
+    )
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [],
+        "query_string": b"",
+        "env": SimpleNamespace(HYPERDRIVE=hyperdrive),
+    })
+
+    dependency = get_db(request)
+    session = next(dependency)
+    try:
+        bind = session.get_bind()
+        assert bind.dialect.name == "postgresql"
+        assert bind.dialect.driver == "psycopg"
+        assert bind.url.host == "db.example.internal"
+        assert bind.url.database == "mta_catalogue"
+    finally:
+        dependency.close()
