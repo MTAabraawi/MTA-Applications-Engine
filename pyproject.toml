@@ -12,7 +12,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "workers-py",
     "workers-runtime-sdk",
     "pytest>=8.0",
 ]
