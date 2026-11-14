@@ -37,3 +37,12 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Check Worker syntax
         run: npm run check
+      - name: Prepare non-production Hyperdrive ID for dry-run
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("wrangler.jsonc")
+          p.write_text(p.read_text().replace("REPLACE_WITH_HYPERDRIVE_CONFIG_ID", "00000000000000000000000000000000"))
+          PY
+      - name: Validate Worker bundle with Wrangler
+        run: npx wrangler deploy --dry-run
