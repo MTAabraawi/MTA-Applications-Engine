@@ -14,7 +14,6 @@ concurrency:
 
 jobs:
   sync:
-    if: ${{ secrets.DATABASE_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -36,12 +35,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Sync catalogue metadata
-        run: python sync_catalogs.py
-
-  configuration-notice:
-    if: ${{ secrets.DATABASE_URL == '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Explain required secret
+        shell: bash
         run: |
-          echo "::warning::Daily sync skipped. Add DATABASE_URL as a GitHub Actions repository secret pointing to the persistent PostgreSQL database."
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::Daily sync skipped. Add DATABASE_URL as a GitHub Actions repository secret pointing to the persistent PostgreSQL database."
+            exit 0
+          fi
+          python sync_catalogs.py
