@@ -24,9 +24,6 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
       - name: Validate deployment configuration
         env:
           HYPERDRIVE_CONFIG_ID: ${{ vars.HYPERDRIVE_CONFIG_ID }}
@@ -50,11 +47,17 @@ jobs:
           path.write_text(content, encoding="utf-8")
           PY
 
-      - name: Install project and test dependencies
-        run: uv sync --all-groups
+      - name: Install JavaScript Worker dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check Worker syntax
+        run: npm run check
+
+      - name: Validate Worker bundle size
+        run: npx wrangler deploy --dry-run
 
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: uvx --from workers-py==1.17.9 pywrangler deploy
+        run: npx wrangler deploy
