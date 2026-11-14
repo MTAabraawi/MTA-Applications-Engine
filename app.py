@@ -4,10 +4,11 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, func, or_, select
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, URL, create_engine, func, or_, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from catalog_sources import fetch_all_catalogs
 
