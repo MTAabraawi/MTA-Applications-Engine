@@ -33,9 +33,9 @@ The Worker does not create tables at startup. The sync runner creates the SQLAlc
    uv run pywrangler deploy
    ```
 
-6. Attach a custom domain such as `api.mtahqq.dpdns.org` to the Worker in Cloudflare's dashboard. Do not point the website's existing Pages hostname at the Worker.
+6. Attach a custom domain such as `api.mtahqq.dpdns.org` only if the domain's DNS zone is active on Cloudflare. If its DNS remains with another provider, use the Worker `workers.dev` hostname initially. Do not point the website's existing Pages hostname at the Worker.
 
-Cloudflare's Python Workers support FastAPI through its ASGI adapter. Python Hyperdrive supports PostgreSQL drivers including psycopg and synchronous SQLAlchemy usage.
+Cloudflare's [Python Workers documentation](https://developers.cloudflare.com/workers/languages/python/) supports FastAPI through its [ASGI adapter](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/). [Python Hyperdrive documentation](https://developers.cloudflare.com/hyperdrive/examples/python-workers/) lists psycopg and synchronous SQLAlchemy support.
 
 ## GitHub Actions setup
 
