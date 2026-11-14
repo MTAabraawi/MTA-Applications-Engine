@@ -67,3 +67,32 @@ def test_fdroid_v2_nested_metadata_is_normalized():
     assert records[0]["platform"] == "android"
     assert records[0]["category"] == "Reading, Office"
     assert records[0]["source_url"] == "https://f-droid.org/packages/org.example.reader/"
+
+
+def test_fdroid_app_array_index_is_supported():
+    import asyncio
+    from catalog_sources import fetch_fdroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "apps": [{
+                    "packageName": "org.example.notes",
+                    "name": "Example Notes",
+                    "summary": "A notes app",
+                    "license": "MIT",
+                    "categories": ["Writing"],
+                }]
+            }
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_fdroid(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["external_id"] == "org.example.notes"
+    assert records[0]["name"] == "Example Notes"
