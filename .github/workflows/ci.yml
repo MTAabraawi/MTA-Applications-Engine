@@ -28,3 +28,12 @@ jobs:
         run: pytest -q
       - name: Compile application and sync runner
         run: python -m py_compile app.py catalog_sources.py sync_catalogs.py worker.py scripts/smoke_catalog_sources.py
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Worker dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check Worker syntax
+        run: npm run check
