@@ -102,3 +102,26 @@ def test_cloudflare_hyperdrive_binding_builds_postgres_session():
         assert bind.url.database == "mta_catalogue"
     finally:
         dependency.close()
+
+
+def test_cloudflare_worker_admin_secret_is_read_from_request_scope():
+    from types import SimpleNamespace
+    from starlette.requests import Request
+    from fastapi import HTTPException
+    from app import require_admin
+
+    request = Request({
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/ingest/catalogs",
+        "headers": [],
+        "query_string": b"",
+        "env": SimpleNamespace(ADMIN_API_TOKEN="worker-secret"),
+    })
+    require_admin("worker-secret", request)
+    try:
+        require_admin("wrong-token", request)
+    except HTTPException as exc:
+        assert exc.status_code == 403
+    else:
+        raise AssertionError("Invalid Worker admin token was accepted")
