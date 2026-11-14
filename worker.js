@@ -16,6 +16,21 @@ function database(env) {
   if (!cachedSql) cachedSql = postgres(env.HYPERDRIVE.connectionString, {max:5,idle_timeout:20,connect_timeout:10,fetch_types:false,prepare:false});
   return cachedSql;
 }
+async function queryWithRetry(env, statement) {
+  let lastError;
+  for (let attempt=0; attempt<3; attempt++) {
+    try {
+      return await database(env).unsafe(statement);
+    } catch (error) {
+      lastError = error;
+      // Hyperdrive connections can become stale between Worker requests.
+      // Discard the failed client and establish a fresh connection before retrying.
+      cachedSql = null;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
 function response(data,status,origin,extraHeaders={}) {
   return new Response(JSON.stringify(data),{status:status,headers:{"content-type":"application/json; charset=utf-8","access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, X-Admin-Token","vary":"Origin",...extraHeaders}});
 }
@@ -168,16 +183,16 @@ async function handle(request,env) {
     if(source)clauses.push("source_key = "+quote(source.toLowerCase()));
     const where=clauses.length?"WHERE "+clauses.join(" AND ")+" ":"";
     const db=database(env);
-    const totalRows=await db.unsafe("SELECT count(*)::int AS total FROM apps "+where);
+    const totalRows=await queryWithRetry(env,"SELECT count(*)::int AS total FROM apps "+where);
     const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
-    const rows=await db.unsafe(sql);
+    const rows=await queryWithRetry(env,sql);
     return response(rows,200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":String(totalRows[0]?.total||0)});
   }
   if(path==="/api/v1/catalog-stats"&&request.method==="GET"){
     const db=database(env),results=await Promise.all([
-      db.unsafe("SELECT count(*)::int AS total,count(*) FILTER (WHERE icon_url IS NOT NULL AND icon_url <> '')::int AS with_icon,count(*) FILTER (WHERE icon_url IS NULL OR icon_url = '')::int AS without_icon FROM apps"),
-      db.unsafe("SELECT platform,count(*)::int AS count FROM apps GROUP BY platform ORDER BY platform"),
-      db.unsafe("SELECT source_key,count(*)::int AS count FROM apps GROUP BY source_key ORDER BY source_key")
+      queryWithRetry(env,"SELECT count(*)::int AS total,count(*) FILTER (WHERE icon_url IS NOT NULL AND icon_url <> '')::int AS with_icon,count(*) FILTER (WHERE icon_url IS NULL OR icon_url = '')::int AS without_icon FROM apps"),
+      queryWithRetry(env,"SELECT platform,count(*)::int AS count FROM apps GROUP BY platform ORDER BY platform"),
+      queryWithRetry(env,"SELECT source_key,count(*)::int AS count FROM apps GROUP BY source_key ORDER BY source_key")
     ]);
     return response({total:results[0][0]?.total||0,with_icon:results[0][0]?.with_icon||0,without_icon:results[0][0]?.without_icon||0,
       platforms:Object.fromEntries(results[1].map(x=>[x.platform,x.count])),
