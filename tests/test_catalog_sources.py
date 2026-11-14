@@ -96,3 +96,42 @@ def test_fdroid_app_array_index_is_supported():
     assert len(records) == 1
     assert records[0]["external_id"] == "org.example.notes"
     assert records[0]["name"] == "Example Notes"
+
+
+def test_fdroid_index_v2_packages_map_is_supported():
+    import asyncio
+    from catalog_sources import fetch_fdroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "repo": {"name": "F-Droid"},
+                "packages": {
+                    "org.example.calendar": {
+                        "metadata": {
+                            "license": "GPL-3.0-or-later",
+                            "localized": {
+                                "en-US": {
+                                    "name": "Example Calendar",
+                                    "summary": "Manage events",
+                                }
+                            },
+                            "categories": ["Time"],
+                        },
+                        "versions": {},
+                    }
+                },
+            }
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_fdroid(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["external_id"] == "org.example.calendar"
+    assert records[0]["name"] == "Example Calendar"
+    assert records[0]["category"] == "Time"
