@@ -343,8 +343,8 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             icon_name = icon.get("name")
             if icon_name:
                 icon_url = f"https://f-droid.org/repo/{icon_name.lstrip('/')}"
-        elif isinstance(icon, str) and icon.startswith("https://"):
-            icon_url = icon
+        elif isinstance(icon, str) and icon.strip():
+            icon_url = icon if icon.startswith("https://") else f"https://f-droid.org/repo/{icon.lstrip('/')}"
 
         record = _record(
             "fdroid", package_id, "android",
