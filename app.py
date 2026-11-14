@@ -5,8 +5,11 @@ from typing import Optional
 
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, or_, select
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, func, or_, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+
+from catalog_sources import fetch_all_catalogs
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mta_engine.db")
 ADMIN_API_TOKEN = os.getenv("ADMIN_API_TOKEN", "")
@@ -14,14 +17,17 @@ connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class AppRecord(Base):
     __tablename__ = "apps"
     __table_args__ = (
         UniqueConstraint("source_key", "external_id", name="uq_app_source_external"),
         Index("ix_apps_platform_name", "platform", "name"),
+        Index("ix_apps_source_platform", "source_key", "platform"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_key: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -40,8 +46,20 @@ class AppRecord(Base):
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+
 Base.metadata.create_all(engine)
-app = FastAPI(title="MTA Applications Engine", version="0.1.0")
+app = FastAPI(title="MTA Applications Engine", version="0.2.0")
+allowed_origins = [x.strip() for x in os.getenv(
+    "CORS_ORIGINS", "https://www.mtahqq.dpdns.org,https://mtahqq.dpdns.org"
+).split(",") if x.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Admin-Token"],
+)
+
 
 def get_db():
     db = SessionLocal()
@@ -50,9 +68,51 @@ def get_db():
     finally:
         db.close()
 
+
+def require_admin(x_admin_token: Optional[str]) -> None:
+    if not ADMIN_API_TOKEN or not x_admin_token or not secrets.compare_digest(x_admin_token, ADMIN_API_TOKEN):
+        raise HTTPException(status_code=403, detail="Ingestion is disabled or unauthorized")
+
+
+def upsert_records(db: Session, records: list[dict]) -> dict:
+    inserted = updated = unchanged = skipped = 0
+    allowed = {
+        "platform", "name", "developer", "summary", "description", "category",
+        "license", "source_url", "app_url", "icon_url", "metadata_json",
+    }
+    for item in records:
+        source_key = str(item.get("source_key") or "").strip()
+        external_id = str(item.get("external_id") or "").strip()
+        values = {key: item.get(key) for key in allowed}
+        if not source_key or not external_id or not values.get("name") or not values.get("source_url"):
+            skipped += 1
+            continue
+        row = db.execute(select(AppRecord).where(
+            AppRecord.source_key == source_key,
+            AppRecord.external_id == external_id,
+        )).scalar_one_or_none()
+        if row is None:
+            db.add(AppRecord(source_key=source_key, external_id=external_id, **values))
+            inserted += 1
+            continue
+        changed = False
+        for key, value in values.items():
+            if getattr(row, key) != value:
+                setattr(row, key, value)
+                changed = True
+        if changed:
+            row.updated_at = datetime.now(timezone.utc)
+            updated += 1
+        else:
+            unchanged += 1
+    db.commit()
+    return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "MTA Applications Engine", "version": "0.1.0"}
+    return {"status": "ok", "service": "MTA Applications Engine", "version": "0.2.0"}
+
 
 @app.get("/api/v1/apps")
 def list_apps(
@@ -80,35 +140,73 @@ def list_apps(
         "icon_url": x.icon_url, "first_seen_at": x.first_seen_at, "updated_at": x.updated_at
     } for x in rows]
 
+
+@app.get("/api/v1/catalog-stats")
+def catalog_stats(db: Session = Depends(get_db)):
+    total = db.scalar(select(func.count()).select_from(AppRecord)) or 0
+    by_platform = db.execute(
+        select(AppRecord.platform, func.count()).group_by(AppRecord.platform).order_by(AppRecord.platform)
+    ).all()
+    by_source = db.execute(
+        select(AppRecord.source_key, func.count()).group_by(AppRecord.source_key).order_by(AppRecord.source_key)
+    ).all()
+    return {
+        "total": total,
+        "platforms": {key: count for key, count in by_platform},
+        "sources": {key: count for key, count in by_source},
+        "metadata_only": True,
+    }
+
+
+@app.post("/api/v1/ingest/catalogs")
+async def ingest_catalogs(
+    x_admin_token: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    require_admin(x_admin_token)
+    catalog_results = await fetch_all_catalogs()
+    summary = {}
+    for source_key, records in catalog_results.items():
+        # Each source is committed independently so a later failure cannot erase earlier work.
+        try:
+            summary[source_key] = upsert_records(db, records)
+            summary[source_key]["fetched"] = len(records)
+        except Exception:
+            db.rollback()
+            summary[source_key] = {"fetched": len(records), "error": "Database write failed"}
+    return {
+        "status": "completed",
+        "sources": summary,
+        "note": "Metadata only. No installer files were downloaded, mirrored, or hosted.",
+    }
+
+
 @app.post("/api/v1/ingest/fdroid")
 async def ingest_fdroid(
     x_admin_token: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    if not ADMIN_API_TOKEN or not x_admin_token or not secrets.compare_digest(x_admin_token, ADMIN_API_TOKEN):
-        raise HTTPException(status_code=403, detail="Ingestion is disabled or unauthorized")
+    require_admin(x_admin_token)
     url = "https://f-droid.org/repo/index-v2.json"
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": "MTA-Applications-Engine/0.1"}) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": "MTA-Applications-Engine/0.2"}) as client:
             response = await client.get(url)
             response.raise_for_status()
             payload = response.json()
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"F-Droid catalogue unavailable: {exc}") from exc
-    apps = payload.get("apps", {})
+    apps = payload.get("apps", {}) if isinstance(payload, dict) else {}
     if not isinstance(apps, dict):
         raise HTTPException(status_code=502, detail="Unexpected F-Droid index structure")
-    inserted = updated = skipped = 0
+    records = []
     for package_id, item in apps.items():
         if not isinstance(item, dict):
-            skipped += 1
             continue
         localized = item.get("localized") or {}
         english = localized.get("en-US") or localized.get("en") or {}
-        name = item.get("name") or english.get("name") or package_id
-        values = {
-            "platform": "android",
-            "name": str(name),
+        records.append({
+            "source_key": "fdroid", "external_id": package_id, "platform": "android",
+            "name": item.get("name") or english.get("name") or package_id,
             "developer": item.get("authorName") or item.get("author"),
             "summary": item.get("summary") or english.get("summary"),
             "description": item.get("description") or english.get("description"),
@@ -118,33 +216,13 @@ async def ingest_fdroid(
             "app_url": item.get("webSite") or item.get("sourceCode"),
             "icon_url": None,
             "metadata_json": {
-                "package_name": package_id,
-                "source_code": item.get("sourceCode"),
-                "issue_tracker": item.get("issueTracker"),
-                "website": item.get("webSite"),
-                "added": item.get("added"),
-                "last_updated": item.get("lastUpdated"),
+                "package_name": package_id, "source_code": item.get("sourceCode"),
+                "issue_tracker": item.get("issueTracker"), "website": item.get("webSite"),
+                "added": item.get("added"), "last_updated": item.get("lastUpdated"),
             },
-        }
-        row = db.execute(select(AppRecord).where(AppRecord.source_key == "fdroid", AppRecord.external_id == package_id)).scalar_one_or_none()
-        if row is None:
-            row = AppRecord(source_key="fdroid", external_id=package_id, **values)
-            db.add(row)
-            inserted += 1
-        else:
-            changed = False
-            for key, value in values.items():
-                if getattr(row, key) != value:
-                    setattr(row, key, value)
-                    changed = True
-            if changed:
-                row.updated_at = datetime.now(timezone.utc)
-                updated += 1
-            else:
-                skipped += 1
-    db.commit()
+        })
+    summary = upsert_records(db, records)
     return {
-        "source": "F-Droid", "discovered": len(apps), "inserted": inserted,
-        "updated": updated, "unchanged_or_skipped": skipped,
-        "note": "Metadata only. No APK files were downloaded, mirrored or hosted."
+        "source": "F-Droid", "discovered": len(apps), **summary,
+        "note": "Metadata only. No APK files were downloaded, mirrored, or hosted.",
     }
