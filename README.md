@@ -63,6 +63,12 @@ uvicorn app:app --reload
 
 For Docker Compose, set `POSTGRES_PASSWORD` and `ADMIN_API_TOKEN` in the environment, then run `docker compose up --build -d`.
 
+## Cloudflare deployment
+
+An optional Cloudflare Workers adapter is included for running the FastAPI API close to the MTA website. It uses the `HYPERDRIVE` binding for PostgreSQL and does not require changing the existing static Pages site. See [Cloudflare deployment instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
+
+The Worker configuration contains a placeholder Hyperdrive ID until the database is connected. Do not deploy it before replacing that ID and adding the `ADMIN_API_TOKEN` Worker secret.
+
 ## Automated ingestion
 
 `.github/workflows/catalogue-sync.yml` is configured for a daily UTC run and manual dispatch. Add a GitHub Actions repository secret named `DATABASE_URL` containing the production PostgreSQL connection string. The workflow skips safely when that secret is absent.
