@@ -67,7 +67,7 @@ For Docker Compose, set `POSTGRES_PASSWORD` and `ADMIN_API_TOKEN` in the environ
 
 `.github/workflows/catalogue-sync.yml` is configured for a daily UTC run and manual dispatch. Add a GitHub Actions repository secret named `DATABASE_URL` containing the production PostgreSQL connection string. The workflow skips safely when that secret is absent.
 
-The scheduled workflow runs automatically only after it is merged into the repository's default branch. Manual dispatch can be run against a selected branch from GitHub Actions.
+The scheduled workflow becomes active only after it is merged into the repository's default branch. GitHub also requires a workflow containing `workflow_dispatch` to exist on the default branch before the manual Run workflow control is available; after that, the branch selector can target this feature branch.
 
 ## Development checks
 
