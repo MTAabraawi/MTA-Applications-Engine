@@ -1,9 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mta-applications-engine",
-  "main": "worker.py",
+  "main": "worker.js",
   "compatibility_date": "2026-11-14",
-  "compatibility_flags": ["python_workers"],
+  "compatibility_flags": ["nodejs_compat"],
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
