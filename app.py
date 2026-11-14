@@ -10,7 +10,7 @@ from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConst
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from catalog_sources import fetch_all_catalogs
+from catalog_sources import fetch_all_catalogs, fetch_fdroid
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mta_engine.db")
 ADMIN_API_TOKEN = os.getenv("ADMIN_API_TOKEN", "")
@@ -234,42 +234,21 @@ async def ingest_fdroid(
     db: Session = Depends(get_db),
 ):
     require_admin(x_admin_token, request)
-    url = "https://f-droid.org/repo/index-v2.json"
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": "MTA-Applications-Engine/0.2"}) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            payload = response.json()
+        async with httpx.AsyncClient(
+            timeout=60,
+            follow_redirects=True,
+            headers={"User-Agent": "MTA-Applications-Engine/0.2"},
+        ) as client:
+            records = await fetch_fdroid(client)
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"F-Droid catalogue unavailable: {exc}") from exc
-    apps = payload.get("apps", {}) if isinstance(payload, dict) else {}
-    if not isinstance(apps, dict):
-        raise HTTPException(status_code=502, detail="Unexpected F-Droid index structure")
-    records = []
-    for package_id, item in apps.items():
-        if not isinstance(item, dict):
-            continue
-        localized = item.get("localized") or {}
-        english = localized.get("en-US") or localized.get("en") or {}
-        records.append({
-            "source_key": "fdroid", "external_id": package_id, "platform": "android",
-            "name": item.get("name") or english.get("name") or package_id,
-            "developer": item.get("authorName") or item.get("author"),
-            "summary": item.get("summary") or english.get("summary"),
-            "description": item.get("description") or english.get("description"),
-            "category": ", ".join(item.get("categories", [])) or None,
-            "license": item.get("license"),
-            "source_url": f"https://f-droid.org/packages/{package_id}/",
-            "app_url": item.get("webSite") or item.get("sourceCode"),
-            "icon_url": None,
-            "metadata_json": {
-                "package_name": package_id, "source_code": item.get("sourceCode"),
-                "issue_tracker": item.get("issueTracker"), "website": item.get("webSite"),
-                "added": item.get("added"), "last_updated": item.get("lastUpdated"),
-            },
-        })
+    if not records:
+        raise HTTPException(status_code=502, detail="F-Droid returned no usable application metadata")
     summary = upsert_records(db, records)
     return {
-        "source": "F-Droid", "discovered": len(apps), **summary,
+        "source": "F-Droid",
+        "discovered": len(records),
+        **summary,
         "note": "Metadata only. No APK files were downloaded, mirrored, or hosted.",
     }
