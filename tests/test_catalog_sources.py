@@ -135,3 +135,39 @@ def test_fdroid_index_v2_packages_map_is_supported():
     assert records[0]["external_id"] == "org.example.calendar"
     assert records[0]["name"] == "Example Calendar"
     assert records[0]["category"] == "Time"
+
+
+def test_fdroid_index_v2_field_locale_maps_resolve_english_text():
+    import asyncio
+    from catalog_sources import fetch_fdroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "repo": {"name": "F-Droid"},
+                "packages": {
+                    "org.example.reader": {
+                        "metadata": {
+                            "localized": {
+                                "name": {"en-US": "Localized Reader", "de": "Leser"},
+                                "summary": {"en-US": "Read books"},
+                                "description": {"en-US": "A localized reading application"},
+                            },
+                            "categories": ["Reading"],
+                        },
+                        "versions": {},
+                    }
+                },
+            }
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_fdroid(FakeClient()))
+    assert records[0]["name"] == "Localized Reader"
+    assert records[0]["summary"] == "Read books"
+    assert records[0]["description"] == "A localized reading application"
