@@ -113,12 +113,8 @@ def test_fdroid_index_v2_packages_map_is_supported():
                     "org.example.calendar": {
                         "metadata": {
                             "license": "GPL-3.0-or-later",
-                            "localized": {
-                                "en-US": {
-                                    "name": "Example Calendar",
-                                    "summary": "Manage events",
-                                }
-                            },
+                            "name": {"en-US": "Example Calendar"},
+                            "localized": {"summary": {"en-US": "Manage events"}},
                             "categories": ["Time"],
                         },
                         "versions": {},
