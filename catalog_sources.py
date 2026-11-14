@@ -274,6 +274,43 @@ def fetch_curated_web_apps() -> list[dict[str, Any]]:
     return _unique(records)
 
 
+
+async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Fetch F-Droid index-v2 metadata without downloading APK artifacts."""
+    try:
+        payload = await _get_json(client, "https://f-droid.org/repo/index-v2.json")
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("F-Droid index fetch failed: %s", exc)
+        return []
+    apps = payload.get("apps", {}) if isinstance(payload, dict) else {}
+    if not isinstance(apps, dict):
+        log.warning("F-Droid returned an unrecognised index structure")
+        return []
+    records = []
+    for package_id, item in apps.items():
+        if not isinstance(item, dict):
+            continue
+        localized = item.get("localized") or {}
+        english = localized.get("en-US") or localized.get("en") or {}
+        categories = item.get("categories") or []
+        record = _record(
+            "fdroid", package_id, "android",
+            item.get("name") or english.get("name") or package_id,
+            f"https://f-droid.org/packages/{package_id}/",
+            developer=item.get("authorName") or item.get("author"),
+            summary=item.get("summary") or english.get("summary"),
+            description=item.get("description") or english.get("description"),
+            category=", ".join(categories) if isinstance(categories, list) else None,
+            license=item.get("license"),
+            app_url=item.get("webSite") or item.get("sourceCode"),
+            metadata_json={"package_name": package_id, "source_code": item.get("sourceCode"),
+                           "issue_tracker": item.get("issueTracker"), "website": item.get("webSite"),
+                           "added": item.get("added"), "last_updated": item.get("lastUpdated")},
+        )
+        if record:
+            records.append(record)
+    return _unique(records)
+
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
