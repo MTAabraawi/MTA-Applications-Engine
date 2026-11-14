@@ -125,3 +125,38 @@ def test_cloudflare_worker_admin_secret_is_read_from_request_scope():
         assert exc.status_code == 403
     else:
         raise AssertionError("Invalid Worker admin token was accepted")
+
+
+def test_fdroid_endpoint_uses_shared_normalizer(monkeypatch):
+    record = {
+        "source_key": "fdroid", "external_id": "org.example.endpoint-test",
+        "platform": "android", "name": "F-Droid Endpoint Test",
+        "source_url": "https://f-droid.org/packages/org.example.endpoint-test/",
+        "metadata_json": {},
+    }
+    monkeypatch.setattr(app_module, "ADMIN_API_TOKEN", "test-token")
+
+    async def fake_fetch(client):
+        return [record]
+
+    monkeypatch.setattr(app_module, "fetch_fdroid", fake_fetch)
+    try:
+        response = client.post(
+            "/api/v1/ingest/fdroid",
+            headers={"X-Admin-Token": "test-token"},
+        )
+        assert response.status_code == 200
+        assert response.json()["discovered"] == 1
+        assert response.json()["inserted"] == 1
+    finally:
+        db = SessionLocal()
+        try:
+            row = db.query(AppRecord).filter_by(
+                source_key="fdroid",
+                external_id="org.example.endpoint-test",
+            ).one_or_none()
+            if row:
+                db.delete(row)
+                db.commit()
+        finally:
+            db.close()
