@@ -44,10 +44,10 @@ function unique(records) {
 }
 function findIconPath(value,depth=0) {
   if(depth>8||value==null)return null;
-  if(typeof value==="string")return /\\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.trim())?value.trim():null;
+  if(typeof value==="string")return /\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.trim())?value.trim():null;
   if(Array.isArray(value)){for(const item of value){const found=findIconPath(item,depth+1);if(found)return found;}return null;}
   if(typeof value==="object"){
-    if(typeof value.name==="string"&&/\\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.name))return value.name;
+    if(typeof value.name==="string"&&/\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.name))return value.name;
     for(const key of ["en-US","en","icon","icons","name"]){if(key in value){const found=findIconPath(value[key],depth+1);if(found)return found;}}
     for(const item of Object.values(value)){const found=findIconPath(item,depth+1);if(found)return found;}
   }
