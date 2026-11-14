@@ -128,10 +128,11 @@ async def fetch_flathub(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                 if not isinstance(data, dict):
                     return None
                 categories = data.get("categories") or []
-                shots = data.get("screenshots") or []
-                icon = None
-                if isinstance(shots, list) and shots and isinstance(shots[0], dict):
-                    icon = shots[0].get("url")
+                icon = data.get("icon")
+                if not icon:
+                    icons = data.get("icons") or []
+                    if isinstance(icons, list):
+                        icon = next((item for item in icons if isinstance(item, str) and item.startswith("https://")), None)
                 return _record(
                     "flathub", app_id, "linux", data.get("name") or app_id,
                     f"https://flathub.org/apps/{app_id}",
@@ -331,6 +332,32 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             value = locale_record.get(field) if field in locale_record else localized.get(field)
             return plain_text(value)
 
+        def find_icon_path(value: Any, depth: int = 0) -> str | None:
+            if depth > 8 or value is None:
+                return None
+            if isinstance(value, str):
+                candidate = value.strip()
+                return candidate if candidate.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp", ".svg")) else None
+            if isinstance(value, list):
+                for item in value:
+                    found = find_icon_path(item, depth + 1)
+                    if found:
+                        return found
+            if isinstance(value, dict):
+                name = value.get("name")
+                if isinstance(name, str) and name.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp", ".svg")):
+                    return name
+                for key in ("en-US", "en", "icon", "icons", "name"):
+                    if key in value:
+                        found = find_icon_path(value[key], depth + 1)
+                        if found:
+                            return found
+                for item in value.values():
+                    found = find_icon_path(item, depth + 1)
+                    if found:
+                        return found
+            return None
+
         categories = metadata.get("categories") or []
         if isinstance(categories, str):
             categories = [categories]
@@ -339,14 +366,11 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
         summary = localized_text("summary") or localized_text("short_description") or plain_text(metadata.get("summary"))
         description = localized_text("description") or localized_text("full_description") or plain_text(metadata.get("description"))
-        icon = localized_text("icon")
+        icon = locale_record.get("icon") or localized.get("icon") or metadata.get("icon") or entry.get("icon")
+        icon_name = find_icon_path(icon)
         icon_url = None
-        if isinstance(icon, dict):
-            icon_name = icon.get("name")
-            if icon_name:
-                icon_url = f"https://f-droid.org/repo/{icon_name.lstrip('/')}"
-        elif isinstance(icon, str) and icon.strip():
-            icon_url = icon if icon.startswith("https://") else f"https://f-droid.org/repo/{icon.lstrip('/')}"
+        if icon_name:
+            icon_url = icon_name if icon_name.startswith("https://") else f"https://f-droid.org/repo/{icon_name.lstrip('/')}"
 
         record = _record(
             "fdroid", package_id, "android",
