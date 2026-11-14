@@ -42,6 +42,18 @@ function record(source,id,platform,name,sourceUrl,extra={}) {
 function unique(records) {
   const seen=new Set();return records.filter(r=>{if(!r)return false;const k=r.source_key+"|"+r.external_id;if(seen.has(k))return false;seen.add(k);return true;});
 }
+function findIconPath(value,depth=0) {
+  if(depth>8||value==null)return null;
+  if(typeof value==="string")return /\\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.trim())?value.trim():null;
+  if(Array.isArray(value)){for(const item of value){const found=findIconPath(item,depth+1);if(found)return found;}return null;}
+  if(typeof value==="object"){
+    if(typeof value.name==="string"&&/\\.(png|jpe?g|webp|svg)(?:[?#].*)?$/i.test(value.name))return value.name;
+    for(const key of ["en-US","en","icon","icons","name"]){if(key in value){const found=findIconPath(value[key],depth+1);if(found)return found;}}
+    for(const item of Object.values(value)){const found=findIconPath(item,depth+1);if(found)return found;}
+  }
+  return null;
+}
+
 async function json(url) {
   const res=await fetch(url,{headers:{"user-agent":"MTA-Applications-Engine/0.3"}});
   if(!res.ok)throw new Error("HTTP "+res.status+" from "+new URL(url).hostname);
@@ -54,11 +66,11 @@ async function fdroid() {
     const key=pair[0],entry=pair[1];if(!entry||typeof entry!=="object")continue;
     const m=entry.metadata&&typeof entry.metadata==="object"?entry.metadata:entry,loc=m.localized||{},en=loc["en-US"]||loc.en||{};
     const val=(k)=>{let x=en[k]??loc[k]??m[k];while(x&&typeof x==="object"&&!Array.isArray(x))x=x["en-US"]??x.en??Object.values(x)[0];return x??null;};
-    const id=key||entry.packageName||entry.package_name||entry.id,icon=val("icon"),iconName=typeof icon==="string"?icon:icon?.name,cats=m.categories||[];
+    const id=key||entry.packageName||entry.package_name||entry.id,iconName=findIconPath(en.icon??loc.icon??m.icon??entry.icon),cats=m.categories||[];
     out.push(record("fdroid",id,"android",val("name")||val("title")||id,"https://f-droid.org/packages/"+id+"/",
       {developer:m.authorName||m.author,summary:val("summary")||val("short_description"),description:val("description")||val("full_description"),
        category:Array.isArray(cats)?cats.join(", "):cats,license:m.license,app_url:m.webSite||m.sourceCode,
-       icon_url:iconName?"https://f-droid.org/repo/"+String(iconName).replace(/^\/+/, ""):null,
+       icon_url:iconName?(String(iconName).startsWith("https://")?iconName:"https://f-droid.org/repo/"+String(iconName).replace(/^\/+/, "")):null,
        metadata_json:{package_name:id,source_code:m.sourceCode,issue_tracker:m.issueTracker,website:m.webSite,added:m.added||entry.added,last_updated:m.lastUpdated||entry.lastUpdated}}));
   }
   return unique(out);
@@ -106,7 +118,7 @@ async function flathub(env) {
         const d=await json("https://flathub.org/api/v2/appstream/"+encodeURIComponent(id)+"?locale=en"),cats=d.categories||[],shots=d.screenshots||[];
         return record("flathub",id,"linux",d.name||id,"https://flathub.org/apps/"+id,{developer:d.developer_name||d.developer,
           summary:d.summary,description:d.description,category:Array.isArray(cats)?cats.join(", "):cats,license:d.license,app_url:d.project_url,
-          icon_url:shots[0]?.url,metadata_json:{flatpak_id:id,categories:cats}});
+          icon_url:d.icon||(Array.isArray(d.icons)?d.icons.find(x=>typeof x==="string"&&/^https:\/\//.test(x)):null),metadata_json:{flatpak_id:id,categories:cats}});
       }catch(e){return null;}}));out.push(...batch);
     }return unique(out);
   }catch(e){console.log("Flathub fetch failed",String(e));return [];}
