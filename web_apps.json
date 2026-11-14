@@ -1,0 +1,79 @@
+[
+  {
+    "id": "mta-website",
+    "name": "MTA Apps Center",
+    "developer": "MTA Applications Team",
+    "summary": "Official MTA application discovery portal",
+    "description": "A web-based application store for discovering multi-platform software catalogs.",
+    "category": "portal",
+    "app_url": "https://www.mtahqq.dpdns.org",
+    "icon_url": "https://www.mtahqq.dpdns.org/icon.png",
+    "homepage": "https://www.mtahqq.dpdns.org"
+  },
+  {
+    "id": "firefox",
+    "name": "Mozilla Firefox",
+    "developer": "Mozilla Foundation",
+    "summary": "Free and open-source web browser",
+    "description": "Mozilla Firefox is a free and open-source web browser.",
+    "category": "browser",
+    "app_url": "https://www.mozilla.org/firefox",
+    "icon_url": "https://www.mozilla.org/media/brand/firefox/logo/hero.356e04968076.png",
+    "homepage": "https://www.mozilla.org"
+  },
+  {
+    "id": "libreoffice",
+    "name": "LibreOffice",
+    "developer": "The Document Foundation",
+    "summary": "Free office suite",
+    "description": "LibreOffice is a free and powerful office suite.",
+    "category": "office",
+    "app_url": "https://www.libreoffice.org",
+    "icon_url": "https://www.libreoffice.org/assets/images/logos/libreoffice-logo.png",
+    "homepage": "https://www.libreoffice.org"
+  },
+  {
+    "id": "gimp",
+    "name": "GIMP",
+    "developer": "GIMP Team",
+    "summary": "GNU Image Manipulation Program",
+    "description": "GIMP is a free and open-source raster graphics editor.",
+    "category": "photo",
+    "app_url": "https://www.gimp.org",
+    "icon_url": "https://www.gimp.org/images/gimp-logo.png",
+    "homepage": "https://www.gimp.org"
+  },
+  {
+    "id": "vivaldi",
+    "name": "Vivaldi",
+    "developer": "Vivaldi Technologies",
+    "summary": "Customizable web browser",
+    "description": "Vivaldi is a freeware, cross-platform web browser.",
+    "category": "browser",
+    "app_url": "https://vivaldi.com",
+    "icon_url": "https://vivaldi.com/static/images/favicon-192x192.png",
+    "homepage": "https://vivaldi.com"
+  },
+  {
+    "id": "onlyoffice",
+    "name": "ONLYOFFICE",
+    "developer": "ONLYOFFICE",
+    "summary": "Office suite with collaboration",
+    "description": "ONLYOFFICE is a free office suite.",
+    "category": "office",
+    "app_url": "https://www.onlyoffice.com",
+    "icon_url": "https://www.onlyoffice.com/img/logo.png",
+    "homepage": "https://www.onlyoffice.com"
+  },
+  {
+    "id": "blender",
+    "name": "Blender",
+    "developer": "Blender Foundation",
+    "summary": "3D creation suite",
+    "description": "Blender is the free and open source 3D creation suite.",
+    "category": "utilities",
+    "app_url": "https://www.blender.org",
+    "icon_url": "https://www.blender.org/media/files/blender_media/blender-logo.svg",
+    "homepage": "https://www.blender.org"
+  }
+]
