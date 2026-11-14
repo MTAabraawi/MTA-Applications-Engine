@@ -24,3 +24,46 @@ def test_deduplication_uses_source_and_external_id():
     second = _record("source-a", "same", "web", "B", "https://example.org/b")
     third = _record("source-b", "same", "web", "C", "https://example.org/c")
     assert len(_unique([first, second, third])) == 2
+
+
+def test_fdroid_v2_nested_metadata_is_normalized():
+    import asyncio
+    from catalog_sources import fetch_fdroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "apps": {
+                    "org.example.reader": {
+                        "metadata": {
+                            "license": "GPL-3.0-or-later",
+                            "authorName": "Example Team",
+                            "sourceCode": "https://github.com/example/reader",
+                            "localized": {
+                                "en-US": {
+                                    "name": "Example Reader",
+                                    "summary": "Read documents",
+                                    "description": "A sample reader app",
+                                }
+                            },
+                            "categories": ["Reading", "Office"],
+                        },
+                        "added": 1700000000000,
+                    }
+                }
+            }
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_fdroid(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["external_id"] == "org.example.reader"
+    assert records[0]["name"] == "Example Reader"
+    assert records[0]["platform"] == "android"
+    assert records[0]["category"] == "Reading, Office"
+    assert records[0]["source_url"] == "https://f-droid.org/packages/org.example.reader/"
