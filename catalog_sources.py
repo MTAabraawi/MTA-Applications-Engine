@@ -321,12 +321,15 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         if not isinstance(locale_record, dict):
             locale_record = {}
 
-        def localized_text(field: str) -> Any:
-            value = locale_record.get(field) if field in locale_record else localized.get(field)
-            # Be tolerant of nested locale maps in both historical index layouts.
+        def plain_text(value: Any) -> Any:
+            # Metadata values can themselves be locale dictionaries.
             while isinstance(value, dict):
                 value = value.get("en-US") or value.get("en") or next(iter(value.values()), None)
             return value
+
+        def localized_text(field: str) -> Any:
+            value = locale_record.get(field) if field in locale_record else localized.get(field)
+            return plain_text(value)
 
         categories = metadata.get("categories") or []
         if isinstance(categories, str):
@@ -334,8 +337,8 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         if not isinstance(categories, list):
             categories = []
 
-        summary = localized_text("summary") or localized_text("short_description") or metadata.get("summary")
-        description = localized_text("description") or localized_text("full_description") or metadata.get("description")
+        summary = localized_text("summary") or localized_text("short_description") or plain_text(metadata.get("summary"))
+        description = localized_text("description") or localized_text("full_description") or plain_text(metadata.get("description"))
         icon = localized_text("icon")
         icon_url = None
         if isinstance(icon, dict):
@@ -347,7 +350,7 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
         record = _record(
             "fdroid", package_id, "android",
-            localized_text("name") or localized_text("title") or metadata.get("name") or package_id,
+            localized_text("name") or localized_text("title") or plain_text(metadata.get("name")) or package_id,
             f"https://f-droid.org/packages/{package_id}/",
             developer=metadata.get("authorName") or metadata.get("author"),
             summary=summary, description=description,
