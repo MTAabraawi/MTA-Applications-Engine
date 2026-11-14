@@ -288,22 +288,29 @@ def fetch_curated_web_apps() -> list[dict[str, Any]]:
 
 
 async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch F-Droid index-v2 app metadata; never fetch package binaries."""
+    """Fetch F-Droid index metadata; support array and keyed app catalogues."""
     try:
         payload = await _get_json(client, "https://f-droid.org/repo/index-v2.json")
     except (httpx.HTTPError, ValueError) as exc:
         log.warning("F-Droid index fetch failed: %s", exc)
         return []
-    apps = payload.get("apps", {}) if isinstance(payload, dict) else {}
-    if not isinstance(apps, dict):
-        log.warning("F-Droid returned an unrecognised index structure")
+    raw_apps = payload.get("apps", []) if isinstance(payload, dict) else []
+    if isinstance(raw_apps, dict):
+        entries = list(raw_apps.items())
+    elif isinstance(raw_apps, list):
+        entries = [(None, item) for item in raw_apps]
+    else:
+        log.warning("F-Droid returned an unrecognised apps collection: %s", type(raw_apps).__name__)
         return []
 
     records = []
-    for package_id, entry in apps.items():
+    for keyed_id, entry in entries:
         if not isinstance(entry, dict):
             continue
-        # index-v2 stores app fields beneath the per-app "metadata" object.
+        package_id = keyed_id or entry.get("packageName") or entry.get("package_name") or entry.get("id")
+        if not package_id:
+            continue
+        # Some index variants nest descriptive fields beneath "metadata".
         metadata = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else entry
         localized = metadata.get("localized") or {}
         if not isinstance(localized, dict):
@@ -324,7 +331,7 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         if isinstance(icon, dict):
             icon_name = icon.get("name")
             if icon_name:
-                icon_url = f"https://f-droid.org/repo/icons/{icon_name}"
+                icon_url = f"https://f-droid.org/repo/{icon_name.lstrip('/')}"
         elif isinstance(icon, str) and icon.startswith("https://"):
             icon_url = icon
 
@@ -349,7 +356,7 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         )
         if record:
             records.append(record)
-    log.info("F-Droid index: %d app records from %d app entries", len(records), len(apps))
+    log.info("F-Droid index: %d app records from %d app entries", len(records), len(entries))
     return _unique(records)
 
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
