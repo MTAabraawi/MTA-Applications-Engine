@@ -53,7 +53,7 @@ async function fdroid() {
     out.push(record("fdroid",id,"android",val("name")||val("title")||id,"https://f-droid.org/packages/"+id+"/",
       {developer:m.authorName||m.author,summary:val("summary")||val("short_description"),description:val("description")||val("full_description"),
        category:Array.isArray(cats)?cats.join(", "):cats,license:m.license,app_url:m.webSite||m.sourceCode,
-       icon_url:iconName?"https://f-droid.org/repo/"+String(iconName).replace(/^\\/+ /,""):null,
+       icon_url:iconName?"https://f-droid.org/repo/"+String(iconName).replace(/^\/+/, ""):null,
        metadata_json:{package_name:id,source_code:m.sourceCode,issue_tracker:m.issueTracker,website:m.webSite,added:m.added||entry.added,last_updated:m.lastUpdated||entry.lastUpdated}}));
   }
   return unique(out);
