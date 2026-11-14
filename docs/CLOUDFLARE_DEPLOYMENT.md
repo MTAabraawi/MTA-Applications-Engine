@@ -43,6 +43,18 @@ Add a repository Actions secret named `DATABASE_URL` containing the same Postgre
 
 The scheduled workflow is already configured for daily UTC execution. It skips safely if `DATABASE_URL` is absent. It becomes active on the default branch only after this pull request is merged.
 
+## GitHub Actions deployment
+
+A manual deployment workflow is included at `.github/workflows/deploy-cloudflare-worker.yml`. After this pull request is merged into the default branch, configure:
+
+- Actions variable: `HYPERDRIVE_CONFIG_ID`
+- Actions secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+- Actions secret for the daily catalogue sync: `DATABASE_URL`
+
+Then open **Actions → Deploy Cloudflare Worker → Run workflow**. The workflow substitutes the Hyperdrive ID at deploy time; the repository keeps only a placeholder. It does not print or commit database credentials.
+
+The optional `ADMIN_API_TOKEN` Worker secret is needed only if you intend to call the protected HTTP ingestion endpoints. The daily GitHub Actions sync uses `DATABASE_URL` directly and does not need that token.
+
 ## Verify deployment
 
 After deployment, verify:
