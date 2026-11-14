@@ -295,6 +295,8 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         log.warning("F-Droid index fetch failed: %s", exc)
         return []
     raw_apps = payload.get("apps", []) if isinstance(payload, dict) else []
+    if isinstance(payload, dict):
+        log.info("F-Droid index root keys: %s; apps type: %s", list(payload.keys())[:20], type(raw_apps).__name__)
     if isinstance(raw_apps, dict):
         entries = list(raw_apps.items())
     elif isinstance(raw_apps, list):
