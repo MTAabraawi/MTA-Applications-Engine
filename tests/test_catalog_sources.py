@@ -44,9 +44,9 @@ def test_fdroid_v2_nested_metadata_is_normalized():
                             "sourceCode": "https://github.com/example/reader",
                             "localized": {
                                 "en-US": {
-                                    "name": "Example Reader",
-                                    "summary": "Read documents",
-                                    "description": "A sample reader app",
+                                    "name": {"en-US": "Example Reader"},
+                                    "summary": {"en-US": "Read documents"},
+                                    "description": {"en-US": "A sample reader app"},
                                 }
                             },
                             "categories": ["Reading", "Office"],
