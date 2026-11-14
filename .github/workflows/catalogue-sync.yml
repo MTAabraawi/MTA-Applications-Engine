@@ -1,6 +1,11 @@
 name: Daily Catalogue Sync
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "catalog_sources.py"
+      - ".github/workflows/catalogue-sync.yml"
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
