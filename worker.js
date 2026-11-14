@@ -163,11 +163,12 @@ async function handle(request,env) {
   }
   if(path==="/api/v1/catalog-stats"&&request.method==="GET"){
     const db=database(env),results=await Promise.all([
-      db.unsafe("SELECT count(*)::int AS total FROM apps"),
+      db.unsafe("SELECT count(*)::int AS total,count(*) FILTER (WHERE icon_url IS NOT NULL AND icon_url <> '')::int AS with_icon,count(*) FILTER (WHERE icon_url IS NULL OR icon_url = '')::int AS without_icon FROM apps"),
       db.unsafe("SELECT platform,count(*)::int AS count FROM apps GROUP BY platform ORDER BY platform"),
       db.unsafe("SELECT source_key,count(*)::int AS count FROM apps GROUP BY source_key ORDER BY source_key")
     ]);
-    return response({total:results[0][0]?.total||0,platforms:Object.fromEntries(results[1].map(x=>[x.platform,x.count])),
+    return response({total:results[0][0]?.total||0,with_icon:results[0][0]?.with_icon||0,without_icon:results[0][0]?.without_icon||0,
+      platforms:Object.fromEntries(results[1].map(x=>[x.platform,x.count])),
       sources:Object.fromEntries(results[2].map(x=>[x.source_key,x.count])),metadata_only:true},200,origin);
   }
   if((path==="/api/v1/ingest/catalogs"||path==="/api/v1/ingest/fdroid")&&request.method==="POST"){
