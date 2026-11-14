@@ -144,12 +144,13 @@ async function handle(request,env) {
   if(path==="/health"&&request.method==="GET")return response({status:"ok",service:"MTA Applications Engine",version:"0.3.0"},200,origin);
   if(path==="/api/v1/apps"&&request.method==="GET"){
     const limit=Math.max(1,Math.min(Number(url.searchParams.get("limit")||50),200)),offset=Math.max(0,Number(url.searchParams.get("offset")||0));
-    const clauses=[],params=[],add=(clause,value)=>{params.push(value);clauses.push(clause.replace("?", "$"+params.length));};
+    const clauses=[],quote=value=>"'"+String(value).replace(/'/g,"''")+"'";
     const q=url.searchParams.get("q"),platform=url.searchParams.get("platform"),source=url.searchParams.get("source");
-    if(q){params.push("%"+q.trim()+"%");const n=params.length;clauses.push("(name ILIKE $"+n+" OR developer ILIKE $"+n+" OR summary ILIKE $"+n+")");}
-    if(platform)add("platform = ?",platform.toLowerCase());if(source)add("source_key = ?",source.toLowerCase());
-    params.push(limit,offset);
-    const rows=await database(env).unsafe("SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,first_seen_at,updated_at FROM apps "+(clauses.length?"WHERE "+clauses.join(" AND "):"")+" ORDER BY name LIMIT $"+(params.length-1)+" OFFSET $"+params.length,params);
+    if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+")");}
+    if(platform)clauses.push("platform = "+quote(platform.toLowerCase()));
+    if(source)clauses.push("source_key = "+quote(source.toLowerCase()));
+    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+(clauses.length?"WHERE "+clauses.join(" AND ")+" ":"")+"ORDER BY name LIMIT "+limit+" OFFSET "+offset;
+    const rows=await database(env).unsafe(sql);
     return response(rows,200,origin);
   }
   if(path==="/api/v1/catalog-stats"&&request.method==="GET"){
