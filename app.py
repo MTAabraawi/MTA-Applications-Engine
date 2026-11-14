@@ -47,7 +47,11 @@ class AppRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
-Base.metadata.create_all(engine)
+if os.getenv("SKIP_SCHEMA_CREATE") != "1":
+    Base.metadata.create_all(engine)
+
+_worker_sessionmakers = {}
+
 app = FastAPI(title="MTA Applications Engine", version="0.2.0")
 allowed_origins = [x.strip() for x in os.getenv(
     "CORS_ORIGINS", "https://www.mtahqq.dpdns.org,https://mtahqq.dpdns.org"
@@ -61,16 +65,57 @@ app.add_middleware(
 )
 
 
-def get_db():
-    db = SessionLocal()
+def _binding_value(env, name: str):
+    if env is None:
+        return None
+    if isinstance(env, dict):
+        return env.get(name)
+    return getattr(env, name, None)
+
+
+def get_db(request: Request):
+    # Cloudflare Workers supplies Hyperdrive through the ASGI request scope.
+    # Local/Docker/GitHub Actions continue using DATABASE_URL and SessionLocal.
+    env = request.scope.get("env")
+    hyperdrive = _binding_value(env, "HYPERDRIVE")
+    if hyperdrive is not None:
+        host = hyperdrive.host
+        port = int(hyperdrive.port)
+        username = hyperdrive.user
+        password = hyperdrive.password
+        database = hyperdrive.database
+        cache_key = (host, port, username, database, hash(password))
+        factory = _worker_sessionmakers.get(cache_key)
+        if factory is None:
+            worker_url = URL.create(
+                "postgresql+psycopg",
+                username=username,
+                password=password,
+                host=host,
+                port=port,
+                database=database,
+                query={"sslmode": "disable"},
+            )
+            worker_engine = create_engine(
+                worker_url,
+                poolclass=NullPool,
+                connect_args={"sslmode": "disable"},
+            )
+            factory = sessionmaker(bind=worker_engine, autoflush=False, autocommit=False)
+            _worker_sessionmakers[cache_key] = factory
+        db = factory()
+    else:
+        db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
 
-def require_admin(x_admin_token: Optional[str]) -> None:
-    if not ADMIN_API_TOKEN or not x_admin_token or not secrets.compare_digest(x_admin_token, ADMIN_API_TOKEN):
+def require_admin(x_admin_token: Optional[str], request: Request) -> None:
+    env_token = _binding_value(request.scope.get("env"), "ADMIN_API_TOKEN")
+    expected_token = env_token or ADMIN_API_TOKEN
+    if not expected_token or not x_admin_token or not secrets.compare_digest(x_admin_token, expected_token):
         raise HTTPException(status_code=403, detail="Ingestion is disabled or unauthorized")
 
 
@@ -160,10 +205,11 @@ def catalog_stats(db: Session = Depends(get_db)):
 
 @app.post("/api/v1/ingest/catalogs")
 async def ingest_catalogs(
+    request: Request,
     x_admin_token: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    require_admin(x_admin_token)
+    require_admin(x_admin_token, request)
     catalog_results = await fetch_all_catalogs()
     summary = {}
     for source_key, records in catalog_results.items():
@@ -183,10 +229,11 @@ async def ingest_catalogs(
 
 @app.post("/api/v1/ingest/fdroid")
 async def ingest_fdroid(
+    request: Request,
     x_admin_token: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    require_admin(x_admin_token)
+    require_admin(x_admin_token, request)
     url = "https://f-droid.org/repo/index-v2.json"
     try:
         async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": "MTA-Applications-Engine/0.2"}) as client:
