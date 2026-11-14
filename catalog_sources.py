@@ -288,7 +288,7 @@ def fetch_curated_web_apps() -> list[dict[str, Any]]:
 
 
 async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch F-Droid index-v2 metadata without downloading APK artifacts."""
+    """Fetch F-Droid index-v2 app metadata; never fetch package binaries."""
     try:
         payload = await _get_json(client, "https://f-droid.org/repo/index-v2.json")
     except (httpx.HTTPError, ValueError) as exc:
@@ -298,29 +298,58 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     if not isinstance(apps, dict):
         log.warning("F-Droid returned an unrecognised index structure")
         return []
+
     records = []
-    for package_id, item in apps.items():
-        if not isinstance(item, dict):
+    for package_id, entry in apps.items():
+        if not isinstance(entry, dict):
             continue
-        localized = item.get("localized") or {}
+        # index-v2 stores app fields beneath the per-app "metadata" object.
+        metadata = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else entry
+        localized = metadata.get("localized") or {}
+        if not isinstance(localized, dict):
+            localized = {}
         english = localized.get("en-US") or localized.get("en") or {}
-        categories = item.get("categories") or []
+        if not isinstance(english, dict):
+            english = {}
+        categories = metadata.get("categories") or []
+        if isinstance(categories, str):
+            categories = [categories]
+        if not isinstance(categories, list):
+            categories = []
+
+        summary = english.get("summary") or english.get("short_description") or metadata.get("summary")
+        description = english.get("description") or english.get("full_description") or metadata.get("description")
+        icon = english.get("icon")
+        icon_url = None
+        if isinstance(icon, dict):
+            icon_name = icon.get("name")
+            if icon_name:
+                icon_url = f"https://f-droid.org/repo/icons/{icon_name}"
+        elif isinstance(icon, str) and icon.startswith("https://"):
+            icon_url = icon
+
         record = _record(
             "fdroid", package_id, "android",
-            item.get("name") or english.get("name") or package_id,
+            english.get("name") or english.get("title") or metadata.get("name") or package_id,
             f"https://f-droid.org/packages/{package_id}/",
-            developer=item.get("authorName") or item.get("author"),
-            summary=item.get("summary") or english.get("summary"),
-            description=item.get("description") or english.get("description"),
-            category=", ".join(categories) if isinstance(categories, list) else None,
-            license=item.get("license"),
-            app_url=item.get("webSite") or item.get("sourceCode"),
-            metadata_json={"package_name": package_id, "source_code": item.get("sourceCode"),
-                           "issue_tracker": item.get("issueTracker"), "website": item.get("webSite"),
-                           "added": item.get("added"), "last_updated": item.get("lastUpdated")},
+            developer=metadata.get("authorName") or metadata.get("author"),
+            summary=summary, description=description,
+            category=", ".join(str(x) for x in categories),
+            license=metadata.get("license"),
+            app_url=metadata.get("webSite") or metadata.get("sourceCode"),
+            icon_url=icon_url,
+            metadata_json={
+                "package_name": package_id,
+                "source_code": metadata.get("sourceCode"),
+                "issue_tracker": metadata.get("issueTracker"),
+                "website": metadata.get("webSite"),
+                "added": metadata.get("added") or entry.get("added"),
+                "last_updated": metadata.get("lastUpdated") or entry.get("lastUpdated"),
+            },
         )
         if record:
             records.append(record)
+    log.info("F-Droid index: %d app records from %d app entries", len(records), len(apps))
     return _unique(records)
 
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
