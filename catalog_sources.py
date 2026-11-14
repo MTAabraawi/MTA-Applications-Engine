@@ -322,11 +322,10 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             locale_record = {}
 
         def localized_text(field: str) -> Any:
-            if field in locale_record:
-                return locale_record.get(field)
-            value = localized.get(field)
-            if isinstance(value, dict):
-                return value.get("en-US") or value.get("en") or next(iter(value.values()), None)
+            value = locale_record.get(field) if field in locale_record else localized.get(field)
+            # Be tolerant of nested locale maps in both historical index layouts.
+            while isinstance(value, dict):
+                value = value.get("en-US") or value.get("en") or next(iter(value.values()), None)
             return value
 
         categories = metadata.get("categories") or []
