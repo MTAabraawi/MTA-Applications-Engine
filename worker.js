@@ -146,10 +146,10 @@ async function handle(request,env) {
     const limit=Math.max(1,Math.min(Number(url.searchParams.get("limit")||50),200)),offset=Math.max(0,Number(url.searchParams.get("offset")||0));
     const clauses=[],quote=value=>"'"+String(value).replace(/'/g,"''")+"'";
     const q=url.searchParams.get("q"),platform=url.searchParams.get("platform"),source=url.searchParams.get("source");
-    if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+")");}
+    if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+" OR description ILIKE "+term+" OR category ILIKE "+term+")");}
     if(platform)clauses.push("platform = "+quote(platform.toLowerCase()));
     if(source)clauses.push("source_key = "+quote(source.toLowerCase()));
-    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+(clauses.length?"WHERE "+clauses.join(" AND ")+" ":"")+"ORDER BY name LIMIT "+limit+" OFFSET "+offset;
+    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+(clauses.length?"WHERE "+clauses.join(" AND ")+" ":"")+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
     const rows=await database(env).unsafe(sql);
     return response(rows,200,origin);
   }
