@@ -99,7 +99,6 @@ def get_db(request: Request):
             worker_engine = create_engine(
                 worker_url,
                 poolclass=NullPool,
-                connect_args={"sslmode": "disable"},
             )
             factory = sessionmaker(bind=worker_engine, autoflush=False, autocommit=False)
             _worker_sessionmakers[cache_key] = factory
