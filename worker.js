@@ -16,13 +16,18 @@ function database(env) {
   if (!cachedSql) cachedSql = postgres(env.HYPERDRIVE.connectionString, {max:5,idle_timeout:20,connect_timeout:10,fetch_types:false,prepare:false});
   return cachedSql;
 }
-function response(data,status,origin) {
-  return new Response(JSON.stringify(data),{status:status,headers:{"content-type":"application/json; charset=utf-8","access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, X-Admin-Token","vary":"Origin"}});
+function response(data,status,origin,extraHeaders={}) {
+  return new Response(JSON.stringify(data),{status:status,headers:{"content-type":"application/json; charset=utf-8","access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, X-Admin-Token","vary":"Origin",...extraHeaders}});
 }
 function corsOrigin(request,env) {
   const allowed=(env.CORS_ORIGINS||DEFAULT_ORIGINS.join(",")).split(",").map(x=>x.trim()).filter(Boolean);
   const origin=request.headers.get("Origin")||"";
-  return allowed.includes(origin)?origin:(origin?"null":"*");
+  if(!origin)return "*";
+  if(allowed.includes(origin))return origin;
+  // The catalogue GET endpoints expose public metadata only. Permit public website
+  // origins so a stale CORS_ORIGINS variable cannot break the public marketplace.
+  const requestedMethod=request.headers.get("Access-Control-Request-Method")||request.method;
+  return requestedMethod==="GET"?"*":"null";
 }
 function safeHttps(value) {
   if(typeof value!=="string")return null;
@@ -149,9 +154,12 @@ async function handle(request,env) {
     if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+" OR description ILIKE "+term+" OR category ILIKE "+term+")");}
     if(platform)clauses.push("platform = "+quote(platform.toLowerCase()));
     if(source)clauses.push("source_key = "+quote(source.toLowerCase()));
-    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+(clauses.length?"WHERE "+clauses.join(" AND ")+" ":"")+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
-    const rows=await database(env).unsafe(sql);
-    return response(rows,200,origin);
+    const where=clauses.length?"WHERE "+clauses.join(" AND ")+" ":"";
+    const db=database(env);
+    const totalRows=await db.unsafe("SELECT count(*)::int AS total FROM apps "+where);
+    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
+    const rows=await db.unsafe(sql);
+    return response(rows,200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":String(totalRows[0]?.total||0)});
   }
   if(path==="/api/v1/catalog-stats"&&request.method==="GET"){
     const db=database(env),results=await Promise.all([
