@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "catalog_sources.py"
+      - "store_sources.json"
       - "tests/**"
       - "app.py"
       - "worker.js"
@@ -39,6 +40,30 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run unit tests
         run: pytest -q
+      - name: Run one full live catalogue batch
+        env:
+          APPLE_SEARCH_TERMS: browser,office,photo
+          WINGET_SEARCH_TERMS: browser,office,developer
+          SNAP_SEARCH_TERMS: browser,office,developer
+          FLATHUB_MAX_APPS: "30"
+        run: |
+          python - <<'PY'
+          import asyncio
+          import json
+          from catalog_sources import fetch_all_catalogs
+
+          catalogues = asyncio.run(fetch_all_catalogs())
+          expected = {
+              "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
+              "apple-itunes", "apple-macos", "winget-run-community", "mta-curated-web",
+          }
+          report = {name: len(records) for name, records in catalogues.items()}
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          missing = sorted(name for name in expected if not report.get(name))
+          if missing:
+              raise SystemExit("Live catalogue batch returned no records for: " + ", ".join(missing))
+          print("All public catalogue connectors returned records in one batch.")
+          PY
       - name: Verify live IzzyOnDroid repository index
         run: |
           python - <<'PY'
