@@ -224,7 +224,7 @@ def test_snap_store_ignores_unavailable_or_invalid_entries():
             return [
                 {"id": "gone", "name": "gone", "title": "Gone", "status": "unavailable",
                  "store-url": "https://snapcraft.io/gone"},
-                {"id": "bad", "name": "bad", "title": "Bad", "status": "available",
+                {"id": "bad", "title": "Bad", "status": "available",
                  "store-url": "http://snapcraft.io/bad"},
             ]
 
