@@ -101,7 +101,7 @@ async function apple(env,entity=null,sourceKey="apple-itunes",platform="ios") {
     const u=new URL("https://itunes.apple.com/search");u.searchParams.set("term",term.trim());u.searchParams.set("country",env.APPLE_COUNTRY||"us");
     u.searchParams.set("limit",String(Math.max(1,Math.min(Number(env.APPLE_LIMIT||100),200))));u.searchParams.set("media","software");if(entity)u.searchParams.set("entity",entity);
     const p=await json(u.toString());
-    for(const x of p.results||[]){if(x.kind&&!["software","software-package"].includes(x.kind))continue;
+    for(const x of p.results||[]){if(x.kind&&!["software","software-package","mac-software"].includes(x.kind))continue;
       out.push(record(sourceKey,x.trackId,platform,x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
         category:x.genres?.[0],app_url:x.trackViewUrl,icon_url:x.artworkUrl512||x.artworkUrl100,
         metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres}}));}
