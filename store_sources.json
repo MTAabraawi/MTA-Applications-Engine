@@ -240,5 +240,13 @@
     "integration_mode": "live_api",
     "reason": "Arch Linux documented public package search JSON interface.",
     "source_key": "arch-linux"
+  },
+  {
+    "id": "debian-packages",
+    "name": "Debian Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Debian Sources public package search API plus official Debian package detail pages.",
+    "source_key": "debian-packages"
   }
 ]
