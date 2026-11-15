@@ -200,9 +200,8 @@
     "id": "steam",
     "name": "Steam",
     "platform": "pc-games",
-    "integration_mode": "live_api",
-    "reason": "Public Steam ISteamApps GetAppList v2 endpoint; imports app identifiers and names only.",
-    "source_key": "steam"
+    "integration_mode": "external_only",
+    "reason": "Steam's documented bulk app-list endpoint returned HTTP 404; public storefront search is undocumented and incomplete."
   },
   {
     "id": "epic-games-store",
