@@ -124,6 +124,19 @@ async function snapStore(env) {
   }catch(e){console.log("Snap Store search failed",term,String(e));}}
   return unique(out);
 }
+async function steam(env) {
+  const terms=(env.STEAM_SEARCH_TERMS||"action,adventure,strategy,simulation,rpg,indie,sports,racing,free to play,multiplayer,puzzle,horror,platformer,sandbox,visual novel").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://store.steampowered.com/api/storesearch/");
+    u.searchParams.set("term",term.trim());u.searchParams.set("l","english");u.searchParams.set("cc","us");
+    const p=await json(u.toString()),items=p.items||[];
+    for(const x of items){out.push(record("steam",x.id,"pc-games",x.name,x.id?"https://store.steampowered.com/app/"+x.id+"/":null,
+      {icon_url:x.tiny_image,metadata_json:{steam_appid:x.id,item_type:x.type,price:x.price,source_scope:"storefront_search"}}));}
+  }catch(e){console.log("Steam storefront search failed",term,String(e));}
+    await new Promise(resolve=>setTimeout(resolve,150));
+  }
+  return unique(out);
+}
 async function winget(env) {
   const terms=(env.WINGET_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
   for(const term of terms){try{
@@ -222,7 +235,7 @@ async function handle(request,env) {
       if(!records.length)return response({detail:"F-Droid returned no usable application metadata"},502,origin);
       return response({source:"F-Droid",discovered:records.length,...await upsert(db,records),note:"Metadata only. No APK files were downloaded, mirrored, or hosted."},200,origin);
     }
-    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"mta-curated-web":curated()};
+    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),steam:steam(env),"mta-curated-web":curated()};
     const entries=await Promise.all(Object.entries(tasks).map(async pair=>[pair[0],await pair[1].catch(e=>{console.log("Catalogue failed",pair[0],String(e));return []})]));
     const summary={};
     for(const entry of entries){const key=entry[0],records=entry[1];try{summary[key]=Object.assign({fetched:records.length},await upsert(db,records));}catch(e){console.log("Database write failed",key,String(e));summary[key]={fetched:records.length,error:"Database write failed"};}}
