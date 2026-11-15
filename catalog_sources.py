@@ -312,7 +312,7 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             response = await client.get(
                 "https://api.snapcraft.io/v2/snaps/find",
                 params={"q": term, "architecture": headers["Snap-Device-Architecture"],
-                        "fields": "name,title,summary,description,icon,publisher,store-url,version,channel,license,website,common-ids,confinement"},
+                        "fields": "title,summary,description,media,publisher,store-url,version,channel,license,website,common-ids,confinement"},
                 headers=headers,
             )
             if response.is_error:
@@ -334,7 +334,8 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             name = item.get("title") or item.get("name")
             snap_name = item.get("name")
             store_url = _https(item.get("store-url")) or (f"https://snapcraft.io/{snap_name}" if snap_name else None)
-            icon = item.get("icon")
+            media = item.get("media") or []
+            icon = item.get("icon") or next((entry.get("url") for entry in media if isinstance(entry, dict) and entry.get("type") == "icon"), None)
             record = _record(
                 "snap-store", item.get("id") or snap_name, "linux", name,
                 store_url, developer=publisher_name or item.get("developer"),
