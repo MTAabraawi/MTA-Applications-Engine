@@ -14,7 +14,7 @@ def test_store_registry_contains_all_32_requested_store_entries():
     live = {entry["source_key"] for entry in entries if entry.get("source_key")}
     assert {
         "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
-        "apple-itunes", "apple-macos", "winget-run-community", "steam", "mta-curated-web",
+        "apple-itunes", "apple-macos", "winget-run-community", "mta-curated-web",
     } <= live
 
 
@@ -94,29 +94,3 @@ def test_apple_macos_connector_uses_mac_software_entity(monkeypatch):
     assert records[0]["name"] == "Example Mac Editor"
 
 
-def test_steam_connector_maps_public_app_list_without_downloads():
-    class FakeResponse:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return {"applist": {"apps": [
-                {"appid": 10, "name": "Example Game"},
-                {"appid": 11, "name": "   "},
-                {"appid": 12, "name": "Example Tool"},
-            ]}}
-
-    class FakeClient:
-        url_seen = None
-
-        async def get(self, url, **kwargs):
-            self.url_seen = url
-            return FakeResponse()
-
-    client = FakeClient()
-    records = asyncio.run(catalog_sources.fetch_steam(client))
-    assert client.url_seen == "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
-    assert [item["external_id"] for item in records] == ["10", "12"]
-    assert records[0]["source_key"] == "steam"
-    assert records[0]["platform"] == "pc-games"
-    assert records[0]["source_url"] == "https://store.steampowered.com/app/10/"
