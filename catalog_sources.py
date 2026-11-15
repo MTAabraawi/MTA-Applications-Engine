@@ -358,7 +358,7 @@ async def fetch_debian_packages(client: httpx.AsyncClient) -> list[dict[str, Any
                 if "role::program" not in page.lower():
                     return None
                 heading = re.search(
-                    r"<h2[^>]*>\s*Links for [^<]*</h2>\s*<h2[^>]*>(.*?)</h2>",
+                    r"<h2[^>]*>\s*Links for [^<]*</h2>[\s\S]*?<h2[^>]*>(.*?)</h2>",
                     page, re.I | re.S,
                 )
                 if not heading:
