@@ -31,6 +31,10 @@ def test_fdroid_v2_nested_metadata_is_normalized():
     from catalog_sources import fetch_fdroid
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
@@ -74,6 +78,10 @@ def test_fdroid_app_array_index_is_supported():
     from catalog_sources import fetch_fdroid
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
@@ -103,6 +111,10 @@ def test_fdroid_index_v2_packages_map_is_supported():
     from catalog_sources import fetch_fdroid
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
@@ -138,6 +150,10 @@ def test_fdroid_index_v2_field_locale_maps_resolve_english_text():
     from catalog_sources import fetch_fdroid
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
@@ -174,6 +190,10 @@ def test_snap_store_public_search_metadata_is_normalized():
     from catalog_sources import fetch_snap_store
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
@@ -219,6 +239,10 @@ def test_snap_store_ignores_unavailable_or_invalid_entries():
     from catalog_sources import fetch_snap_store
 
     class FakeResponse:
+        is_error = False
+        status_code = 200
+        text = ""
+
         def raise_for_status(self):
             return None
 
