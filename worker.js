@@ -153,6 +153,42 @@ async function archLinux(env) {
   }catch(e){console.log("Arch Linux package search failed",term,String(e));}}
   return unique(out);
 }
+async function debianPackages(env) {
+  const terms=(env.DEBIAN_SEARCH_TERMS||"browser,office,graphics,video,audio,education,security,games,communication,utilities").split(",").map(x=>x.trim()).filter(Boolean);
+  const limit=Math.max(1,Math.min(Number(env.DEBIAN_LIMIT_PER_TERM||12),20)),names=[];
+  const searches=await Promise.all(terms.map(async term=>{
+    try{return await json("https://sources.debian.org/api/search/"+encodeURIComponent(term)+"/");}
+    catch(e){console.log("Debian package search failed",term,String(e));return null;}
+  }));
+  for(const payload of searches){const results=payload?.results||{},exact=results.exact,other=Array.isArray(results.other)?results.other:[];
+    if(exact?.name)names.push(String(exact.name));
+    for(const item of other.slice(0,limit))if(item?.name)names.push(String(item.name));
+  }
+  const uniqueNames=[...new Set(names)];
+  const records=await Promise.all(uniqueNames.map(async packageName=>{
+    try{
+      const url="https://packages.debian.org/sid/amd64/"+encodeURIComponent(packageName);
+      const res=await fetch(url,{headers:{"user-agent":"MTA-Applications-Engine/0.3"}});
+      if(!res.ok)return null;
+      const page=await res.text();
+      if(!page.toLowerCase().includes("role::program"))return null;
+      const heading=page.match(/<h2[^>]*>\s*Links for [^<]*<\/h2>\s*<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      if(!heading)return null;
+      const clean=value=>value.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<br\s*\/?>|<\/p>|<\/pre>|<\/li>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"').replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim();
+      const summary=clean(heading[1]),start=heading.index+heading[0].length,tail=page.slice(start),related=tail.search(/<h2[^>]*>\s*Other Packages Related/i);
+      let body=related>=0?tail.slice(0,related):tail;
+      body=body.replace(/<p[^>]*>\s*Tags:[\s\S]*$/i,"");
+      const description=clean(body).slice(0,6000)||summary;
+      const sizeMatch=page.match(/<th>\s*amd64\s*<\/th>\s*<td>\s*([\d,.]+)\s*(kB|MB|B)/i);
+      let sizeBytes=null;if(sizeMatch){const factor={b:1,kb:1024,mb:1048576}[sizeMatch[2].toLowerCase()];sizeBytes=Math.round(Number(sizeMatch[1].replace(/,/g,""))*factor);}
+      const versionMatch=page.match(/<h1>\s*Package:\s*[^<(]+\(([^)]+)\)/i);
+      return record("debian-packages",packageName,"linux",packageName,url,{summary,description,app_url:url,
+        metadata_json:{version:versionMatch?.[1]?.trim()||null,architecture:"amd64",size_bytes:sizeBytes,suite:"sid"}});
+    }catch(e){console.log("Debian package detail failed",packageName,String(e));return null;}
+  }));
+  return unique(records);
+}
+
 async function winget(env) {
   const terms=(env.WINGET_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
   for(const term of terms){try{
@@ -251,7 +287,7 @@ async function handle(request,env) {
       if(!records.length)return response({detail:"F-Droid returned no usable application metadata"},502,origin);
       return response({source:"F-Droid",discovered:records.length,...await upsert(db,records),note:"Metadata only. No APK files were downloaded, mirrored, or hosted."},200,origin);
     }
-    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"arch-linux":archLinux(env),steam:steam(env),"mta-curated-web":curated()};
+    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"arch-linux":archLinux(env),"debian-packages":debianPackages(env),steam:steam(env),"mta-curated-web":curated()};
     const entries=await Promise.all(Object.entries(tasks).map(async pair=>[pair[0],await pair[1].catch(e=>{console.log("Catalogue failed",pair[0],String(e));return []})]));
     const summary={};
     for(const entry of entries){const key=entry[0],records=entry[1];try{summary[key]=Object.assign({fetched:records.length},await upsert(db,records));}catch(e){console.log("Database write failed",key,String(e));summary[key]={fetched:records.length,error:"Database write failed"};}}
