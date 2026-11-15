@@ -1,0 +1,65 @@
+name: Applications Engine Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "catalog_sources.py"
+      - "tests/**"
+      - "app.py"
+      - "worker.js"
+      - "package.json"
+      - ".github/workflows/engine-tests.yml"
+  push:
+    branches: [feature/izzyondroid-catalogue]
+    paths:
+      - "catalog_sources.py"
+      - "tests/**"
+      - "app.py"
+      - "worker.js"
+      - "package.json"
+      - ".github/workflows/engine-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run unit tests
+        run: pytest -q
+      - name: Verify live IzzyOnDroid repository index
+        run: |
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          url = "https://apt.izzysoft.de/fdroid/repo/index-v2.json"
+          request = urllib.request.Request(url, headers={"User-Agent": "MTA-Applications-Engine/0.3"})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              if response.status != 200:
+                  raise SystemExit(f"IzzyOnDroid returned HTTP {response.status}")
+              payload = json.load(response)
+          apps = payload.get("apps") or payload.get("packages")
+          if not isinstance(apps, (dict, list)) or not apps:
+              raise SystemExit("IzzyOnDroid index is reachable but contains no recognized app entries")
+          print(f"IzzyOnDroid live index OK: {len(apps)} entries")
+          PY
+      - name: Check Python syntax
+        run: python -m py_compile app.py catalog_sources.py sync_catalogs.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Cloudflare Worker syntax
+        run: node --check worker.js

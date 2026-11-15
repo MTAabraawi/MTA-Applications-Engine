@@ -167,3 +167,50 @@ def test_fdroid_index_v2_field_locale_maps_resolve_english_text():
     assert records[0]["name"] == "Localized Reader"
     assert records[0]["summary"] == "Read books"
     assert records[0]["description"] == "A localized reading application"
+
+
+
+def test_izzyondroid_index_uses_independent_source_identity_and_listing_url():
+    import asyncio
+    from catalog_sources import fetch_izzyondroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "repo": {"name": "IzzyOnDroid"},
+                "packages": {
+                    "org.example.izzy": {
+                        "metadata": {
+                            "license": "MIT",
+                            "authorName": "Example Developer",
+                            "localized": {
+                                "name": {"en-US": "Izzy Example"},
+                                "summary": {"en-US": "An example Android app"},
+                                "description": {"en-US": "Metadata from IzzyOnDroid"},
+                            },
+                            "categories": ["Tools"],
+                        },
+                        "versions": {},
+                    }
+                },
+            }
+
+    class FakeClient:
+        requested_url = None
+
+        async def get(self, url, **kwargs):
+            self.requested_url = url
+            return FakeResponse()
+
+    client = FakeClient()
+    records = asyncio.run(fetch_izzyondroid(client))
+    assert client.requested_url == "https://apt.izzysoft.de/fdroid/repo/index-v2.json"
+    assert len(records) == 1
+    assert records[0]["source_key"] == "izzyondroid"
+    assert records[0]["external_id"] == "org.example.izzy"
+    assert records[0]["name"] == "Izzy Example"
+    assert records[0]["platform"] == "android"
+    assert records[0]["source_url"] == "https://apt.izzysoft.de/fdroid/index/apk/org.example.izzy"

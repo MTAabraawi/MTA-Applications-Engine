@@ -288,12 +288,20 @@ def fetch_curated_web_apps() -> list[dict[str, Any]]:
 
 
 
-async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch F-Droid index metadata; support array and keyed app catalogues."""
+async def fetch_fdroid(
+    client: httpx.AsyncClient,
+    *,
+    index_url: str = "https://f-droid.org/repo/index-v2.json",
+    source_key: str = "fdroid",
+    app_page_base: str = "https://f-droid.org/packages/",
+    app_page_suffix: str = "/",
+    icon_base: str = "https://f-droid.org/repo/",
+) -> list[dict[str, Any]]:
+    """Fetch an F-Droid-compatible index without downloading installer files."""
     try:
-        payload = await _get_json(client, "https://f-droid.org/repo/index-v2.json")
+        payload = await _get_json(client, index_url)
     except (httpx.HTTPError, ValueError) as exc:
-        log.warning("F-Droid index fetch failed: %s", exc)
+        log.warning("%s index fetch failed: %s", source_key, exc)
         return []
     raw_apps = (payload.get("apps") or payload.get("packages") or []) if isinstance(payload, dict) else []
     if isinstance(raw_apps, dict):
@@ -301,7 +309,7 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     elif isinstance(raw_apps, list):
         entries = [(None, item) for item in raw_apps]
     else:
-        log.warning("F-Droid returned an unrecognised apps collection: %s", type(raw_apps).__name__)
+        log.warning("%s returned an unrecognised apps collection: %s", source_key, type(raw_apps).__name__)
         return []
 
     records = []
@@ -370,12 +378,12 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         icon_name = find_icon_path(icon)
         icon_url = None
         if icon_name:
-            icon_url = icon_name if icon_name.startswith("https://") else f"https://f-droid.org/repo/{icon_name.lstrip('/')}"
+            icon_url = icon_name if icon_name.startswith("https://") else f"{icon_base}{icon_name.lstrip('/')}"
 
         record = _record(
-            "fdroid", package_id, "android",
+            source_key, package_id, "android",
             localized_text("name") or localized_text("title") or plain_text(metadata.get("name")) or package_id,
-            f"https://f-droid.org/packages/{package_id}/",
+            f"{app_page_base}{package_id}{app_page_suffix}",
             developer=metadata.get("authorName") or metadata.get("author"),
             summary=summary, description=description,
             category=", ".join(str(x) for x in categories),
@@ -393,14 +401,27 @@ async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         )
         if record:
             records.append(record)
-    log.info("F-Droid index: %d app records from %d app entries", len(records), len(entries))
+    log.info("%s index: %d app records from %d app entries", source_key, len(records), len(entries))
     return _unique(records)
+
+async def fetch_izzyondroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Fetch the official IzzyOnDroid F-Droid-compatible repository index."""
+    return await fetch_fdroid(
+        client,
+        index_url="https://apt.izzysoft.de/fdroid/repo/index-v2.json",
+        source_key="izzyondroid",
+        app_page_base="https://apt.izzysoft.de/fdroid/index/apk/",
+        app_page_suffix="",
+        icon_base="https://apt.izzysoft.de/fdroid/repo/",
+    )
+
 
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
             "fdroid": fetch_fdroid(client),
+            "izzyondroid": fetch_izzyondroid(client),
             "flathub": fetch_flathub(client),
             "homebrew-cask": fetch_homebrew_cask(client),
             "apple-itunes": fetch_apple_itunes(client),
