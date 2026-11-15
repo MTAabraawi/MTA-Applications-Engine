@@ -184,14 +184,18 @@ async def fetch_homebrew_cask(client: httpx.AsyncClient) -> list[dict[str, Any]]
     return _unique(records)
 
 
-async def fetch_apple_itunes(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Search Apple’s public Search API; store the app's own listing URL."""
+async def fetch_apple_itunes(
+    client: httpx.AsyncClient, *, entity: str | None = None,
+    source_key: str = "apple-itunes", platform: str = "ios",
+) -> list[dict[str, Any]]:
+    """Search Apple's public Search API for iOS or Mac software listings."""
     records = []
     for term in APPLE_SEARCH_TERMS:
         try:
             payload = await _get_json(
                 client, "https://itunes.apple.com/search",
-                params={"term": term, "country": APPLE_COUNTRY, "limit": APPLE_LIMIT, "media": "software"},
+                params={"term": term, "country": APPLE_COUNTRY, "limit": APPLE_LIMIT, "media": "software",
+                        **({"entity": entity} if entity else {})},
             )
         except (httpx.HTTPError, ValueError) as exc:
             log.warning("Apple Search API failed for %r: %s", term, exc)
@@ -205,13 +209,60 @@ async def fetch_apple_itunes(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                 continue
             track_url = item.get("trackViewUrl")
             record = _record(
-                "apple-itunes", item.get("trackId"), "ios", item.get("trackName"),
+                source_key, item.get("trackId"), platform, item.get("trackName"),
                 track_url, developer=item.get("artistName"),
                 summary=item.get("shortDescription"), description=item.get("description"),
                 category=(item.get("genres") or [None])[0],
                 app_url=track_url, icon_url=item.get("artworkUrl512") or item.get("artworkUrl100"),
                 metadata_json={"bundle_id": item.get("bundleId"), "version": item.get("version"),
                                "price": item.get("price"), "genres": item.get("genres")},
+            )
+            if record:
+                records.append(record)
+    return _unique(records)
+
+
+async def fetch_apple_macos(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Search Apple's public Search API for Mac App Store listings."""
+    return await fetch_apple_itunes(client, entity="macSoftware", source_key="apple-macos", platform="macos")
+
+
+SNAP_SEARCH_TERMS = [x.strip() for x in os.getenv(
+    "SNAP_SEARCH_TERMS", "browser,office,photo,video,education,security,finance,communication,developer,utilities"
+).split(",") if x.strip()]
+SNAP_LIMIT = max(1, min(int(os.getenv("SNAP_LIMIT", "50")), 100))
+
+
+async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Search the public Snap Store using snapd's documented /v2/find API."""
+    records = []
+    for term in SNAP_SEARCH_TERMS:
+        try:
+            payload = await _get_json(
+                client, "https://api.snapcraft.io/v2/snaps/find",
+                params={"q": term},
+                headers={"Snap-Device-Series": "16", "Accept": "application/json"},
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("Snap Store search failed for %r: %s", term, exc)
+            continue
+        items = payload.get("results", []) if isinstance(payload, dict) else []
+        for item in items[:SNAP_LIMIT] if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            name = item.get("name")
+            title = item.get("title") or name
+            publisher = item.get("publisher") or {}
+            media = item.get("media") or []
+            icon = next((m.get("url") for m in media if isinstance(m, dict) and m.get("type") == "icon"), None)
+            record = _record(
+                "snap-store", name, "linux", title,
+                f"https://snapcraft.io/{name}" if name else None,
+                developer=publisher.get("display-name") if isinstance(publisher, dict) else None,
+                summary=item.get("summary"), description=item.get("description"),
+                category=", ".join(item.get("categories") or []) if isinstance(item.get("categories"), list) else None,
+                icon_url=icon,
+                metadata_json={"snap_name": name, "snap_id": item.get("id"), "publisher": publisher},
             )
             if record:
                 records.append(record)
@@ -422,9 +473,11 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
         jobs = {
             "fdroid": fetch_fdroid(client),
             "izzyondroid": fetch_izzyondroid(client),
+            "snap-store": fetch_snap_store(client),
             "flathub": fetch_flathub(client),
             "homebrew-cask": fetch_homebrew_cask(client),
             "apple-itunes": fetch_apple_itunes(client),
+            "apple-macos": fetch_apple_macos(client),
             "winget-run-community": fetch_winget_community(client),
         }
         names = list(jobs)
