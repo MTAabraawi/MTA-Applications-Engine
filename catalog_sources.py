@@ -311,7 +311,8 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         try:
             payload = await _get_json(
                 client, "https://api.snapcraft.io/v2/snaps/find",
-                params={"q": term, "limit": SNAP_LIMIT},
+                params={"q": term, "limit": SNAP_LIMIT, "architecture": headers["Snap-Device-Architecture"],
+                        "fields": "name,title,summary,description,icon,publisher,store-url,version,channel,license,website,common-ids,confinement"},
                 headers=headers,
             )
         except (httpx.HTTPError, ValueError) as exc:
