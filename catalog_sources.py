@@ -294,6 +294,7 @@ async def fetch_fdroid(
     index_url: str = "https://f-droid.org/repo/index-v2.json",
     source_key: str = "fdroid",
     app_page_base: str = "https://f-droid.org/packages/",
+    app_page_suffix: str = "/",
     icon_base: str = "https://f-droid.org/repo/",
 ) -> list[dict[str, Any]]:
     """Fetch an F-Droid-compatible index without downloading installer files."""
@@ -382,7 +383,7 @@ async def fetch_fdroid(
         record = _record(
             source_key, package_id, "android",
             localized_text("name") or localized_text("title") or plain_text(metadata.get("name")) or package_id,
-            f"{app_page_base}{package_id}", 
+            f"{app_page_base}{package_id}{app_page_suffix}",
             developer=metadata.get("authorName") or metadata.get("author"),
             summary=summary, description=description,
             category=", ".join(str(x) for x in categories),
