@@ -24,6 +24,8 @@ async def main() -> None:
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if not any(item["count"] for item in report.values()):
         raise SystemExit("All upstream catalogue connectors returned zero records.")
+    if report.get("snap-store", {}).get("count", 0) == 0:
+        raise SystemExit("Snap Store live connector returned zero records; investigate the upstream API.")
 
 
 if __name__ == "__main__":
