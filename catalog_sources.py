@@ -467,6 +467,45 @@ async def fetch_izzyondroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     )
 
 
+STEAM_SEARCH_TERMS = [x.strip() for x in os.getenv(
+    "STEAM_SEARCH_TERMS",
+    "action,adventure,strategy,simulation,rpg,indie,sports,racing,free to play,multiplayer,puzzle,horror,platformer,sandbox,visual novel",
+).split(",") if x.strip()]
+
+
+async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Search Steam's public storefront JSON endpoint; results are query-limited, not exhaustive."""
+    records = []
+    for term in STEAM_SEARCH_TERMS:
+        try:
+            payload = await _get_json(
+                client, "https://store.steampowered.com/api/storesearch/",
+                params={"term": term, "l": "english", "cc": "us"},
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("Steam storefront search failed for %r: %s", term, exc)
+            continue
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            app_id = item.get("id")
+            name = item.get("name")
+            record = _record(
+                "steam", app_id, "pc-games", name,
+                f"https://store.steampowered.com/app/{app_id}/" if app_id else None,
+                icon_url=item.get("tiny_image"),
+                metadata_json={"steam_appid": app_id, "item_type": item.get("type"),
+                               "price": item.get("price"), "source_scope": "storefront_search"},
+            )
+            if record:
+                records.append(record)
+        await asyncio.sleep(0.15)
+    log.info("Steam storefront search: %d unique records across %d terms",
+             len(_unique(records)), len(STEAM_SEARCH_TERMS))
+    return _unique(records)
+
+
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
@@ -479,6 +518,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
             "apple-itunes": fetch_apple_itunes(client),
             "apple-macos": fetch_apple_macos(client),
             "winget-run-community": fetch_winget_community(client),
+            "steam": fetch_steam(client),
         }
         names = list(jobs)
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
