@@ -199,6 +199,8 @@ def test_snap_store_public_search_metadata_is_normalized():
             assert url == "https://api.snapcraft.io/v2/find"
             assert kwargs["params"]["q"]
             assert kwargs["headers"]["Snap-Device-Series"] == "16"
+            assert kwargs["headers"]["Snap-Device-Architecture"] == "amd64"
+            assert "fields" in kwargs["params"]
             return FakeResponse()
 
     records = asyncio.run(fetch_snap_store(FakeClient()))
