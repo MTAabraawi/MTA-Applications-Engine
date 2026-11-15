@@ -25,6 +25,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
       FLATHUB_MAX_APPS: "1000"
+      SNAP_LIMIT: "100"
       APPLE_LIMIT: "100"
       WINGET_LIMIT: "100"
     steps:
