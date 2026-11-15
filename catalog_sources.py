@@ -205,7 +205,7 @@ async def fetch_apple_itunes(
             if not isinstance(item, dict):
                 continue
             # Apple's Search API uses kind=software for app results.
-            if item.get("kind") not in (None, "software", "software-package"):
+            if item.get("kind") not in (None, "software", "software-package", "mac-software"):
                 continue
             track_url = item.get("trackViewUrl")
             record = _record(
