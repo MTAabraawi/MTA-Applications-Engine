@@ -45,6 +45,7 @@ jobs:
           APPLE_SEARCH_TERMS: browser,office,photo
           WINGET_SEARCH_TERMS: browser,office,developer
           ARCH_SEARCH_TERMS: browser,office,developer
+          DEBIAN_SEARCH_TERMS: browser,office,graphics
           SNAP_SEARCH_TERMS: browser,office,developer
           FLATHUB_MAX_APPS: "30"
         run: |
@@ -56,7 +57,7 @@ jobs:
           catalogues = asyncio.run(fetch_all_catalogs())
           expected = {
               "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
-              "apple-itunes", "apple-macos", "winget-run-community", "arch-linux", "steam", "mta-curated-web",
+              "apple-itunes", "apple-macos", "winget-run-community", "arch-linux", "debian-packages", "steam", "mta-curated-web",
           }
           report = {name: len(records) for name, records in catalogues.items()}
           print(json.dumps(report, ensure_ascii=False, indent=2))
