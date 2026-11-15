@@ -200,8 +200,9 @@
     "id": "steam",
     "name": "Steam",
     "platform": "pc-games",
-    "integration_mode": "external_only",
-    "reason": "Steam's documented bulk app-list endpoint returned HTTP 404; public storefront search is undocumented and incomplete."
+    "integration_mode": "live_api",
+    "reason": "Public Steam storefront JSON search endpoint; query-limited results only, not a complete inventory.",
+    "source_key": "steam"
   },
   {
     "id": "epic-games-store",
