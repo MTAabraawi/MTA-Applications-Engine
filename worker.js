@@ -172,7 +172,7 @@ async function debianPackages(env) {
       if(!res.ok)return null;
       const page=await res.text();
       if(!page.toLowerCase().includes("role::program"))return null;
-      const heading=page.match(/<h2[^>]*>\s*Links for [^<]*<\/h2>\s*<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      const heading=page.match(/<h2[^>]*>\s*Links for [^<]*<\/h2>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i);
       if(!heading)return null;
       const clean=value=>value.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<br\s*\/?>|<\/p>|<\/pre>|<\/li>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"').replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim();
       const summary=clean(heading[1]),start=heading.index+heading[0].length,tail=page.slice(start),related=tail.search(/<h2[^>]*>\s*Other Packages Related/i);
