@@ -277,3 +277,5 @@ def test_debian_package_connector_extracts_real_description_and_binary_size():
     assert "file archiver" in records[0]["summary"]
     assert records[0]["metadata_json"]["size_bytes"] == 1708851
     assert records[0]["metadata_json"]["version"] == "26.06+dfsg-1"
+
+# Debian package metadata parser regression coverage is included above.
