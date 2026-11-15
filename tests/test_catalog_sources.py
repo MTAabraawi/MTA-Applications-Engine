@@ -241,3 +241,39 @@ def test_arch_linux_public_package_search_metadata_and_size():
     assert records[0]["name"] == "sample-app"
     assert records[0]["source_url"] == "https://archlinux.org/packages/extra/x86_64/sample-app/"
     assert records[0]["metadata_json"]["size_bytes"] == 123456
+
+
+def test_debian_package_connector_extracts_real_description_and_binary_size():
+    import asyncio
+    from catalog_sources import fetch_debian_packages
+
+    class FakeResponse:
+        def __init__(self, payload=None, text=""):
+            self._payload, self.text = payload, text
+            self.status_code = 200
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            if "sources.debian.org/api/search/" in url:
+                return FakeResponse({"results": {"exact": {"name": "7zip"}, "other": []}})
+            return FakeResponse(text="""
+                <h2>Links for 7zip</h2>
+                <h2>7-Zip file archiver with a high compression ratio</h2>
+                <p>7-Zip is a file archiver with a high compression ratio.</p>
+                <p>Tags: role::program, works-with::archive</p>
+                <h2>Other Packages Related to 7zip</h2>
+                <h2>Download 7zip</h2>
+                <table><tr><th>amd64</th><td>1,668.8 kB</td><td>7,542.0 kB</td></tr></table>
+                <h1>Package: 7zip (26.06+dfsg-1)</h1>
+            """)
+    records = asyncio.run(fetch_debian_packages(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "debian-packages"
+    assert records[0]["name"] == "7zip"
+    assert "file archiver" in records[0]["summary"]
+    assert records[0]["metadata_json"]["size_bytes"] == 1708851
+    assert records[0]["metadata_json"]["version"] == "26.06+dfsg-1"
