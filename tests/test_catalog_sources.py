@@ -167,3 +167,69 @@ def test_fdroid_index_v2_field_locale_maps_resolve_english_text():
     assert records[0]["name"] == "Localized Reader"
     assert records[0]["summary"] == "Read books"
     assert records[0]["description"] == "A localized reading application"
+
+
+def test_snap_store_public_search_metadata_is_normalized():
+    import asyncio
+    from catalog_sources import fetch_snap_store
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [{
+                "id": "snap-unique-id",
+                "name": "sample-reader",
+                "title": "Sample Reader",
+                "summary": "Read documents",
+                "description": "A sample document reader",
+                "status": "available",
+                "store-url": "https://snapcraft.io/sample-reader",
+                "icon": "https://dashboard.snapcraft.io/site_media/sample.png",
+                "publisher": {"username": "sample-team", "display-name": "Sample Team"},
+                "version": "2.0",
+                "channel": "stable",
+                "license": "MIT",
+                "confinement": "strict",
+            }]
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            assert url == "https://api.snapcraft.io/v2/find"
+            assert kwargs["params"]["q"]
+            assert kwargs["headers"]["Snap-Device-Series"] == "16"
+            return FakeResponse()
+
+    records = asyncio.run(fetch_snap_store(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "snap-store"
+    assert records[0]["external_id"] == "snap-unique-id"
+    assert records[0]["name"] == "Sample Reader"
+    assert records[0]["platform"] == "linux"
+    assert records[0]["source_url"] == "https://snapcraft.io/sample-reader"
+    assert records[0]["developer"] == "Sample Team"
+    assert records[0]["metadata_json"]["version"] == "2.0"
+
+
+def test_snap_store_ignores_unavailable_or_invalid_entries():
+    import asyncio
+    from catalog_sources import fetch_snap_store
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [
+                {"id": "gone", "name": "gone", "title": "Gone", "status": "unavailable",
+                 "store-url": "https://snapcraft.io/gone"},
+                {"id": "bad", "name": "bad", "title": "Bad", "status": "available",
+                 "store-url": "http://snapcraft.io/bad"},
+            ]
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    assert asyncio.run(fetch_snap_store(FakeClient())) == []
