@@ -104,7 +104,7 @@ async function apple(env,entity=null,sourceKey="apple-itunes",platform="ios") {
     for(const x of p.results||[]){if(x.kind&&!["software","software-package","mac-software"].includes(x.kind))continue;
       out.push(record(sourceKey,x.trackId,platform,x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
         category:x.genres?.[0],app_url:x.trackViewUrl,icon_url:x.artworkUrl512||x.artworkUrl100,
-        metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres}}));}
+        metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres,size_bytes:x.fileSizeBytes??null}}));}
   }catch(e){console.log("Apple search failed",term,String(e));}}
   return unique(out);
 }
@@ -135,6 +135,22 @@ async function steam(env) {
   }catch(e){console.log("Steam storefront search failed",term,String(e));}
     await new Promise(resolve=>setTimeout(resolve,150));
   }
+  return unique(out);
+}
+async function archLinux(env) {
+  const terms=(env.ARCH_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://archlinux.org/packages/search/json/");u.searchParams.set("q",term.trim());
+    const p=await json(u.toString()),items=Array.isArray(p)?p:(p.results||p.packages||[]);
+    for(const x of items.slice(0,Math.max(1,Math.min(Number(env.ARCH_LIMIT||100),200)))){
+      const name=x.pkgname||x.name,repo=x.repo||"extra",arch=x.arch||"x86_64";if(!name)continue;
+      const rawSize=x.compressed_size??x.pkg_size??x.download_size,size=rawSize==null?null:Number(rawSize);
+      out.push(record("arch-linux",repo+"/"+arch+"/"+name,"linux",name,"https://archlinux.org/packages/"+repo+"/"+arch+"/"+name+"/",
+        {developer:x.packager,summary:x.pkgdesc||x.description,description:x.pkgdesc||x.description,
+         category:Array.isArray(x.groups)?x.groups.join(", "):null,license:Array.isArray(x.licenses)?x.licenses.join(", "):null,
+         metadata_json:{version:x.pkgver,repository:repo,architecture:arch,size_bytes:Number.isFinite(size)?size:null,last_updated:x.last_update,homepage:x.url}}));
+    }
+  }catch(e){console.log("Arch Linux package search failed",term,String(e));}}
   return unique(out);
 }
 async function winget(env) {
@@ -213,7 +229,7 @@ async function handle(request,env) {
     const where=clauses.length?"WHERE "+clauses.join(" AND ")+" ":"";
     const db=database(env);
     const totalRows=await queryWithRetry(env,"SELECT count(*)::int AS total FROM apps "+where);
-    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
+    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata AS metadata_json FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
     const rows=await queryWithRetry(env,sql);
     return response(rows,200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":String(totalRows[0]?.total||0)});
   }
@@ -235,7 +251,7 @@ async function handle(request,env) {
       if(!records.length)return response({detail:"F-Droid returned no usable application metadata"},502,origin);
       return response({source:"F-Droid",discovered:records.length,...await upsert(db,records),note:"Metadata only. No APK files were downloaded, mirrored, or hosted."},200,origin);
     }
-    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),steam:steam(env),"mta-curated-web":curated()};
+    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"arch-linux":archLinux(env),steam:steam(env),"mta-curated-web":curated()};
     const entries=await Promise.all(Object.entries(tasks).map(async pair=>[pair[0],await pair[1].catch(e=>{console.log("Catalogue failed",pair[0],String(e));return []})]));
     const summary={};
     for(const entry of entries){const key=entry[0],records=entry[1];try{summary[key]=Object.assign({fetched:records.length},await upsert(db,records));}catch(e){console.log("Database write failed",key,String(e));summary[key]={fetched:records.length,error:"Database write failed"};}}
