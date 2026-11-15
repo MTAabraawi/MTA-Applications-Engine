@@ -74,18 +74,18 @@ async function json(url) {
   if(!res.ok)throw new Error("HTTP "+res.status+" from "+new URL(url).hostname);
   return res.json();
 }
-async function fdroid() {
-  const payload=await json("https://f-droid.org/repo/index-v2.json"),apps=payload.apps||payload.packages||{};
+async function fdroid(indexUrl="https://f-droid.org/repo/index-v2.json",sourceKey="fdroid",appPageBase="https://f-droid.org/packages/",iconBase="https://f-droid.org/repo/") {
+  const payload=await json(indexUrl),apps=payload.apps||payload.packages||{};
   const entries=Array.isArray(apps)?apps.map(x=>[null,x]):Object.entries(apps),out=[];
   for(const pair of entries){
     const key=pair[0],entry=pair[1];if(!entry||typeof entry!=="object")continue;
     const m=entry.metadata&&typeof entry.metadata==="object"?entry.metadata:entry,loc=m.localized||{},en=loc["en-US"]||loc.en||{};
     const val=(k)=>{let x=en[k]??loc[k]??m[k];while(x&&typeof x==="object"&&!Array.isArray(x))x=x["en-US"]??x.en??Object.values(x)[0];return x??null;};
     const id=key||entry.packageName||entry.package_name||entry.id,iconName=findIconPath(en.icon??loc.icon??m.icon??entry.icon),cats=m.categories||[];
-    out.push(record("fdroid",id,"android",val("name")||val("title")||id,"https://f-droid.org/packages/"+id+"/",
+    out.push(record(sourceKey,id,"android",val("name")||val("title")||id,appPageBase+id+(appPageBase.includes("apt.izzysoft.de")?"":"/"),
       {developer:m.authorName||m.author,summary:val("summary")||val("short_description"),description:val("description")||val("full_description"),
        category:Array.isArray(cats)?cats.join(", "):cats,license:m.license,app_url:m.webSite||m.sourceCode,
-       icon_url:iconName?(String(iconName).startsWith("https://")?iconName:"https://f-droid.org/repo/"+String(iconName).replace(/^\/+/, "")):null,
+       icon_url:iconName?(String(iconName).startsWith("https://")?iconName:iconBase+String(iconName).replace(/^\/+/, "")):null,
        metadata_json:{package_name:id,source_code:m.sourceCode,issue_tracker:m.issueTracker,website:m.webSite,added:m.added||entry.added,last_updated:m.lastUpdated||entry.lastUpdated}}));
   }
   return unique(out);
@@ -95,17 +95,33 @@ async function homebrew() {
   return unique(items.map(x=>{const token=x.token,name=Array.isArray(x.name)?x.name[0]:token;return record("homebrew-cask",token,"macos",name,"https://formulae.brew.sh/cask/"+token,
     {summary:x.desc,description:x.desc,category:x.category,license:x.license,app_url:x.homepage,icon_url:x.artwork?.icon,metadata_json:{version:x.version,homepage:x.homepage,caveats:x.caveats}});}));
 }
-async function apple(env) {
+async function apple(env,entity=null,sourceKey="apple-itunes",platform="ios") {
   const terms=(env.APPLE_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather").split(","),out=[];
   for(const term of terms){try{
     const u=new URL("https://itunes.apple.com/search");u.searchParams.set("term",term.trim());u.searchParams.set("country",env.APPLE_COUNTRY||"us");
-    u.searchParams.set("limit",String(Math.max(1,Math.min(Number(env.APPLE_LIMIT||100),200))));u.searchParams.set("media","software");
+    u.searchParams.set("limit",String(Math.max(1,Math.min(Number(env.APPLE_LIMIT||100),200))));u.searchParams.set("media","software");if(entity)u.searchParams.set("entity",entity);
     const p=await json(u.toString());
     for(const x of p.results||[]){if(x.kind&&!["software","software-package"].includes(x.kind))continue;
-      out.push(record("apple-itunes",x.trackId,"ios",x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
+      out.push(record(sourceKey,x.trackId,platform,x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
         category:x.genres?.[0],app_url:x.trackViewUrl,icon_url:x.artworkUrl512||x.artworkUrl100,
         metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres}}));}
   }catch(e){console.log("Apple search failed",term,String(e));}}
+  return unique(out);
+}
+async function snapStore(env) {
+  const terms=(env.SNAP_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://api.snapcraft.io/v2/snaps/find");u.searchParams.set("q",term.trim());
+    const res=await fetch(u.toString(),{headers:{"user-agent":"MTA-Applications-Engine/0.3","Snap-Device-Series":"16","Accept":"application/json"}});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const p=await res.json(),items=p.results||[];
+    for(const x of items.slice(0,Math.max(1,Math.min(Number(env.SNAP_LIMIT||50),100)))){
+      const publisher=x.publisher||{},media=x.media||[],icon=media.find(m=>m.type==="icon")?.url,name=x.name;
+      out.push(record("snap-store",name,"linux",x.title||name,name?"https://snapcraft.io/"+name:null,{developer:publisher["display-name"],
+        summary:x.summary,description:x.description,category:Array.isArray(x.categories)?x.categories.join(", "):null,icon_url:icon,
+        metadata_json:{snap_name:name,snap_id:x.id,publisher:publisher}}));
+    }
+  }catch(e){console.log("Snap Store search failed",term,String(e));}}
   return unique(out);
 }
 async function winget(env) {
@@ -206,7 +222,7 @@ async function handle(request,env) {
       if(!records.length)return response({detail:"F-Droid returned no usable application metadata"},502,origin);
       return response({source:"F-Droid",discovered:records.length,...await upsert(db,records),note:"Metadata only. No APK files were downloaded, mirrored, or hosted."},200,origin);
     }
-    const tasks={fdroid:fdroid(),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"winget-run-community":winget(env),"mta-curated-web":curated()};
+    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"mta-curated-web":curated()};
     const entries=await Promise.all(Object.entries(tasks).map(async pair=>[pair[0],await pair[1].catch(e=>{console.log("Catalogue failed",pair[0],String(e));return []})]));
     const summary={};
     for(const entry of entries){const key=entry[0],records=entry[1];try{summary[key]=Object.assign({fetched:records.length},await upsert(db,records));}catch(e){console.log("Database write failed",key,String(e));summary[key]={fetched:records.length,error:"Database write failed"};}}
