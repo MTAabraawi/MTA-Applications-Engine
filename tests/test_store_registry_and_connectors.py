@@ -41,16 +41,19 @@ def test_snap_store_connector_uses_public_find_api_and_maps_listing_metadata(mon
 
     class FakeClient:
         headers_seen = None
+        params_seen = None
         url_seen = None
 
         async def get(self, url, **kwargs):
             self.url_seen = url
             self.headers_seen = kwargs.get("headers")
+            self.params_seen = kwargs.get("params")
             return FakeResponse()
 
     client = FakeClient()
     records = asyncio.run(catalog_sources.fetch_snap_store(client))
-    assert client.url_seen.startswith("https://api.snapcraft.io/v2/snaps/find?")
+    assert client.url_seen == "https://api.snapcraft.io/v2/snaps/find"
+    assert client.params_seen == {"q": "browser"}
     assert client.headers_seen["Snap-Device-Series"] == "16"
     assert len(records) == 1
     assert records[0]["source_key"] == "snap-store"
