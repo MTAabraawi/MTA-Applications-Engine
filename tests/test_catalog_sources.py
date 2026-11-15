@@ -216,7 +216,7 @@ def test_snap_store_public_search_metadata_is_normalized():
 
     class FakeClient:
         async def get(self, url, **kwargs):
-            assert url == "https://api.snapcraft.io/v2/find"
+            assert url == "https://api.snapcraft.io/v2/snaps/find"
             assert kwargs["params"]["q"]
             assert kwargs["headers"]["Snap-Device-Series"] == "16"
             assert kwargs["headers"]["Snap-Device-Architecture"] == "amd64"
