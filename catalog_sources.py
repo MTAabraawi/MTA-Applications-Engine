@@ -309,12 +309,16 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     }
     for term in SNAP_SEARCH_TERMS:
         try:
-            payload = await _get_json(
-                client, "https://api.snapcraft.io/v2/snaps/find",
+            response = await client.get(
+                "https://api.snapcraft.io/v2/snaps/find",
                 params={"q": term, "limit": SNAP_LIMIT, "architecture": headers["Snap-Device-Architecture"],
                         "fields": "name,title,summary,description,icon,publisher,store-url,version,channel,license,website,common-ids,confinement"},
                 headers=headers,
             )
+            if response.is_error:
+                log.warning("Snap Store API error for %r: HTTP %s %s", term, response.status_code, response.text[:800])
+            response.raise_for_status()
+            payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             log.warning("Snap Store search failed for %r: %s", term, exc)
             continue
