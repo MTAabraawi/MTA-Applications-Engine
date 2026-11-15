@@ -9,6 +9,7 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Source | Platform | Source type |
 |---|---|---|
 | F-Droid | Android | Public F-Droid repository index |
+| Snap Store | Linux | Official public Snap Store search API (search-term coverage; not a complete export) |
 | Flathub | Linux | Flathub AppStream catalogue |
 | WinGet community index | Windows | winget.run search API (third-party index) |
 | Homebrew Cask | macOS | Official Homebrew Cask JSON feed |
@@ -51,6 +52,7 @@ Optional catalogue controls:
 - `APPLE_COUNTRY`, `APPLE_SEARCH_TERMS`, `APPLE_LIMIT`
 - `WINGET_SEARCH_TERMS`, `WINGET_LIMIT`
 - `FLATHUB_MAX_APPS`, `CATALOG_CONCURRENCY`
+- `SNAP_SEARCH_TERMS`, `SNAP_LIMIT`, `SNAP_DEVICE_ARCHITECTURE`
 
 ## Run locally
 
