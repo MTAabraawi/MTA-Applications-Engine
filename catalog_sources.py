@@ -469,7 +469,7 @@ async def fetch_izzyondroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
 STEAM_SEARCH_TERMS = [x.strip() for x in os.getenv(
     "STEAM_SEARCH_TERMS",
-    "action,adventure,strategy,simulation,rpg,indie,sports,racing,free to play,multiplayer,puzzle,horror,platformer,sandbox,visual novel",
+    "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer",
 ).split(",") if x.strip()]
 
 
@@ -480,7 +480,7 @@ async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         try:
             payload = await _get_json(
                 client, "https://store.steampowered.com/api/storesearch/",
-                params={"term": term, "l": "english", "cc": "us"},
+                params={"term": term, "l": "english", "cc": "us"}, timeout=10,
             )
         except (httpx.HTTPError, ValueError) as exc:
             log.warning("Steam storefront search failed for %r: %s", term, exc)
