@@ -200,8 +200,9 @@
     "id": "steam",
     "name": "Steam",
     "platform": "pc-games",
-    "integration_mode": "external_only",
-    "reason": "No stable official bulk catalogue endpoint approved for ingestion in this batch."
+    "integration_mode": "live_api",
+    "reason": "Public Steam ISteamApps GetAppList v2 endpoint; imports app identifiers and names only.",
+    "source_key": "steam"
   },
   {
     "id": "epic-games-store",
