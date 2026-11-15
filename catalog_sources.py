@@ -311,7 +311,7 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         try:
             response = await client.get(
                 "https://api.snapcraft.io/v2/snaps/find",
-                params={"q": term, "limit": SNAP_LIMIT, "architecture": headers["Snap-Device-Architecture"],
+                params={"q": term, "architecture": headers["Snap-Device-Architecture"],
                         "fields": "name,title,summary,description,icon,publisher,store-url,version,channel,license,website,common-ids,confinement"},
                 headers=headers,
             )
