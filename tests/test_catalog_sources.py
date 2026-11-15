@@ -214,3 +214,30 @@ def test_izzyondroid_index_uses_independent_source_identity_and_listing_url():
     assert records[0]["name"] == "Izzy Example"
     assert records[0]["platform"] == "android"
     assert records[0]["source_url"] == "https://apt.izzysoft.de/fdroid/index/apk/org.example.izzy"
+
+
+def test_arch_linux_public_package_search_metadata_and_size():
+    import asyncio
+    from catalog_sources import fetch_arch_linux
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {"results": [{
+                "pkgname": "sample-app", "repo": "extra", "arch": "x86_64",
+                "pkgver": "1.2.3-1", "pkgdesc": "A sample desktop application",
+                "packager": "Arch Linux Team", "compressed_size": 123456,
+                "url": "https://example.org"
+            }]}
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_arch_linux(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "arch-linux"
+    assert records[0]["name"] == "sample-app"
+    assert records[0]["source_url"] == "https://archlinux.org/packages/extra/x86_64/sample-app/"
+    assert records[0]["metadata_json"]["size_bytes"] == 123456
