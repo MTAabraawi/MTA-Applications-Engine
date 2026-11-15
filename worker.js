@@ -78,7 +78,7 @@ async function snapStore(env) {
   const terms=(env.SNAP_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather").split(",");
   const limit=Math.max(1,Math.min(Number(env.SNAP_LIMIT||100),100)),out=[];
   for(const term of terms){try{
-    const u=new URL("https://api.snapcraft.io/v2/snaps/find");u.searchParams.set("q",term.trim());u.searchParams.set("architecture",env.SNAP_DEVICE_ARCHITECTURE||"amd64");u.searchParams.set("fields","name,title,summary,description,icon,publisher,store-url,version,channel,license,website,common-ids,confinement");
+    const u=new URL("https://api.snapcraft.io/v2/snaps/find");u.searchParams.set("q",term.trim());u.searchParams.set("architecture",env.SNAP_DEVICE_ARCHITECTURE||"amd64");u.searchParams.set("fields","title,summary,description,media,publisher,store-url,version,channel,license,website,common-ids,confinement");
     const res=await fetch(u.toString(),{headers:{
       "user-agent":"MTA-Applications-Engine/0.3",
       "Snap-Device-Series":"16",
@@ -89,11 +89,11 @@ async function snapStore(env) {
     if(!res.ok)throw new Error("HTTP "+res.status);
     const p=await res.json(),items=Array.isArray(p)?p:(p.results||p.snaps||p.data||[]);
     for(const x of items){if(!x||x.status==="unavailable")continue;
-      const pub=x.publisher||{},name=x.title||x.name,snapName=x.name;
+      const pub=x.publisher||{},name=x.title||x.name,snapName=x.name,media=x.media||[],icon=x.icon||(media.find(m=>m?.type==="icon")||{}).url;
       const url=x["store-url"]|| (snapName?"https://snapcraft.io/"+snapName:null);
       out.push(record("snap-store",x.id||snapName,"linux",name,url,{
         developer:pub["display-name"]||pub.username||x.developer,summary:x.summary,description:x.description,
-        license:x.license,app_url:x.website,icon_url:x.icon,
+        license:x.license,app_url:x.website,icon_url:icon,
         metadata_json:{snap_name:snapName,version:x.version,channel:x.channel,publisher:pub,
           common_ids:x["common-ids"],confinement:x.confinement}
       }));
