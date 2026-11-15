@@ -14,7 +14,7 @@ def test_store_registry_contains_all_32_requested_store_entries():
     live = {entry["source_key"] for entry in entries if entry.get("source_key")}
     assert {
         "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
-        "apple-itunes", "apple-macos", "winget-run-community", "mta-curated-web",
+        "apple-itunes", "apple-macos", "winget-run-community", "steam", "mta-curated-web",
     } <= live
 
 
@@ -94,3 +94,39 @@ def test_apple_macos_connector_uses_mac_software_entity(monkeypatch):
     assert records[0]["name"] == "Example Mac Editor"
 
 
+
+
+def test_steam_connector_uses_public_storefront_search(monkeypatch):
+    monkeypatch.setattr(catalog_sources, "STEAM_SEARCH_TERMS", ["strategy"])
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"items": [{
+                "id": 1234,
+                "name": "Example Strategy",
+                "type": "app",
+                "tiny_image": "https://cdn.example/steam.png",
+                "price": {"currency": "USD", "final": 999},
+            }]}
+
+    class FakeClient:
+        params_seen = None
+        url_seen = None
+
+        async def get(self, url, **kwargs):
+            self.url_seen = url
+            self.params_seen = kwargs.get("params")
+            return FakeResponse()
+
+    client = FakeClient()
+    records = asyncio.run(catalog_sources.fetch_steam(client))
+    assert client.url_seen == "https://store.steampowered.com/api/storesearch/"
+    assert client.params_seen == {"term": "strategy", "l": "english", "cc": "us"}
+    assert len(records) == 1
+    assert records[0]["source_key"] == "steam"
+    assert records[0]["external_id"] == "1234"
+    assert records[0]["platform"] == "pc-games"
+    assert records[0]["icon_url"] == "https://cdn.example/steam.png"
