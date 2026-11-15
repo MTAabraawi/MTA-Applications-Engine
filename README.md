@@ -9,6 +9,7 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Source | Platform | Source type |
 |---|---|---|
 | F-Droid | Android | Public F-Droid repository index |
+| IzzyOnDroid | Android | Independent F-Droid-compatible repository index |
 | Flathub | Linux | Flathub AppStream catalogue |
 | WinGet community index | Windows | winget.run search API (third-party index) |
 | Homebrew Cask | macOS | Official Homebrew Cask JSON feed |
