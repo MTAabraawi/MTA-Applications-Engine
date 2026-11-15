@@ -288,6 +288,63 @@ def fetch_curated_web_apps() -> list[dict[str, Any]]:
 
 
 
+SNAP_SEARCH_TERMS = [x.strip() for x in os.getenv(
+    "SNAP_SEARCH_TERMS",
+    "browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather",
+).split(",") if x.strip()]
+SNAP_LIMIT = max(1, min(int(os.getenv("SNAP_LIMIT", "100")), 100))
+
+
+async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Search the official public Snap Store API for stable public application metadata.
+
+    This is search-term indexing, not a complete export of the entire Snap Store.
+    """
+    records: list[dict[str, Any]] = []
+    headers = {
+        "Snap-Device-Series": "16",
+        "Snap-Device-Architecture": os.getenv("SNAP_DEVICE_ARCHITECTURE", "amd64"),
+        "Snap-Device-Store": "ubuntu",
+        "Accept": "application/json",
+    }
+    for term in SNAP_SEARCH_TERMS:
+        try:
+            payload = await _get_json(
+                client, "https://api.snapcraft.io/v2/find",
+                params={"q": term, "limit": SNAP_LIMIT},
+                headers=headers,
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("Snap Store search failed for %r: %s", term, exc)
+            continue
+        items = payload if isinstance(payload, list) else (
+            payload.get("results") or payload.get("snaps") or payload.get("data") or []
+            if isinstance(payload, dict) else []
+        )
+        for item in items:
+            if not isinstance(item, dict) or item.get("status", "available") != "available":
+                continue
+            publisher = item.get("publisher") or {}
+            publisher_name = publisher.get("display-name") or publisher.get("username") if isinstance(publisher, dict) else None
+            name = item.get("title") or item.get("name")
+            snap_name = item.get("name")
+            store_url = _https(item.get("store-url")) or (f"https://snapcraft.io/{snap_name}" if snap_name else None)
+            icon = item.get("icon")
+            record = _record(
+                "snap-store", item.get("id") or snap_name, "linux", name,
+                store_url, developer=publisher_name or item.get("developer"),
+                summary=item.get("summary"), description=item.get("description"),
+                license=item.get("license"), app_url=item.get("website"),
+                icon_url=icon,
+                metadata_json={"snap_name": snap_name, "version": item.get("version"),
+                               "channel": item.get("channel"), "publisher": publisher,
+                               "common_ids": item.get("common-ids"), "confinement": item.get("confinement")},
+            )
+            if record:
+                records.append(record)
+    return _unique(records)
+
+
 async def fetch_fdroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Fetch F-Droid index metadata; support array and keyed app catalogues."""
     try:
@@ -401,6 +458,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
             "fdroid": fetch_fdroid(client),
+            "snap-store": fetch_snap_store(client),
             "flathub": fetch_flathub(client),
             "homebrew-cask": fetch_homebrew_cask(client),
             "apple-itunes": fetch_apple_itunes(client),
