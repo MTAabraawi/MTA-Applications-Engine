@@ -55,7 +55,7 @@ jobs:
           catalogues = asyncio.run(fetch_all_catalogs())
           expected = {
               "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
-              "apple-itunes", "apple-macos", "winget-run-community", "mta-curated-web",
+              "apple-itunes", "apple-macos", "winget-run-community", "steam", "mta-curated-web",
           }
           report = {name: len(records) for name, records in catalogues.items()}
           print(json.dumps(report, ensure_ascii=False, indent=2))
