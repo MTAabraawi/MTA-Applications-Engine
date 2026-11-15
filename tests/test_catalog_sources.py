@@ -221,6 +221,7 @@ def test_snap_store_public_search_metadata_is_normalized():
             assert kwargs["headers"]["Snap-Device-Series"] == "16"
             assert kwargs["headers"]["Snap-Device-Architecture"] == "amd64"
             assert "fields" in kwargs["params"]
+            assert "limit" not in kwargs["params"]
             return FakeResponse()
 
     records = asyncio.run(fetch_snap_store(FakeClient()))
