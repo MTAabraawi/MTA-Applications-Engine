@@ -467,6 +467,37 @@ async def fetch_izzyondroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     )
 
 
+async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Fetch Steam's public app-name index; metadata only, without installer assets."""
+    try:
+        payload = await _get_json(client, "https://api.steampowered.com/ISteamApps/GetAppList/v2/")
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("Steam public app list failed: %s", exc)
+        return []
+    applist = payload.get("applist") if isinstance(payload, dict) else None
+    items = applist.get("apps") if isinstance(applist, dict) else None
+    if not isinstance(items, list):
+        log.warning("Steam returned an unrecognised app-list response")
+        return []
+    records = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        app_id = item.get("appid")
+        name = item.get("name")
+        if not app_id or not isinstance(name, str) or not name.strip():
+            continue
+        record = _record(
+            "steam", app_id, "pc-games", name,
+            f"https://store.steampowered.com/app/{app_id}/",
+            metadata_json={"steam_appid": app_id, "metadata_scope": "public_app_list"},
+        )
+        if record:
+            records.append(record)
+    log.info("Steam public app list: %d records from %d entries", len(records), len(items))
+    return _unique(records)
+
+
 async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
@@ -479,6 +510,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
             "apple-itunes": fetch_apple_itunes(client),
             "apple-macos": fetch_apple_macos(client),
             "winget-run-community": fetch_winget_community(client),
+            "steam": fetch_steam(client),
         }
         names = list(jobs)
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
