@@ -232,5 +232,13 @@
     "platform": "web",
     "integration_mode": "external_only",
     "reason": "Public API requires an approved developer token."
+  },
+  {
+    "id": "arch-linux",
+    "name": "Arch Linux Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Arch Linux documented public package search JSON interface.",
+    "source_key": "arch-linux"
   }
 ]
