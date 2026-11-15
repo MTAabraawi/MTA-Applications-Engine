@@ -125,7 +125,7 @@ async function snapStore(env) {
   return unique(out);
 }
 async function steam(env) {
-  const terms=(env.STEAM_SEARCH_TERMS||"action,adventure,strategy,simulation,rpg,indie,sports,racing,free to play,multiplayer,puzzle,horror,platformer,sandbox,visual novel").split(","),out=[];
+  const terms=(env.STEAM_SEARCH_TERMS||"action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer").split(","),out=[];
   for(const term of terms){try{
     const u=new URL("https://store.steampowered.com/api/storesearch/");
     u.searchParams.set("term",term.trim());u.searchParams.set("l","english");u.searchParams.set("cc","us");
