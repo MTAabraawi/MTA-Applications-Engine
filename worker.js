@@ -74,18 +74,18 @@ async function json(url) {
   if(!res.ok)throw new Error("HTTP "+res.status+" from "+new URL(url).hostname);
   return res.json();
 }
-async function fdroid() {
-  const payload=await json("https://f-droid.org/repo/index-v2.json"),apps=payload.apps||payload.packages||{};
+async function fdroid(indexUrl="https://f-droid.org/repo/index-v2.json",sourceKey="fdroid",appPageBase="https://f-droid.org/packages/",iconBase="https://f-droid.org/repo/") {
+  const payload=await json(indexUrl),apps=payload.apps||payload.packages||{};
   const entries=Array.isArray(apps)?apps.map(x=>[null,x]):Object.entries(apps),out=[];
   for(const pair of entries){
     const key=pair[0],entry=pair[1];if(!entry||typeof entry!=="object")continue;
     const m=entry.metadata&&typeof entry.metadata==="object"?entry.metadata:entry,loc=m.localized||{},en=loc["en-US"]||loc.en||{};
     const val=(k)=>{let x=en[k]??loc[k]??m[k];while(x&&typeof x==="object"&&!Array.isArray(x))x=x["en-US"]??x.en??Object.values(x)[0];return x??null;};
     const id=key||entry.packageName||entry.package_name||entry.id,iconName=findIconPath(en.icon??loc.icon??m.icon??entry.icon),cats=m.categories||[];
-    out.push(record("fdroid",id,"android",val("name")||val("title")||id,"https://f-droid.org/packages/"+id+"/",
+    out.push(record(sourceKey,id,"android",val("name")||val("title")||id,appPageBase+id+(appPageBase.includes("apt.izzysoft.de")?"":"/"),
       {developer:m.authorName||m.author,summary:val("summary")||val("short_description"),description:val("description")||val("full_description"),
        category:Array.isArray(cats)?cats.join(", "):cats,license:m.license,app_url:m.webSite||m.sourceCode,
-       icon_url:iconName?(String(iconName).startsWith("https://")?iconName:"https://f-droid.org/repo/"+String(iconName).replace(/^\/+/, "")):null,
+       icon_url:iconName?(String(iconName).startsWith("https://")?iconName:iconBase+String(iconName).replace(/^\/+/, "")):null,
        metadata_json:{package_name:id,source_code:m.sourceCode,issue_tracker:m.issueTracker,website:m.webSite,added:m.added||entry.added,last_updated:m.lastUpdated||entry.lastUpdated}}));
   }
   return unique(out);
@@ -95,19 +95,100 @@ async function homebrew() {
   return unique(items.map(x=>{const token=x.token,name=Array.isArray(x.name)?x.name[0]:token;return record("homebrew-cask",token,"macos",name,"https://formulae.brew.sh/cask/"+token,
     {summary:x.desc,description:x.desc,category:x.category,license:x.license,app_url:x.homepage,icon_url:x.artwork?.icon,metadata_json:{version:x.version,homepage:x.homepage,caveats:x.caveats}});}));
 }
-async function apple(env) {
+async function apple(env,entity=null,sourceKey="apple-itunes",platform="ios") {
   const terms=(env.APPLE_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather").split(","),out=[];
   for(const term of terms){try{
     const u=new URL("https://itunes.apple.com/search");u.searchParams.set("term",term.trim());u.searchParams.set("country",env.APPLE_COUNTRY||"us");
-    u.searchParams.set("limit",String(Math.max(1,Math.min(Number(env.APPLE_LIMIT||100),200))));u.searchParams.set("media","software");
+    u.searchParams.set("limit",String(Math.max(1,Math.min(Number(env.APPLE_LIMIT||100),200))));u.searchParams.set("media","software");if(entity)u.searchParams.set("entity",entity);
     const p=await json(u.toString());
-    for(const x of p.results||[]){if(x.kind&&!["software","software-package"].includes(x.kind))continue;
-      out.push(record("apple-itunes",x.trackId,"ios",x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
+    for(const x of p.results||[]){if(x.kind&&!["software","software-package","mac-software"].includes(x.kind))continue;
+      out.push(record(sourceKey,x.trackId,platform,x.trackName,x.trackViewUrl,{developer:x.artistName,summary:x.shortDescription,description:x.description,
         category:x.genres?.[0],app_url:x.trackViewUrl,icon_url:x.artworkUrl512||x.artworkUrl100,
-        metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres}}));}
+        metadata_json:{bundle_id:x.bundleId,version:x.version,price:x.price,genres:x.genres,size_bytes:x.fileSizeBytes??null}}));}
   }catch(e){console.log("Apple search failed",term,String(e));}}
   return unique(out);
 }
+async function snapStore(env) {
+  const terms=(env.SNAP_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://api.snapcraft.io/v2/snaps/find");u.searchParams.set("q",term.trim());
+    const res=await fetch(u.toString(),{headers:{"user-agent":"MTA-Applications-Engine/0.3","Snap-Device-Series":"16","Accept":"application/json"}});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const p=await res.json(),items=p.results||[];
+    for(const x of items.slice(0,Math.max(1,Math.min(Number(env.SNAP_LIMIT||50),100)))){
+      const publisher=x.publisher||{},media=x.media||[],icon=media.find(m=>m.type==="icon")?.url,name=x.name;
+      out.push(record("snap-store",name,"linux",x.title||name,name?"https://snapcraft.io/"+name:null,{developer:publisher["display-name"],
+        summary:x.summary,description:x.description,category:Array.isArray(x.categories)?x.categories.join(", "):null,icon_url:icon,
+        metadata_json:{snap_name:name,snap_id:x.id,publisher:publisher}}));
+    }
+  }catch(e){console.log("Snap Store search failed",term,String(e));}}
+  return unique(out);
+}
+async function steam(env) {
+  const terms=(env.STEAM_SEARCH_TERMS||"action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://store.steampowered.com/api/storesearch/");
+    u.searchParams.set("term",term.trim());u.searchParams.set("l","english");u.searchParams.set("cc","us");
+    const p=await json(u.toString()),items=p.items||[];
+    for(const x of items){out.push(record("steam",x.id,"pc-games",x.name,x.id?"https://store.steampowered.com/app/"+x.id+"/":null,
+      {icon_url:x.tiny_image,metadata_json:{steam_appid:x.id,item_type:x.type,price:x.price,source_scope:"storefront_search"}}));}
+  }catch(e){console.log("Steam storefront search failed",term,String(e));}
+    await new Promise(resolve=>setTimeout(resolve,150));
+  }
+  return unique(out);
+}
+async function archLinux(env) {
+  const terms=(env.ARCH_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
+  for(const term of terms){try{
+    const u=new URL("https://archlinux.org/packages/search/json/");u.searchParams.set("q",term.trim());
+    const p=await json(u.toString()),items=Array.isArray(p)?p:(p.results||p.packages||[]);
+    for(const x of items.slice(0,Math.max(1,Math.min(Number(env.ARCH_LIMIT||100),200)))){
+      const name=x.pkgname||x.name,repo=x.repo||"extra",arch=x.arch||"x86_64";if(!name)continue;
+      const rawSize=x.compressed_size??x.pkg_size??x.download_size,size=rawSize==null?null:Number(rawSize);
+      out.push(record("arch-linux",repo+"/"+arch+"/"+name,"linux",name,"https://archlinux.org/packages/"+repo+"/"+arch+"/"+name+"/",
+        {developer:x.packager,summary:x.pkgdesc||x.description,description:x.pkgdesc||x.description,
+         category:Array.isArray(x.groups)?x.groups.join(", "):null,license:Array.isArray(x.licenses)?x.licenses.join(", "):null,
+         metadata_json:{version:x.pkgver,repository:repo,architecture:arch,size_bytes:Number.isFinite(size)?size:null,last_updated:x.last_update,homepage:x.url}}));
+    }
+  }catch(e){console.log("Arch Linux package search failed",term,String(e));}}
+  return unique(out);
+}
+async function debianPackages(env) {
+  const terms=(env.DEBIAN_SEARCH_TERMS||"browser,office,graphics,video,audio,education,security,games,communication,utilities").split(",").map(x=>x.trim()).filter(Boolean);
+  const limit=Math.max(1,Math.min(Number(env.DEBIAN_LIMIT_PER_TERM||12),20)),names=[];
+  const searches=await Promise.all(terms.map(async term=>{
+    try{return await json("https://sources.debian.org/api/search/"+encodeURIComponent(term)+"/");}
+    catch(e){console.log("Debian package search failed",term,String(e));return null;}
+  }));
+  for(const payload of searches){const results=payload?.results||{},exact=results.exact,other=Array.isArray(results.other)?results.other:[];
+    if(exact?.name)names.push(String(exact.name));
+    for(const item of other.slice(0,limit))if(item?.name)names.push(String(item.name));
+  }
+  const uniqueNames=[...new Set(names)];
+  const records=await Promise.all(uniqueNames.map(async packageName=>{
+    try{
+      const url="https://packages.debian.org/sid/amd64/"+encodeURIComponent(packageName);
+      const res=await fetch(url,{headers:{"user-agent":"MTA-Applications-Engine/0.3"}});
+      if(!res.ok)return null;
+      const page=await res.text();
+      if(!page.toLowerCase().includes("role::program"))return null;
+      const heading=page.match(/<h2[^>]*>\s*Links for [^<]*<\/h2>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      if(!heading)return null;
+      const clean=value=>value.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<br\s*\/?>|<\/p>|<\/pre>|<\/li>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"').replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim();
+      const summary=clean(heading[1]),start=heading.index+heading[0].length,tail=page.slice(start),related=tail.search(/<h2[^>]*>\s*Other Packages Related/i);
+      let body=related>=0?tail.slice(0,related):tail;
+      body=body.replace(/<p[^>]*>\s*Tags:[\s\S]*$/i,"");
+      const description=clean(body).slice(0,6000)||summary;
+      const sizeMatch=page.match(/<th>\s*amd64\s*<\/th>\s*<td>\s*([\d,.]+)\s*(kB|MB|B)/i);
+      let sizeBytes=null;if(sizeMatch){const factor={b:1,kb:1024,mb:1048576}[sizeMatch[2].toLowerCase()];sizeBytes=Math.round(Number(sizeMatch[1].replace(/,/g,""))*factor);}
+      const versionMatch=page.match(/<h1>\s*Package:\s*[^<(]+\(([^)]+)\)/i);
+      return record("debian-packages",packageName,"linux",packageName,url,{summary,description,app_url:url,
+        metadata_json:{version:versionMatch?.[1]?.trim()||null,architecture:"amd64",size_bytes:sizeBytes,suite:"sid"}});
+    }catch(e){console.log("Debian package detail failed",packageName,String(e));return null;}
+  }));
+  return unique(records);
+}
+
 async function winget(env) {
   const terms=(env.WINGET_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities").split(","),out=[];
   for(const term of terms){try{
@@ -184,7 +265,7 @@ async function handle(request,env) {
     const where=clauses.length?"WHERE "+clauses.join(" AND ")+" ":"";
     const db=database(env);
     const totalRows=await queryWithRetry(env,"SELECT count(*)::int AS total FROM apps "+where);
-    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
+    const sql="SELECT id,source_key AS source,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata AS metadata_json FROM apps "+where+"ORDER BY name,platform,source_key,external_id LIMIT "+limit+" OFFSET "+offset;
     const rows=await queryWithRetry(env,sql);
     return response(rows,200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":String(totalRows[0]?.total||0)});
   }
@@ -206,7 +287,7 @@ async function handle(request,env) {
       if(!records.length)return response({detail:"F-Droid returned no usable application metadata"},502,origin);
       return response({source:"F-Droid",discovered:records.length,...await upsert(db,records),note:"Metadata only. No APK files were downloaded, mirrored, or hosted."},200,origin);
     }
-    const tasks={fdroid:fdroid(),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"winget-run-community":winget(env),"mta-curated-web":curated()};
+    const tasks={fdroid:fdroid(),"izzyondroid":fdroid("https://apt.izzysoft.de/fdroid/repo/index-v2.json","izzyondroid","https://apt.izzysoft.de/fdroid/index/apk/","https://apt.izzysoft.de/fdroid/repo/"),"snap-store":snapStore(env),flathub:flathub(env),"homebrew-cask":homebrew(),"apple-itunes":apple(env),"apple-macos":apple(env,"macSoftware","apple-macos","macos"),"winget-run-community":winget(env),"arch-linux":archLinux(env),"debian-packages":debianPackages(env),steam:steam(env),"mta-curated-web":curated()};
     const entries=await Promise.all(Object.entries(tasks).map(async pair=>[pair[0],await pair[1].catch(e=>{console.log("Catalogue failed",pair[0],String(e));return []})]));
     const summary={};
     for(const entry of entries){const key=entry[0],records=entry[1];try{summary[key]=Object.assign({fetched:records.length},await upsert(db,records));}catch(e){console.log("Database write failed",key,String(e));summary[key]={fetched:records.length,error:"Database write failed"};}}

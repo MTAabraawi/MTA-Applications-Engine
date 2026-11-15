@@ -167,3 +167,115 @@ def test_fdroid_index_v2_field_locale_maps_resolve_english_text():
     assert records[0]["name"] == "Localized Reader"
     assert records[0]["summary"] == "Read books"
     assert records[0]["description"] == "A localized reading application"
+
+
+
+def test_izzyondroid_index_uses_independent_source_identity_and_listing_url():
+    import asyncio
+    from catalog_sources import fetch_izzyondroid
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "repo": {"name": "IzzyOnDroid"},
+                "packages": {
+                    "org.example.izzy": {
+                        "metadata": {
+                            "license": "MIT",
+                            "authorName": "Example Developer",
+                            "localized": {
+                                "name": {"en-US": "Izzy Example"},
+                                "summary": {"en-US": "An example Android app"},
+                                "description": {"en-US": "Metadata from IzzyOnDroid"},
+                            },
+                            "categories": ["Tools"],
+                        },
+                        "versions": {},
+                    }
+                },
+            }
+
+    class FakeClient:
+        requested_url = None
+
+        async def get(self, url, **kwargs):
+            self.requested_url = url
+            return FakeResponse()
+
+    client = FakeClient()
+    records = asyncio.run(fetch_izzyondroid(client))
+    assert client.requested_url == "https://apt.izzysoft.de/fdroid/repo/index-v2.json"
+    assert len(records) == 1
+    assert records[0]["source_key"] == "izzyondroid"
+    assert records[0]["external_id"] == "org.example.izzy"
+    assert records[0]["name"] == "Izzy Example"
+    assert records[0]["platform"] == "android"
+    assert records[0]["source_url"] == "https://apt.izzysoft.de/fdroid/index/apk/org.example.izzy"
+
+
+def test_arch_linux_public_package_search_metadata_and_size():
+    import asyncio
+    from catalog_sources import fetch_arch_linux
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {"results": [{
+                "pkgname": "sample-app", "repo": "extra", "arch": "x86_64",
+                "pkgver": "1.2.3-1", "pkgdesc": "A sample desktop application",
+                "packager": "Arch Linux Team", "compressed_size": 123456,
+                "url": "https://example.org"
+            }]}
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            return FakeResponse()
+
+    records = asyncio.run(fetch_arch_linux(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "arch-linux"
+    assert records[0]["name"] == "sample-app"
+    assert records[0]["source_url"] == "https://archlinux.org/packages/extra/x86_64/sample-app/"
+    assert records[0]["metadata_json"]["size_bytes"] == 123456
+
+
+def test_debian_package_connector_extracts_real_description_and_binary_size():
+    import asyncio
+    from catalog_sources import fetch_debian_packages
+
+    class FakeResponse:
+        def __init__(self, payload=None, text=""):
+            self._payload, self.text = payload, text
+            self.status_code = 200
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        async def get(self, url, **kwargs):
+            if "sources.debian.org/api/search/" in url:
+                return FakeResponse({"results": {"exact": {"name": "7zip"}, "other": []}})
+            return FakeResponse(text="""
+                <h2>Links for 7zip</h2>
+                <h2>7-Zip file archiver with a high compression ratio</h2>
+                <p>7-Zip is a file archiver with a high compression ratio.</p>
+                <p>Tags: role::program, works-with::archive</p>
+                <h2>Other Packages Related to 7zip</h2>
+                <h2>Download 7zip</h2>
+                <table><tr><th>amd64</th><td>1,668.8 kB</td><td>7,542.0 kB</td></tr></table>
+                <h1>Package: 7zip (26.06+dfsg-1)</h1>
+            """)
+    records = asyncio.run(fetch_debian_packages(FakeClient()))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "debian-packages"
+    assert records[0]["name"] == "7zip"
+    assert "file archiver" in records[0]["summary"]
+    assert records[0]["metadata_json"]["size_bytes"] == 1708851
+    assert records[0]["metadata_json"]["version"] == "26.06+dfsg-1"
+
+# Debian package metadata parser regression coverage is included above.

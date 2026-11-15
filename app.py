@@ -182,7 +182,7 @@ def list_apps(
         "platform": x.platform, "name": x.name, "developer": x.developer,
         "summary": x.summary, "description": x.description, "category": x.category,
         "license": x.license, "source_url": x.source_url, "app_url": x.app_url,
-        "icon_url": x.icon_url, "first_seen_at": x.first_seen_at, "updated_at": x.updated_at
+        "icon_url": x.icon_url, "metadata_json": x.metadata_json, "first_seen_at": x.first_seen_at, "updated_at": x.updated_at
     } for x in rows]
 
 

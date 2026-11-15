@@ -9,11 +9,17 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Source | Platform | Source type |
 |---|---|---|
 | F-Droid | Android | Public F-Droid repository index |
+| IzzyOnDroid | Android | Independent F-Droid-compatible repository index |
+| Snap Store | Linux | Public snapd `/v2/find` search API |
 | Flathub | Linux | Flathub AppStream catalogue |
 | WinGet community index | Windows | winget.run search API (third-party index) |
+| Steam storefront search | PC games | Public storefront JSON search by configured terms; partial coverage, not a full inventory |
 | Homebrew Cask | macOS | Official Homebrew Cask JSON feed |
-| Apple Search API | iOS | Apple public Search API, country configurable |
+| Apple App Store | iOS | Apple public Search API, country configurable |
+| Mac App Store | macOS | Apple public Search API with `macSoftware` entity |
 | MTA curated web catalogue | Web | Maintained in `web_apps.json` |
+
+The complete 32-store directory and each store's integration state are maintained in `store_sources.json`. Only entries marked `live_api` are included in ingestion; `external_only` entries remain direct links until a supported public API or approved partner feed is available. This prevents a store link from being misrepresented as an indexed catalogue.
 
 Connectors fail independently. A temporary outage at one source should not stop ingestion from the others. Results are deduplicated by source key and external identifier, and non-HTTPS source links are rejected.
 

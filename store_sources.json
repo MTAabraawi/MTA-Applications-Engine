@@ -1,0 +1,252 @@
+[
+  {
+    "id": "google-play",
+    "name": "Google Play",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue feed for bulk metadata ingestion."
+  },
+  {
+    "id": "apkmirror",
+    "name": "APKMirror",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue API verified."
+  },
+  {
+    "id": "apkpure",
+    "name": "APKPure",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue API verified."
+  },
+  {
+    "id": "uptodown",
+    "name": "Uptodown",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue API verified."
+  },
+  {
+    "id": "aptoide",
+    "name": "Aptoide",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Partner/developer access is required for a reliable catalogue feed."
+  },
+  {
+    "id": "amazon-appstore",
+    "name": "Amazon Appstore",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue feed verified."
+  },
+  {
+    "id": "fdroid",
+    "name": "F-Droid",
+    "platform": "android",
+    "integration_mode": "live_api",
+    "reason": "Public F-Droid v2 repository index.",
+    "source_key": "fdroid"
+  },
+  {
+    "id": "huawei-appgallery",
+    "name": "Huawei AppGallery",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue feed verified."
+  },
+  {
+    "id": "samsung-galaxy-store",
+    "name": "Samsung Galaxy Store",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue feed verified."
+  },
+  {
+    "id": "xiaomi-getapps",
+    "name": "Xiaomi GetApps",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue feed verified."
+  },
+  {
+    "id": "oppo-app-market",
+    "name": "OPPO App Market",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue feed verified."
+  },
+  {
+    "id": "vivo-app-store",
+    "name": "Vivo App Store",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue feed verified."
+  },
+  {
+    "id": "one-store",
+    "name": "ONE Store",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue feed verified."
+  },
+  {
+    "id": "taptap",
+    "name": "TapTap",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue API verified."
+  },
+  {
+    "id": "qooapp",
+    "name": "QooApp",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No supported public catalogue API verified."
+  },
+  {
+    "id": "izzyondroid",
+    "name": "IzzyOnDroid",
+    "platform": "android",
+    "integration_mode": "live_api",
+    "reason": "Independent F-Droid-compatible public repository index.",
+    "source_key": "izzyondroid"
+  },
+  {
+    "id": "accrescent",
+    "name": "Accrescent",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "No public third-party catalogue API; not an F-Droid-compatible feed."
+  },
+  {
+    "id": "aurora-store",
+    "name": "Aurora Store",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Alternative Google Play client, not an independent catalogue source."
+  },
+  {
+    "id": "apple-itunes",
+    "name": "Apple App Store",
+    "platform": "ios",
+    "integration_mode": "live_api",
+    "reason": "Apple public Search API.",
+    "source_key": "apple-itunes"
+  },
+  {
+    "id": "microsoft-store",
+    "name": "Microsoft Store",
+    "platform": "windows",
+    "integration_mode": "external_only",
+    "reason": "No supported public bulk catalogue API verified."
+  },
+  {
+    "id": "winget-run-community",
+    "name": "WinGet",
+    "platform": "windows",
+    "integration_mode": "live_api",
+    "reason": "Community search API; not the official Microsoft Store.",
+    "source_key": "winget-run-community"
+  },
+  {
+    "id": "chocolatey",
+    "name": "Chocolatey",
+    "platform": "windows",
+    "integration_mode": "external_only",
+    "reason": "Chocolatey recommends supported CLI clients; custom automated OData querying is not guaranteed."
+  },
+  {
+    "id": "flathub",
+    "name": "Flathub",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Flathub AppStream API.",
+    "source_key": "flathub"
+  },
+  {
+    "id": "snap-store",
+    "name": "Snap Store",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Public snapd /v2/find endpoint.",
+    "source_key": "snap-store"
+  },
+  {
+    "id": "ubuntu-app-center",
+    "name": "Ubuntu App Center",
+    "platform": "linux",
+    "integration_mode": "external_only",
+    "reason": "No separate public catalogue feed verified; overlaps underlying package sources."
+  },
+  {
+    "id": "apple-macos",
+    "name": "Mac App Store",
+    "platform": "macos",
+    "integration_mode": "live_api",
+    "reason": "Apple public Search API with macSoftware entity.",
+    "source_key": "apple-macos"
+  },
+  {
+    "id": "homebrew-cask",
+    "name": "Homebrew",
+    "platform": "macos",
+    "integration_mode": "live_api",
+    "reason": "Official Homebrew Cask JSON feed.",
+    "source_key": "homebrew-cask"
+  },
+  {
+    "id": "steam",
+    "name": "Steam",
+    "platform": "pc-games",
+    "integration_mode": "live_api",
+    "reason": "Public Steam storefront JSON search endpoint; query-limited results only, not a complete inventory.",
+    "source_key": "steam"
+  },
+  {
+    "id": "epic-games-store",
+    "name": "Epic Games Store",
+    "platform": "pc-games",
+    "integration_mode": "external_only",
+    "reason": "No supported public bulk catalogue API verified."
+  },
+  {
+    "id": "gog",
+    "name": "GOG",
+    "platform": "pc-games",
+    "integration_mode": "external_only",
+    "reason": "No supported public bulk catalogue API verified."
+  },
+  {
+    "id": "mta-curated-web",
+    "name": "MTA Web Apps",
+    "platform": "web",
+    "integration_mode": "live_api",
+    "reason": "MTA-maintained curated web application metadata.",
+    "source_key": "mta-curated-web"
+  },
+  {
+    "id": "product-hunt",
+    "name": "Product Hunt",
+    "platform": "web",
+    "integration_mode": "external_only",
+    "reason": "Public API requires an approved developer token."
+  },
+  {
+    "id": "arch-linux",
+    "name": "Arch Linux Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Arch Linux documented public package search JSON interface.",
+    "source_key": "arch-linux"
+  },
+  {
+    "id": "debian-packages",
+    "name": "Debian Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Debian Sources public package search API plus official Debian package detail pages.",
+    "source_key": "debian-packages"
+  }
+]
