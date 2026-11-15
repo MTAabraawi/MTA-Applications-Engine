@@ -78,7 +78,7 @@ async function snapStore(env) {
   const terms=(env.SNAP_SEARCH_TERMS||"browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather").split(",");
   const limit=Math.max(1,Math.min(Number(env.SNAP_LIMIT||100),100)),out=[];
   for(const term of terms){try{
-    const u=new URL("https://api.snapcraft.io/v2/find");u.searchParams.set("q",term.trim());u.searchParams.set("limit",String(limit));
+    const u=new URL("https://api.snapcraft.io/v2/snaps/find");u.searchParams.set("q",term.trim());u.searchParams.set("limit",String(limit));
     const res=await fetch(u.toString(),{headers:{
       "user-agent":"MTA-Applications-Engine/0.3",
       "Snap-Device-Series":"16",
