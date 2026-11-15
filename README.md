@@ -13,7 +13,6 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Snap Store | Linux | Public snapd `/v2/find` search API |
 | Flathub | Linux | Flathub AppStream catalogue |
 | WinGet community index | Windows | winget.run search API (third-party index) |
-| Steam | PC games/software | Public Steam app-name index; listing metadata only |
 | Homebrew Cask | macOS | Official Homebrew Cask JSON feed |
 | Apple App Store | iOS | Apple public Search API, country configurable |
 | Mac App Store | macOS | Apple public Search API with `macSoftware` entity |
