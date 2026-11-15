@@ -29,6 +29,8 @@ WINGET_SEARCH_TERMS = [x.strip() for x in os.getenv(
 ).split(",") if x.strip()]
 APPLE_LIMIT = max(1, min(int(os.getenv("APPLE_LIMIT", "100")), 200))
 WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "24")), 24))
+ARCH_SEARCH_TERMS = [x.strip() for x in os.getenv("ARCH_SEARCH_TERMS", "browser,office,photo,video,education,security,finance,communication,developer,utilities").split(",") if x.strip()]
+ARCH_LIMIT = max(1, min(int(os.getenv("ARCH_LIMIT", "100")), 200))
 FLATHUB_MAX_APPS = max(1, min(int(os.getenv("FLATHUB_MAX_APPS", "1000")), 5000))
 CONCURRENCY = max(1, min(int(os.getenv("CATALOG_CONCURRENCY", "6")), 12))
 TIMEOUT = httpx.Timeout(30.0, connect=10.0)
@@ -215,7 +217,7 @@ async def fetch_apple_itunes(
                 category=(item.get("genres") or [None])[0],
                 app_url=track_url, icon_url=item.get("artworkUrl512") or item.get("artworkUrl100"),
                 metadata_json={"bundle_id": item.get("bundleId"), "version": item.get("version"),
-                               "price": item.get("price"), "genres": item.get("genres")},
+                               "price": item.get("price"), "genres": item.get("genres"), "size_bytes": item.get("fileSizeBytes")},
             )
             if record:
                 records.append(record)
@@ -263,6 +265,44 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                 category=", ".join(item.get("categories") or []) if isinstance(item.get("categories"), list) else None,
                 icon_url=icon,
                 metadata_json={"snap_name": name, "snap_id": item.get("id"), "publisher": publisher},
+            )
+            if record:
+                records.append(record)
+    return _unique(records)
+
+
+async def fetch_arch_linux(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Search Arch Linux's documented public package JSON interface."""
+    records = []
+    for term in ARCH_SEARCH_TERMS:
+        try:
+            payload = await _get_json(client, "https://archlinux.org/packages/search/json/", params={"q": term})
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("Arch Linux package search failed for %r: %s", term, exc)
+            continue
+        items = payload if isinstance(payload, list) else (payload.get("results") or payload.get("packages") or [] if isinstance(payload, dict) else [])
+        for item in items[:ARCH_LIMIT] if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            package = item.get("pkgname") or item.get("name")
+            repo = item.get("repo") or "extra"
+            arch = item.get("arch") or "x86_64"
+            if not package:
+                continue
+            raw_size = item.get("compressed_size") or item.get("pkg_size") or item.get("download_size")
+            try:
+                size = int(raw_size) if raw_size is not None else None
+            except (TypeError, ValueError):
+                size = None
+            record = _record(
+                "arch-linux", f"{repo}/{arch}/{package}", "linux", package,
+                f"https://archlinux.org/packages/{repo}/{arch}/{package}/",
+                developer=item.get("packager"), summary=item.get("pkgdesc") or item.get("description"),
+                description=item.get("pkgdesc") or item.get("description"),
+                category=", ".join(item.get("groups") or []) if isinstance(item.get("groups"), list) else None,
+                license=", ".join(item.get("licenses") or []) if isinstance(item.get("licenses"), list) else None,
+                metadata_json={"version": item.get("pkgver"), "repository": repo, "architecture": arch,
+                               "size_bytes": size, "last_updated": item.get("last_update"), "homepage": item.get("url")},
             )
             if record:
                 records.append(record)
@@ -518,6 +558,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
             "apple-itunes": fetch_apple_itunes(client),
             "apple-macos": fetch_apple_macos(client),
             "winget-run-community": fetch_winget_community(client),
+            "arch-linux": fetch_arch_linux(client),
             "steam": fetch_steam(client),
         }
         names = list(jobs)
