@@ -310,7 +310,7 @@ async def fetch_snap_store(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     for term in SNAP_SEARCH_TERMS:
         try:
             payload = await _get_json(
-                client, "https://api.snapcraft.io/v2/find",
+                client, "https://api.snapcraft.io/v2/snaps/find",
                 params={"q": term, "limit": SNAP_LIMIT},
                 headers=headers,
             )
