@@ -411,6 +411,7 @@ async def fetch_izzyondroid(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         index_url="https://apt.izzysoft.de/fdroid/repo/index-v2.json",
         source_key="izzyondroid",
         app_page_base="https://apt.izzysoft.de/fdroid/index/apk/",
+        app_page_suffix="",
         icon_base="https://apt.izzysoft.de/fdroid/repo/",
     )
 
