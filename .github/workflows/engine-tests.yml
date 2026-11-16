@@ -6,9 +6,11 @@ on:
     paths:
       - "catalog_sources.py"
       - "expanded_catalog_sources.py"
+      - "open_catalog_sources.py"
       - "sync_catalogs.py"
       - ".github/workflows/catalogue-sync.yml"
       - "store_sources.json"
+      - "scripts/smoke_catalog_sources.py"
       - "tests/**"
       - "app.py"
       - "worker.js"
@@ -89,7 +91,7 @@ jobs:
           print(f"IzzyOnDroid live index OK: {len(apps)} entries")
           PY
       - name: Check Python syntax
-        run: python -m py_compile app.py catalog_sources.py sync_catalogs.py
+        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py
       - uses: actions/setup-node@v4
         with:
           node-version: 22
