@@ -120,17 +120,19 @@ def test_google_play_appbrain_paginates_and_preserves_full_metadata(monkeypatch)
     def handler(url, kwargs):
         params = kwargs["params"]
         if params["offset"] == 0:
-            return {"apps": [{
+            apps = [{
                 "package": "com.example.game", "name": "Example Game",
                 "developer": "Example Studio", "shortDescription": "A game",
                 "description": "Full description", "versionString": "2.0",
                 "rating": 4.7, "iconUrl": "https://cdn.example/icon.png",
                 "featureGraphicUrl": "https://cdn.example/feature.png",
-            }]}
+            }]
+            apps.extend({"package": f"com.example.game{n}", "name": f"Example Game {n}"} for n in range(1, 50))
+            return {"apps": apps}
         return {"apps": []}
     client = FakeClient(handler)
     records = asyncio.run(fetch_google_play_appbrain(client))
-    assert len(records) == 1
+    assert len(records) == 50
     assert records[0]["source_key"] == "google-play"
     assert records[0]["source_url"] == "https://play.google.com/store/apps/details?id=com.example.game"
     assert records[0]["metadata_json"]["featureGraphicUrl"] == "https://cdn.example/feature.png"
