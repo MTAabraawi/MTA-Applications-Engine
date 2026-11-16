@@ -353,7 +353,7 @@ async def _fetch_appbrain_platform(
                     if not track_id.isdigit():
                         continue
                     external_id = track_id
-                    listing_url = f"https://apps.apple.com/app/id{track_id}"
+                    listing_url = item.get("appStoreUrl") or f"https://apps.apple.com/app/id{track_id}"
                     record_platform = "ios"
                 else:
                     if not package:
@@ -368,7 +368,7 @@ async def _fetch_appbrain_platform(
                 metadata["appbrain_platform"] = platform
                 record = _record(
                     source_key, external_id, record_platform, name, listing_url,
-                    developer=item.get("developer") or item.get("publisher") or item.get("artistName"),
+                    developer=item.get("developerName") or item.get("developer") or item.get("publisher") or item.get("artistName"),
                     summary=item.get("shortDescription"), description=item.get("description"),
                     category=item.get("marketCategory") or category,
                     icon_url=item.get("iconUrl") or item.get("icon") or item.get("iconURL"),

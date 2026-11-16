@@ -147,7 +147,7 @@ def test_apple_appbrain_uses_ios_platform_and_app_store_listing(monkeypatch):
     monkeypatch.setenv("APPBRAIN_ENABLE_IOS", "true")
     client = FakeClient(lambda url, kwargs: {"apps": [{
         "package": "ios-123456789", "trackId": "123456789", "name": "Example iOS App",
-        "artistName": "Example Developer", "description": "iOS description",
+        "artistName": "Example Developer", "developerName": "AppBrain Developer", "appStoreUrl": "https://apps.apple.com/us/app/example/id123456789", "description": "iOS description",
         "iconUrl": "https://cdn.example/ios.png", "price": "$0.00",
     }]})
     records = asyncio.run(fetch_apple_appbrain(client))
@@ -155,7 +155,8 @@ def test_apple_appbrain_uses_ios_platform_and_app_store_listing(monkeypatch):
     assert records[0]["source_key"] == "apple-itunes"
     assert records[0]["external_id"] == "123456789"
     assert records[0]["platform"] == "ios"
-    assert records[0]["source_url"] == "https://apps.apple.com/app/id123456789"
+    assert records[0]["source_url"] == "https://apps.apple.com/us/app/example/id123456789"
+    assert records[0]["developer"] == "AppBrain Developer"
     assert client.calls[0][1]["params"]["platform"] == "IOS"
     assert records[0]["metadata_json"]["price"] == "$0.00"
 
