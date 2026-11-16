@@ -27,6 +27,33 @@ HEADERS = {
 }
 
 
+async def _get_with_retry(client: httpx.AsyncClient, url: str, **kwargs: Any) -> httpx.Response:
+    """Retry transient upstream failures and respect Retry-After when supplied."""
+    response = None
+    for attempt in range(4):
+        try:
+            response = await client.get(url, **kwargs)
+        except httpx.HTTPError:
+            if attempt == 3:
+                raise
+            await asyncio.sleep(min(2 ** attempt, 20))
+            continue
+        status = getattr(response, "status_code", 200)
+        if status == 429 or status in (500, 502, 503, 504):
+            if attempt == 3:
+                return response
+            headers = getattr(response, "headers", {}) or {}
+            retry_after = headers.get("Retry-After") if hasattr(headers, "get") else None
+            try:
+                delay = float(retry_after) if retry_after is not None else float(2 ** attempt)
+            except (TypeError, ValueError):
+                delay = float(2 ** attempt)
+            await asyncio.sleep(min(max(delay, 1.0), 30.0))
+            continue
+        return response
+    return response
+
+
 def _text(value: Any) -> str | None:
     if isinstance(value, str):
         value = value.strip()
@@ -80,6 +107,7 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """
     max_apps = max(100, min(int(os.getenv("BLUEJETTY_MAX_APPS", "200000")), 300000))
     page_size = 100
+    page_delay = max(0.25, min(float(os.getenv("BLUEJETTY_PAGE_DELAY", "0.55")), 5.0))
     url = "https://bluejetty.ai/v1/apps?limit=100"
     seen_apps: set[str] = set()
     records: list[dict[str, Any]] = []
@@ -88,7 +116,7 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
     while url and len(seen_apps) < max_apps:
         try:
-            response = await client.get(url, timeout=TIMEOUT, headers=HEADERS)
+            response = await _get_with_retry(client, url, timeout=TIMEOUT, headers=HEADERS)
             if response.status_code == 409 and not restart_used:
                 restart_used = True
                 url = "https://bluejetty.ai/v1/apps?limit=100"
@@ -147,7 +175,7 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                     summary=item.get("summary") or item.get("tagline"),
                     description=item.get("description"),
                     category=item.get("category") or item.get("primaryCategory"),
-                    app_url=listing_url if destinations else item.get("website"),
+                    app_url=item.get("websiteUrl") or item.get("website") or (listing_url if destinations else None),
                     icon_url=item.get("iconUrl") or item.get("icon_url") or item.get("icon"),
                     metadata_json={
                         "catalog_type": "mobile-app-index",
@@ -193,8 +221,8 @@ async def fetch_openuse(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
     while offset < max_apps:
         try:
-            response = await client.get(
-                "https://api.openuse.app/v1/public/apps",
+            response = await _get_with_retry(
+                client, "https://api.openuse.app/v1/public/apps",
                 params={"limit": page_size, "offset": offset},
                 timeout=TIMEOUT,
                 headers=HEADERS,
