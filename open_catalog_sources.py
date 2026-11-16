@@ -259,7 +259,7 @@ async def fetch_openuse(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         await asyncio.sleep(0.55)
 
     log.info("OpenUse catalogue: %d platform records from %d app entries (cap=%d)",
-             len(records), len(seen), max_apps)
+             len(records), len({slug for slug, _ in seen}), max_apps)
     return _unique(records)
 
 
@@ -272,7 +272,7 @@ def _chocolatey_search_page(choco: str, page: int, page_size: int) -> list[tuple
         "--approved-only",
         "--no-color",
         "--source=https://community.chocolatey.org/api/v2",
-        "--timeout=180",
+        "--execution-timeout=180",
     ]
     completed = subprocess.run(
         command, capture_output=True, text=True, timeout=210, check=False,
