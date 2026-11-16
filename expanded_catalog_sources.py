@@ -78,7 +78,7 @@ async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]
                     description=description if isinstance(description, str) else None,
                     category=", ".join(item.get("categories") or []) if isinstance(item.get("categories"), list) else None,
                     icon_url=icon,
-                    metadata_json={"slug": slug, "weekly_downloads": item.get("weekly_downloads"),
+                    metadata_json={"slug": slug, "catalog_type": "browser-extension", "weekly_downloads": item.get("weekly_downloads"),
                                    "average_daily_users": item.get("average_daily_users"),
                                    "ratings": item.get("ratings"), "created": item.get("created"),
                                    "last_updated": item.get("last_updated"), "source": "Mozilla Add-ons API"},
@@ -137,7 +137,7 @@ async def fetch_wordpress_plugins(client: httpx.AsyncClient) -> list[dict[str, A
                     description=short_description,
                     category="WordPress plugin", app_url=item.get("homepage"),
                     icon_url=icon,
-                    metadata_json={"version": item.get("version"), "rating": item.get("rating"),
+                    metadata_json={"catalog_type": "wordpress-plugin", "version": item.get("version"), "rating": item.get("rating"),
                                    "num_ratings": item.get("num_ratings"),
                                    "active_installs": item.get("active_installs"),
                                    "last_updated": item.get("last_updated"),
@@ -172,7 +172,7 @@ async def fetch_homebrew_formulae(client: httpx.AsyncClient) -> list[dict[str, A
             developer=item.get("tap"), summary=item.get("desc"), description=item.get("desc"),
             category=None,
             license=item.get("license"), app_url=item.get("homepage"),
-            metadata_json={"version": versions.get("stable"), "tap": item.get("tap"),
+            metadata_json={"catalog_type": "homebrew-formula", "version": versions.get("stable"), "tap": item.get("tap"),
                            "bottle": bool(item.get("bottle")),
                            "also_available_on_linux": True, "dependencies": item.get("dependencies", [])},
         )
@@ -229,7 +229,7 @@ async def fetch_scoop_buckets(client: httpx.AsyncClient) -> list[dict[str, Any]]
                         developer=None, summary=description, description=description,
                         category=f"Scoop {bucket}", license=license_value if isinstance(license_value, str) else None,
                         app_url=homepage if isinstance(homepage, str) else None,
-                        metadata_json={"version": manifest.get("version"), "bucket": bucket,
+                        metadata_json={"catalog_type": "scoop-manifest", "version": manifest.get("version"), "bucket": bucket,
                                        "homepage": homepage, "architecture": list((manifest.get("architecture") or {}).keys())
                                        if isinstance(manifest.get("architecture"), dict) else [],
                                        "manifest_path": source_path},
@@ -284,7 +284,7 @@ async def fetch_alpine_packages(client: httpx.AsyncClient) -> list[dict[str, Any
                 developer=fields.get("m"), summary=fields.get("T"), description=fields.get("T"),
                 license=fields.get("L"),
                 app_url=fields.get("U"),
-                metadata_json={"version": fields.get("V"), "architecture": fields.get("A"),
+                metadata_json={"catalog_type": "alpine-package", "version": fields.get("V"), "architecture": fields.get("A"),
                                "origin": fields.get("o"), "size_bytes": int(fields["S"]) if fields.get("S", "").isdigit() else None,
                                "repository": repository, "branch": "edge"},
             )
@@ -376,7 +376,7 @@ async def fetch_jetbrains_plugins(client: httpx.AsyncClient) -> list[dict[str, A
                 summary=item.get("preview"), description=item.get("preview"),
                 category=", ".join(item.get("tags") or []) if isinstance(item.get("tags"), list) else None,
                 icon_url=icon,
-                metadata_json={"xml_id": item.get("xmlId"), "downloads": item.get("downloads"),
+                metadata_json={"catalog_type": "ide-plugin", "xml_id": item.get("xmlId"), "downloads": item.get("downloads"),
                                "rating": item.get("rating"), "pricing_model": item.get("pricingModel"),
                                "vendor_verified": vendor.get("isVerified") if isinstance(vendor, dict) else None},
             )
@@ -420,7 +420,7 @@ async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, An
                 developer=item.get("creator"), summary=item.get("description"),
                 description=item.get("description"), icon_url=icon,
                 app_url=item.get("url"),
-                metadata_json={"downloads": item.get("downloads"), "shell_version_map": item.get("shell_version_map"),
+                metadata_json={"catalog_type": "desktop-extension", "downloads": item.get("downloads"), "shell_version_map": item.get("shell_version_map"),
                                "extension_id": item.get("pk")},
             )
             if record:
