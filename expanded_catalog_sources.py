@@ -9,6 +9,8 @@ import asyncio
 import io
 import json
 import logging
+import html as html_module
+import re
 import os
 import tarfile
 from typing import Any
@@ -104,8 +106,7 @@ async def fetch_wordpress_plugins(client: httpx.AsyncClient) -> list[dict[str, A
             except (httpx.HTTPError, ValueError) as exc:
                 log.warning("WordPress plugin search failed for %r page %d: %s", term, page, exc)
                 break
-            info = payload.get("info", {}) if isinstance(payload, dict) else {}
-            items = info.get("plugins", []) if isinstance(info, dict) else []
+            items = payload.get("plugins", []) if isinstance(payload, dict) else []
             if not isinstance(items, list) or not items:
                 break
             for item in items:
@@ -113,15 +114,23 @@ async def fetch_wordpress_plugins(client: httpx.AsyncClient) -> list[dict[str, A
                     continue
                 slug = item.get("slug")
                 name = item.get("name")
+                if isinstance(name, str):
+                    name = html_module.unescape(re.sub(r"<[^>]+>", " ", name)).strip()
                 if not slug or not name:
                     continue
+                short_description = item.get("short_description")
+                if isinstance(short_description, str):
+                    short_description = html_module.unescape(re.sub(r"<[^>]+>", " ", short_description)).strip()
+                author = item.get("author")
+                if isinstance(author, str):
+                    author = html_module.unescape(re.sub(r"<[^>]+>", " ", author)).strip()
                 icons = item.get("icons") or {}
                 icon = icons.get("2x") or icons.get("1x") or icons.get("default") if isinstance(icons, dict) else None
                 record = _record(
                     "wordpress-plugins", slug, "web-plugins", name,
                     f"https://wordpress.org/plugins/{slug}/",
-                    developer=item.get("author"), summary=item.get("short_description"),
-                    description=item.get("short_description"),
+                    developer=author, summary=short_description,
+                    description=short_description,
                     category="WordPress plugin", app_url=item.get("homepage"),
                     icon_url=icon,
                     metadata_json={"version": item.get("version"), "rating": item.get("rating"),
