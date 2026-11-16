@@ -16,8 +16,13 @@ class FakeResponse:
         self.payload = payload
     def raise_for_status(self):
         return None
+    status_code = 200
+    headers = {"content-type": "application/json; charset=utf-8", "content-encoding": "identity", "content-length": "2"}
+    @property
+    def content(self):
+        return self.payload.encode("utf-8") if isinstance(self.payload, str) else json.dumps(self.payload).encode("utf-8")
     def json(self):
-        return self.payload
+        return json.loads(self.payload) if isinstance(self.payload, str) else self.payload
     @property
     def text(self):
         return self.payload if isinstance(self.payload, str) else json.dumps(self.payload)
@@ -80,6 +85,20 @@ def test_homebrew_formula_feed_indexes_formula_metadata():
     assert records[0]["source_key"] == "homebrew-formulae"
     assert records[0]["external_id"] == "sample-tool"
     assert records[0]["metadata_json"]["version"] == "1.2.3"
+
+
+def test_homebrew_formula_feed_logs_json_failure_diagnostics(caplog):
+    client = FakeClient(lambda url, kwargs: "not valid json")
+    caplog.set_level(logging.ERROR, logger="mta.catalogs.expanded")
+
+    records = asyncio.run(fetch_homebrew_formulae(client))
+
+    assert records == []
+    assert "Homebrew formula feed failed" in caplog.text
+    assert "type=JSONDecodeError" in caplog.text
+    assert "status=200" in caplog.text
+    assert "content_type='application/json; charset=utf-8'" in caplog.text
+    assert "body_bytes=14" in caplog.text
 
 
 def test_google_play_appbrain_connector_is_safely_disabled_without_key(monkeypatch):
