@@ -5,6 +5,8 @@ from expanded_catalog_sources import (
     fetch_homebrew_formulae,
     fetch_wordpress_plugins,
     fetch_google_play_appbrain,
+    fetch_jetbrains_plugins,
+    fetch_gnome_extensions,
 )
 
 
