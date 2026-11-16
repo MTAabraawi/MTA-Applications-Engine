@@ -61,6 +61,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Expand PostgreSQL catalogue metadata columns
+        if: env.DATABASE_URL != ''
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python scripts/migrate_catalog_text_columns.py
