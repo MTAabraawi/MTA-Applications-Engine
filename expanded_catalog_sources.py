@@ -151,10 +151,33 @@ async def fetch_wordpress_plugins(client: httpx.AsyncClient) -> list[dict[str, A
 
 async def fetch_homebrew_formulae(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Fetch the complete public Homebrew/core formula metadata feed."""
+    url = "https://formulae.brew.sh/api/formula.json"
+    response = None
     try:
-        payload = await _json(client, "https://formulae.brew.sh/api/formula.json")
-    except (httpx.HTTPError, ValueError) as exc:
-        log.warning("Homebrew formula feed failed: %s", exc)
+        response = await client.get(
+            url,
+            timeout=TIMEOUT,
+            headers={"Accept": "application/json"},
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception as exc:
+        # Keep the failure actionable without logging the potentially large feed body.
+        status = getattr(response, "status_code", None)
+        headers = getattr(response, "headers", {}) if response is not None else {}
+        content_type = headers.get("content-type") if hasattr(headers, "get") else None
+        content_encoding = headers.get("content-encoding") if hasattr(headers, "get") else None
+        content_length = headers.get("content-length") if hasattr(headers, "get") else None
+        try:
+            body_bytes = len(response.content) if response is not None else None
+        except Exception:
+            body_bytes = None
+        log.exception(
+            "Homebrew formula feed failed: type=%s status=%s content_type=%r "
+            "content_encoding=%r content_length=%r body_bytes=%s",
+            type(exc).__name__, status, content_type, content_encoding,
+            content_length, body_bytes,
+        )
         return []
     if not isinstance(payload, list):
         return []

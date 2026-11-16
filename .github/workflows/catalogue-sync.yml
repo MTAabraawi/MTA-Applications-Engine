@@ -47,7 +47,7 @@ jobs:
       APPLE_LIMIT: "100"
       WINGET_LIMIT: "100"
       CATALOG_CONCURRENCY: "4"
-      SYNC_SOURCES: ${{ github.event_name == 'push' && 'alpine-linux,homebrew-formulae,jetbrains-marketplace' || inputs.sync_sources || '' }}
+      SYNC_SOURCES: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[homebrew-only]') && 'homebrew-formulae' || (github.event_name == 'push' && 'alpine-linux,homebrew-formulae,jetbrains-marketplace' || inputs.sync_sources || '') }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
