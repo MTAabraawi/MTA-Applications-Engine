@@ -60,6 +60,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Expand PostgreSQL catalogue metadata columns
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/migrate_catalog_text_columns.py
       - name: Sync catalogue metadata
         shell: bash
         run: |
