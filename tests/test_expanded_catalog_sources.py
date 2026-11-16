@@ -8,6 +8,7 @@ from expanded_catalog_sources import (
     fetch_jetbrains_plugins,
     fetch_gnome_extensions,
 )
+from fedora_catalog_source import fetch_fedora_packages
 
 
 class FakeResponse:
@@ -17,6 +18,9 @@ class FakeResponse:
         return None
     def json(self):
         return self.payload
+    @property
+    def text(self):
+        return self.payload if isinstance(self.payload, str) else json.dumps(self.payload)
 
 
 class FakeClient:
@@ -119,3 +123,17 @@ def test_gnome_extensions_connector_maps_public_extension_metadata(monkeypatch):
     assert records[0]["source_url"] == "https://extensions.gnome.org/extension/4919/weather/"
     assert records[0]["icon_url"] == "https://extensions.gnome.org/extension-data/icons/icon_4919.png"
     assert records[0]["metadata_json"]["downloads"] == 28158
+
+
+def test_fedora_static_index_collects_package_names_and_detail_links():
+    def handler(url, kwargs):
+        if url.endswith("index-static.html"):
+            return '<html><a href="/index/fa.html">fa</a></html>'
+        return '<html><a href="/pkgs/fedora-app/fedora-app/index.html">fedora-app</a></html>'
+    client = FakeClient(handler)
+    records = asyncio.run(fetch_fedora_packages(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "fedora-packages"
+    assert records[0]["external_id"] == "fedora-app/fedora-app"
+    assert records[0]["source_url"] == "https://packages.fedoraproject.org/pkgs/fedora-app/fedora-app/index.html"
+    assert records[0]["metadata_json"]["catalog_type"] == "rpm-package"
