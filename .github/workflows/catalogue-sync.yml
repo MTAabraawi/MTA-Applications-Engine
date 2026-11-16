@@ -6,6 +6,7 @@ on:
     paths:
       - "catalog_sources.py"
       - "expanded_catalog_sources.py"
+      - "open_catalog_sources.py"
       - "fedora_catalog_source.py"
       - "sync_catalogs.py"
       - "store_sources.json"
@@ -35,6 +36,8 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
       FLATHUB_MAX_APPS: "5000"
+      BLUEJETTY_MAX_APPS: "200000"
+      OPENUSE_MAX_APPS: "50000"
       FIREFOX_ADDON_PAGES: "5"
       WORDPRESS_PLUGIN_PAGES: "5"
       APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
@@ -49,8 +52,9 @@ jobs:
       STEAM_SEARCH_TERMS: "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer,racing,sports,casual,platformer,puzzle,shooter,role playing"
       APPLE_LIMIT: "100"
       WINGET_LIMIT: "100"
+      WINGET_PAGES: "3"
       CATALOG_CONCURRENCY: "4"
-      SYNC_SOURCES: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[homebrew-only]') && 'homebrew-formulae' || (github.event_name == 'push' && 'alpine-linux,homebrew-formulae,jetbrains-marketplace' || inputs.sync_sources || '') }}
+      SYNC_SOURCES: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[homebrew-only]') && 'homebrew-formulae' || (github.event_name == 'push' && 'bluejetty,openuse,alpine-linux,homebrew-formulae,jetbrains-marketplace' || inputs.sync_sources || '') }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -75,4 +79,38 @@ jobs:
             echo "::warning::Daily sync skipped. Add DATABASE_URL as a GitHub Actions repository secret pointing to the persistent PostgreSQL database."
             exit 0
           fi
+          python sync_catalogs.py
+
+  chocolatey:
+    if: github.event_name != 'workflow_dispatch' || inputs.sync_sources == '' || contains(inputs.sync_sources, 'chocolatey')
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CHOCOLATEY_PAGE_SIZE: "1000"
+      CHOCOLATEY_MAX_PAGES: "10"
+      SYNC_SOURCES: "chocolatey"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Verify supported Chocolatey CLI
+        shell: pwsh
+        run: |
+          choco --version
+      - name: Import Chocolatey Community Repository catalogue
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) {
+            Write-Host "::warning::Chocolatey sync skipped because DATABASE_URL is not configured."
+            exit 0
+          }
           python sync_catalogs.py
