@@ -38,6 +38,9 @@ jobs:
       FIREFOX_ADDON_PAGES: "5"
       WORDPRESS_PLUGIN_PAGES: "5"
       APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
+      APPBRAIN_MAX_PAGES: "1"
+      APPBRAIN_IOS_MAX_PAGES: "1"
+      APPBRAIN_ENABLE_IOS: "false"
       APPLE_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather,games,music,social,travel,shopping,news,books,fitness,calendar,notes,scanner,keyboard,cloud,streaming,art,food"
       WINGET_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
       ARCH_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
