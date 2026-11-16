@@ -28,41 +28,56 @@ class FakeClient:
 
 def test_bluejetty_follows_meta_next_and_keeps_official_store_urls(monkeypatch):
     monkeypatch.setenv("BLUEJETTY_MAX_APPS", "200")
-    first_next = "https://bluejetty.ai/v1/apps?limit=100&cursor=next-page"
+    first_next = "https://bluejetty.ai/v1/apps?limit=100&cursor=empty-page"
+    second_next = "https://bluejetty.ai/v1/apps?limit=100&cursor=next-page"
 
     def handler(url, kwargs):
+        if url.endswith("cursor=empty-page"):
+            return {"data": [], "meta": {"next": second_next}}
         if url.endswith("cursor=next-page"):
             return {
                 "data": [{
                     "blueJettyId": "12345679",
                     "name": "Example Android App",
-                    "platforms": ["android"],
-                    "playStoreUrl": "https://play.google.com/store/apps/details?id=org.example.app",
+                    "stores": [{
+                        "platform": "android",
+                        "url": "https://play.google.com/store/apps/details?id=org.example.app",
+                    }],
+                    "provenance": "public_source",
+                    "sourceObservedAt": "2026-11-10T00:00:00Z",
                 }],
-                "meta": {"next": None},
+                "meta": {"next": None, "format": "bluejetty.app_index/3"},
             }
         return {
             "data": [{
                 "blueJettyId": "12345678",
                 "name": "Example iOS App",
-                "platforms": ["ios"],
-                "appStoreUrl": "https://apps.apple.com/us/app/example/id12345678",
+                "stores": [{
+                    "platform": "ios",
+                    "url": "https://apps.apple.com/us/app/example/id12345678",
+                }],
                 "jsonUrl": "https://bluejetty.ai/v1/index/apps/12345678",
+                "htmlUrl": "https://bluejetty.ai/apps/example",
+                "websiteUrl": "https://example.org",
+                "provenance": "publisher_authorized",
             }],
-            "meta": {"next": first_next},
+            "meta": {"next": first_next, "format": "bluejetty.app_index/3"},
         }
 
     client = FakeClient(handler)
     records = asyncio.run(module.fetch_bluejetty(client))
 
-    assert len(client.calls) == 2
+    assert len(client.calls) == 3
     assert len(records) == 2
     assert records[0]["source_key"] == "bluejetty"
     assert records[0]["platform"] == "ios"
     assert records[0]["source_url"] == "https://apps.apple.com/us/app/example/id12345678"
+    assert records[0]["app_url"] == "https://example.org"
+    assert records[0]["metadata_json"]["bluejetty_html_url"] == "https://bluejetty.ai/apps/example"
+    assert records[0]["metadata_json"]["provenance"] == "publisher_authorized"
     assert records[1]["platform"] == "android"
     assert records[1]["source_url"].startswith("https://play.google.com/store/apps/")
-    assert records[0]["metadata_json"]["bluejetty_id"] == "12345678"
+    assert records[1]["metadata_json"]["source_observed_at"] == "2026-11-10T00:00:00Z"
 
 
 def test_openuse_imports_each_supported_platform_and_paginates(monkeypatch):
