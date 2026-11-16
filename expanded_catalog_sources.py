@@ -308,7 +308,7 @@ async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str
         try:
             payload = await _json(
                 client, "https://api.appbrain.com/v2/info/browse",
-                params={"apikey": api_key, "category": category, "offset": 0, "limit": 50, "platform": "ANDROID"},
+                params={"apikey": api_key, "category": category, "offset": 0, "limit": 50},
             )
         except (httpx.HTTPError, ValueError) as exc:
             log.warning("AppBrain Google Play category %s failed: %s", category, exc)
@@ -430,9 +430,21 @@ async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, An
 
 
 
-async def fetch_expanded_catalogs() -> dict[str, list[dict[str, Any]]]:
+async def fetch_expanded_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
     """Fetch all new public catalogues independently; one source failure is isolated."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
+    async def collect(name: str, job):
+        try:
+            records = await job
+        except Exception as exc:
+            log.exception("Catalogue %s failed: %s", name, exc)
+            if on_source:
+                on_source(name, [], exc)
+            return []
+        if on_source:
+            on_source(name, records)
+        return records
+
         jobs = {
             "firefox-addons": fetch_firefox_addons(client),
             "wordpress-plugins": fetch_wordpress_plugins(client),
@@ -445,6 +457,7 @@ async def fetch_expanded_catalogs() -> dict[str, list[dict[str, Any]]]:
             "fedora-packages": fetch_fedora_packages(client),
         }
         names = list(jobs)
+        jobs = {name: collect(name, job) for name, job in jobs.items()}
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
     output: dict[str, list[dict[str, Any]]] = {}
     for name, result in zip(names, results):
