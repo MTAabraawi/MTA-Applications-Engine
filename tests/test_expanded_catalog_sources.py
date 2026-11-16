@@ -48,12 +48,12 @@ def test_firefox_addons_uses_mozilla_public_api_and_normalizes_records(monkeypat
 def test_wordpress_plugins_uses_official_directory_api(monkeypatch):
     monkeypatch.setenv("WORDPRESS_PLUGIN_TERMS", "security")
     monkeypatch.setenv("WORDPRESS_PLUGIN_PAGES", "1")
-    client = FakeClient(lambda url, kwargs: {"info": {"plugins": [{
+    client = FakeClient(lambda url, kwargs: {"info": {"page": 1, "pages": 1, "results": 1}, "plugins": [{
         "slug": "secure-sample", "name": "Secure Sample", "author": "Example Author",
         "short_description": "A security plugin", "version": "2.0",
         "rating": 96, "num_ratings": 20, "active_installs": 10000,
         "icons": {"1x": "https://ps.w.org/secure-sample/icon-128x128.png"},
-    }]}})
+    }]})
     records = asyncio.run(fetch_wordpress_plugins(client))
     assert len(records) == 1
     assert records[0]["source_key"] == "wordpress-plugins"
