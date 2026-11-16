@@ -8,12 +8,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from catalog_sources import fetch_all_catalogs
+from expanded_catalog_sources import fetch_expanded_catalogs
 
 logging.basicConfig(level="INFO")
 
 
 async def main() -> None:
     catalogues = await fetch_all_catalogs()
+    expanded = await fetch_expanded_catalogs(source_filter={"bluejetty", "openuse"})
+    catalogues.update(expanded)
     report = {
         source: {
             "count": len(records),
