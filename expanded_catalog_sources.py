@@ -205,7 +205,7 @@ async def fetch_scoop_buckets(client: httpx.AsyncClient) -> list[dict[str, Any]]
                     if not isinstance(manifest, dict):
                         continue
                     package = member.name.rsplit("/", 1)[-1][:-5]
-                    name = manifest.get("description") or manifest.get("name") or package
+                    name = manifest.get("name") or package
                     description = manifest.get("description")
                     homepage = manifest.get("homepage")
                     license_value = manifest.get("license")
