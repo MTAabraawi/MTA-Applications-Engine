@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 
 from catalog_sources import _record, _unique
+from fedora_catalog_source import fetch_fedora_packages
 
 log = logging.getLogger("mta.catalogs.expanded")
 TIMEOUT = httpx.Timeout(60.0, connect=15.0)
@@ -441,6 +442,7 @@ async def fetch_expanded_catalogs() -> dict[str, list[dict[str, Any]]]:
             "google-play": fetch_google_play_appbrain(client),
             "jetbrains-marketplace": fetch_jetbrains_plugins(client),
             "gnome-extensions": fetch_gnome_extensions(client),
+            "fedora-packages": fetch_fedora_packages(client),
         }
         names = list(jobs)
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
