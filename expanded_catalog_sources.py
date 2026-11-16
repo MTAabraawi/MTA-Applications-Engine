@@ -45,7 +45,7 @@ async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]
                 payload = await _json(
                     client, "https://addons.mozilla.org/api/v5/addons/search/",
                     params={"q": term, "app": "firefox", "type": "extension",
-                            "page_size": 50, "page": page, "sort": "weekly_downloads"},
+                            "page_size": 50, "page": page},
                 )
             except (httpx.HTTPError, ValueError) as exc:
                 log.warning("Mozilla AMO search failed for %r page %d: %s", term, page, exc)
