@@ -155,8 +155,8 @@
     "id": "chocolatey",
     "name": "Chocolatey",
     "platform": "windows",
-    "integration_mode": "external_only",
-    "reason": "Chocolatey recommends supported CLI clients; custom automated OData querying is not guaranteed."
+    "integration_mode": "cli_search",
+    "reason": "Community Repository queried through the supported Chocolatey CLI on a Windows runner; direct custom OData querying is intentionally not used."
   },
   {
     "id": "flathub",
@@ -313,5 +313,21 @@
     "integration_mode": "live_api",
     "reason": "Fedora's public alphabetic static package index; stores package names and official detail links without crawling every detail page.",
     "source_key": "fedora-packages"
+  },
+  {
+    "id": "bluejetty-app-index",
+    "name": "Blue Jetty App Index",
+    "platform": "multi",
+    "integration_mode": "live_api",
+    "reason": "Public paginated mobile app index; no API key. Index is a focused corpus, not a complete copy of Apple or Google stores.",
+    "source_key": "bluejetty"
+  },
+  {
+    "id": "openuse-catalog",
+    "name": "OpenUse Software Catalog",
+    "platform": "multi",
+    "integration_mode": "live_api",
+    "reason": "Free read-only public JSON API with pagination and official release references; no API key. Focuses on free and open-source software.",
+    "source_key": "openuse"
   }
 ]
