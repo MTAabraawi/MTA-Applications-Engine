@@ -137,3 +137,38 @@ def test_fedora_static_index_collects_package_names_and_detail_links():
     assert records[0]["external_id"] == "fedora-app/fedora-app"
     assert records[0]["source_url"] == "https://packages.fedoraproject.org/pkgs/fedora-app/fedora-app/index.html"
     assert records[0]["metadata_json"]["catalog_type"] == "rpm-package"
+
+
+
+def test_expanded_catalogue_filter_fetches_only_selected_sources(monkeypatch):
+    import expanded_catalog_sources as module
+
+    called = []
+
+    async def fake_homebrew(client):
+        called.append("homebrew-formulae")
+        return [{"source_key": "homebrew-formulae", "external_id": "one"}]
+
+    async def fake_alpine(client):
+        called.append("alpine-linux")
+        return [{"source_key": "alpine-linux", "external_id": "two"}]
+
+    monkeypatch.setattr(module, "fetch_homebrew_formulae", fake_homebrew)
+    monkeypatch.setattr(module, "fetch_alpine_packages", fake_alpine)
+
+    records = asyncio.run(module.fetch_expanded_catalogs(
+        source_filter={"alpine-linux", "homebrew-formulae"}
+    ))
+
+    assert set(records) == {"alpine-linux", "homebrew-formulae"}
+    assert set(called) == {"alpine-linux", "homebrew-formulae"}
+    assert len(records["alpine-linux"]) == 1
+    assert len(records["homebrew-formulae"]) == 1
+
+
+def test_expanded_catalogue_filter_rejects_unknown_sources():
+    import pytest
+    import expanded_catalog_sources as module
+
+    with pytest.raises(ValueError, match="Unknown expanded catalogue source"):
+        asyncio.run(module.fetch_expanded_catalogs(source_filter={"not-a-source"}))

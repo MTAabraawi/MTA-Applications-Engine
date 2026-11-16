@@ -9,7 +9,9 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from app import SessionLocal, upsert_records
+from sqlalchemy import inspect, text
+
+from app import SessionLocal, engine, upsert_records
 from catalog_sources import fetch_all_catalogs
 from expanded_catalog_sources import fetch_expanded_catalogs
 
@@ -20,6 +22,22 @@ async def main() -> None:
     if not os.getenv("DATABASE_URL"):
         raise SystemExit("DATABASE_URL must point to a persistent database (for example PostgreSQL).")
 
+    # Widen bounded metadata fields in place. PostgreSQL otherwise rejects long
+    # category tag lists and SPDX license expressions; existing rows are preserved.
+    if engine.dialect.name == "postgresql":
+        columns = {column["name"]: column for column in inspect(engine).get_columns("apps")}
+        with engine.begin() as connection:
+            for column_name in ("category", "license"):
+                column = columns.get(column_name)
+                if column and getattr(column["type"], "length", None) is not None:
+                    connection.execute(text(
+                        f"ALTER TABLE apps ALTER COLUMN {column_name} TYPE TEXT USING {column_name}::text"
+                    ))
+                    logging.info("Expanded apps.%s to TEXT without changing existing rows", column_name)
+
+    selected_sources = {
+        item.strip() for item in os.getenv("SYNC_SOURCES", "").split(",") if item.strip()
+    }
     summary = {}
     db = SessionLocal()
 
@@ -42,10 +60,14 @@ async def main() -> None:
         print(json.dumps({"source": source, **result}, ensure_ascii=False), flush=True)
 
     try:
-        logging.info("Starting base catalogue sources")
-        await fetch_all_catalogs(on_source=save_source)
-        logging.info("Starting expanded catalogue sources")
-        await fetch_expanded_catalogs(on_source=save_source)
+        if selected_sources:
+            logging.info("Starting targeted catalogue retry for: %s", ", ".join(sorted(selected_sources)))
+            await fetch_expanded_catalogs(on_source=save_source, source_filter=selected_sources)
+        else:
+            logging.info("Starting base catalogue sources")
+            await fetch_all_catalogs(on_source=save_source)
+            logging.info("Starting expanded catalogue sources")
+            await fetch_expanded_catalogs(on_source=save_source)
     finally:
         db.close()
 

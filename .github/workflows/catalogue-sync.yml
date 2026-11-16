@@ -13,6 +13,12 @@ on:
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+    inputs:
+      sync_sources:
+        description: "Comma-separated source keys to retry; leave blank for the full catalogue"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -41,6 +47,7 @@ jobs:
       APPLE_LIMIT: "100"
       WINGET_LIMIT: "100"
       CATALOG_CONCURRENCY: "4"
+      SYNC_SOURCES: ${{ github.event_name == 'push' && 'alpine-linux,homebrew-formulae,jetbrains-marketplace' || inputs.sync_sources || '' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -53,6 +60,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Expand PostgreSQL catalogue metadata columns
+        if: env.DATABASE_URL != ''
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/migrate_catalog_text_columns.py
       - name: Sync catalogue metadata
         shell: bash
         run: |
