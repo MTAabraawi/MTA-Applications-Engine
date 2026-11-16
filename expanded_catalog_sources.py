@@ -402,6 +402,9 @@ async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str
 async def fetch_apple_appbrain(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Fetch Apple App Store metadata through AppBrain's documented iOS browse API."""
     api_key = os.getenv("APPBRAIN_API_KEY", "").strip()
+    if os.getenv("APPBRAIN_ENABLE_IOS", "false").strip().lower() not in {"1", "true", "yes", "on"}:
+        log.info("Apple App Store/AppBrain connector skipped: APPBRAIN_ENABLE_IOS is disabled")
+        return []
     if not api_key:
         log.info("Apple App Store/AppBrain connector skipped: APPBRAIN_API_KEY is not configured")
         return []
