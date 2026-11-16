@@ -432,7 +432,6 @@ async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, An
 
 async def fetch_expanded_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
     """Fetch all new public catalogues independently; one source failure is isolated."""
-    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
     async def collect(name: str, job):
         try:
             records = await job
@@ -445,6 +444,7 @@ async def fetch_expanded_catalogs(on_source=None) -> dict[str, list[dict[str, An
             on_source(name, records)
         return records
 
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
             "firefox-addons": fetch_firefox_addons(client),
             "wordpress-plugins": fetch_wordpress_plugins(client),
