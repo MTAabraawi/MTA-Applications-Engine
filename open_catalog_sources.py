@@ -300,7 +300,7 @@ async def fetch_chocolatey(client: httpx.AsyncClient | None = None) -> list[dict
         return []
     page_size = max(25, min(int(os.getenv("CHOCOLATEY_PAGE_SIZE", "1000")), 1000))
     max_pages = max(1, min(int(os.getenv("CHOCOLATEY_MAX_PAGES", "10")), 10))
-    found: dict[str, str] = {}
+    found: dict[str, tuple[str, str]] = {}
     for page in range(max_pages):
         try:
             items = await asyncio.to_thread(_chocolatey_search_page, choco, page, page_size)
@@ -308,12 +308,12 @@ async def fetch_chocolatey(client: httpx.AsyncClient | None = None) -> list[dict
             log.warning("Chocolatey CLI search failed on page %d: %s", page, exc)
             break
         for package_id, version in items:
-            found[package_id.casefold()] = version
+            found[package_id.casefold()] = (package_id, version)
         if len(items) < page_size:
             break
     records = []
-    for package_id, version in found.items():
-        display_id = next((key for key in found if key == package_id), package_id)
+    for package_id, version in found.values():
+        display_id = package_id
         records.append(_record(
             "chocolatey", package_id, "windows", display_id,
             f"https://community.chocolatey.org/packages/{package_id}",
