@@ -29,7 +29,7 @@ WINGET_SEARCH_TERMS = [x.strip() for x in os.getenv(
     "browser,office,photo,video,education,security,finance,communication,developer,utilities",
 ).split(",") if x.strip()]
 APPLE_LIMIT = max(1, min(int(os.getenv("APPLE_LIMIT", "100")), 200))
-WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "100")), 100))
+WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "24")), 24))
 WINGET_PAGES = max(1, min(int(os.getenv("WINGET_PAGES", "3")), 10))
 ARCH_SEARCH_TERMS = [x.strip() for x in os.getenv("ARCH_SEARCH_TERMS", "browser,office,photo,video,education,security,finance,communication,developer,utilities").split(",") if x.strip()]
 ARCH_LIMIT = max(1, min(int(os.getenv("ARCH_LIMIT", "100")), 200))
