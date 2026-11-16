@@ -6,6 +6,7 @@ on:
     paths:
       - "expanded_catalog_sources.py"
       - "tests/test_expanded_catalog_sources.py"
+      - "tests/test_store_registry_and_connectors.py"
       - "scripts/discover_expanded_catalogs.py"
       - ".github/workflows/expanded-catalog-discovery.yml"
   workflow_dispatch:
