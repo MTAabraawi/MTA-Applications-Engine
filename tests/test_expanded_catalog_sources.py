@@ -7,6 +7,7 @@ from expanded_catalog_sources import (
     fetch_homebrew_formulae,
     fetch_wordpress_plugins,
     fetch_google_play_appbrain,
+    fetch_apple_appbrain,
     fetch_jetbrains_plugins,
     fetch_gnome_extensions,
 )
@@ -110,6 +111,53 @@ def test_google_play_appbrain_connector_is_safely_disabled_without_key(monkeypat
     assert records == []
     assert client.calls == []
 
+
+
+def test_google_play_appbrain_paginates_and_preserves_full_metadata(monkeypatch):
+    monkeypatch.setenv("APPBRAIN_API_KEY", "test-key")
+    monkeypatch.setenv("APPBRAIN_CATEGORIES", "GAMES")
+    monkeypatch.setenv("APPBRAIN_MAX_PAGES", "2")
+    def handler(url, kwargs):
+        params = kwargs["params"]
+        if params["offset"] == 0:
+            apps = [{
+                "package": "com.example.game", "name": "Example Game",
+                "developer": "Example Studio", "shortDescription": "A game",
+                "description": "Full description", "versionString": "2.0",
+                "rating": 4.7, "iconUrl": "https://cdn.example/icon.png",
+                "featureGraphicUrl": "https://cdn.example/feature.png",
+            }]
+            apps.extend({"package": f"com.example.game{n}", "name": f"Example Game {n}"} for n in range(1, 50))
+            return {"apps": apps}
+        return {"apps": []}
+    client = FakeClient(handler)
+    records = asyncio.run(fetch_google_play_appbrain(client))
+    assert len(records) == 50
+    assert records[0]["source_key"] == "google-play"
+    assert records[0]["source_url"] == "https://play.google.com/store/apps/details?id=com.example.game"
+    assert records[0]["metadata_json"]["featureGraphicUrl"] == "https://cdn.example/feature.png"
+    assert records[0]["metadata_json"]["rating"] == 4.7
+    assert [call[1]["params"]["offset"] for call in client.calls] == [0, 50]
+
+
+def test_apple_appbrain_uses_ios_platform_and_app_store_listing(monkeypatch):
+    monkeypatch.setenv("APPBRAIN_API_KEY", "test-key")
+    monkeypatch.setenv("APPBRAIN_IOS_CATEGORIES", "GAMES")
+    monkeypatch.setenv("APPBRAIN_IOS_MAX_PAGES", "1")
+    monkeypatch.setenv("APPBRAIN_ENABLE_IOS", "true")
+    client = FakeClient(lambda url, kwargs: {"apps": [{
+        "package": "ios-123456789", "trackId": "123456789", "name": "Example iOS App",
+        "artistName": "Example Developer", "description": "iOS description",
+        "iconUrl": "https://cdn.example/ios.png", "price": "$0.00",
+    }]})
+    records = asyncio.run(fetch_apple_appbrain(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "apple-itunes"
+    assert records[0]["external_id"] == "123456789"
+    assert records[0]["platform"] == "ios"
+    assert records[0]["source_url"] == "https://apps.apple.com/app/id123456789"
+    assert client.calls[0][1]["params"]["platform"] == "IOS"
+    assert records[0]["metadata_json"]["price"] == "$0.00"
 
 def test_jetbrains_marketplace_connector_maps_plugin_metadata(monkeypatch):
     monkeypatch.setenv("JETBRAINS_PLUGIN_TERMS", "python")
