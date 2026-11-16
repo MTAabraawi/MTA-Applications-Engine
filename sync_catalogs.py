@@ -6,6 +6,7 @@ import os
 
 from app import SessionLocal, upsert_records
 from catalog_sources import fetch_all_catalogs
+from expanded_catalog_sources import fetch_expanded_catalogs
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
@@ -14,6 +15,8 @@ async def main() -> None:
     if not os.getenv("DATABASE_URL"):
         raise SystemExit("DATABASE_URL must point to a persistent database (for example PostgreSQL).")
     catalogues = await fetch_all_catalogs()
+    expanded = await fetch_expanded_catalogs()
+    catalogues.update(expanded)
     summary = {}
     db = SessionLocal()
     try:
