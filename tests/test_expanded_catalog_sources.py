@@ -82,3 +82,38 @@ def test_google_play_appbrain_connector_is_safely_disabled_without_key(monkeypat
     records = asyncio.run(fetch_google_play_appbrain(client))
     assert records == []
     assert client.calls == []
+
+
+def test_jetbrains_marketplace_connector_maps_plugin_metadata(monkeypatch):
+    monkeypatch.setenv("JETBRAINS_PLUGIN_TERMS", "python")
+    client = FakeClient(lambda url, kwargs: {"plugins": [{
+        "id": 631, "xmlId": "Pythonid", "link": "/plugin/631-python",
+        "name": "Python", "preview": "Python language support",
+        "downloads": 13015105, "rating": 3.37, "pricingModel": "FREE",
+        "icon": "/files/631/icon/default.svg", "tags": ["Programming Language"],
+        "vendor": {"name": "JetBrains", "isVerified": True},
+    }]})
+    records = asyncio.run(fetch_jetbrains_plugins(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "jetbrains-marketplace"
+    assert records[0]["source_url"] == "https://plugins.jetbrains.com/plugin/631-python"
+    assert records[0]["icon_url"] == "https://plugins.jetbrains.com/files/631/icon/default.svg"
+    assert records[0]["metadata_json"]["downloads"] == 13015105
+
+
+def test_gnome_extensions_connector_maps_public_extension_metadata(monkeypatch):
+    monkeypatch.setenv("GNOME_EXTENSION_TERMS", "weather")
+    client = FakeClient(lambda url, kwargs: {"extensions": [{
+        "uuid": "weather@example.org", "pk": 4919, "name": "Weather",
+        "creator": "Example Dev", "description": "Weather on desktop",
+        "link": "/extension/4919/weather/",
+        "icon": "/extension-data/icons/icon_4919.png",
+        "url": "https://github.com/example/weather", "downloads": 28158,
+        "shell_version_map": {"45": {"version": 1}},
+    }]})
+    records = asyncio.run(fetch_gnome_extensions(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "gnome-extensions"
+    assert records[0]["source_url"] == "https://extensions.gnome.org/extension/4919/weather/"
+    assert records[0]["icon_url"] == "https://extensions.gnome.org/extension-data/icons/icon_4919.png"
+    assert records[0]["metadata_json"]["downloads"] == 28158
