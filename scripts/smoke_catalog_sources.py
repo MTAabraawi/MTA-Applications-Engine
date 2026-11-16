@@ -28,6 +28,9 @@ async def main() -> None:
     missing_public = [name for name in ("bluejetty", "openuse") if not report.get(name, {}).get("count")]
     if missing_public:
         raise SystemExit("New public catalogue connectors returned no records: " + ", ".join(missing_public))
+    missing = [source for source in ("bluejetty", "openuse") if report.get(source, {}).get("count", 0) <= 0]
+    if missing:
+        raise SystemExit("Required public catalogue connector(s) returned zero records: " + ", ".join(missing))
     if not any(item["count"] for item in report.values()):
         raise SystemExit("All upstream catalogue connectors returned zero records.")
 
