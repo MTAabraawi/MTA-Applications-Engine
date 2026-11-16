@@ -48,7 +48,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Run unit tests with per-test diagnostics
-        run: python -X faulthandler -m pytest -vv -s -o faulthandler_timeout=120
+        run: python -X faulthandler -m pytest -vv -s --timeout=90 --timeout-method=signal --durations=20 -o faulthandler_timeout=60
       - name: Run one full live catalogue batch
         env:
           APPLE_SEARCH_TERMS: browser,office,photo
