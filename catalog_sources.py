@@ -633,7 +633,6 @@ async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
 async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
-    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
     async def collect(name: str, job):
         try:
             records = await job
@@ -646,6 +645,7 @@ async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
             on_source(name, records)
         return records
 
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
             "fdroid": fetch_fdroid(client),
             "izzyondroid": fetch_izzyondroid(client),
