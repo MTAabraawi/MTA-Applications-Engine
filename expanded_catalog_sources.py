@@ -339,7 +339,7 @@ async def fetch_jetbrains_plugins(client: httpx.AsyncClient) -> list[dict[str, A
         "JETBRAINS_PLUGIN_TERMS",
         "python,kotlin,java,web,ide,git,database,theme,editor,testing,ai,markdown,docker,cloud,security",
     ).split(",") if x.strip()]
-    limit = max(1, min(int(os.getenv("JETBRAINS_PLUGIN_LIMIT", "100")), 100))
+    limit = max(1, min(int(os.getenv("JETBRAINS_PLUGIN_LIMIT", "20")), 20))
     records: list[dict[str, Any]] = []
     for term in terms:
         try:
