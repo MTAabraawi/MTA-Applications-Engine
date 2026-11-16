@@ -65,7 +65,7 @@ async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]
                 author = authors[0].get("name") if authors and isinstance(authors[0], dict) else None
                 icons = item.get("icons") or {}
                 icon = item.get("icon_url") or (icons.get("64") if isinstance(icons, dict) else None)
-                url = item.get("url") or (f"https://addons.mozilla.org/firefox/addon/{slug}/" if slug else None)
+                url = f"https://addons.mozilla.org/firefox/addon/{slug}/" if slug else None
                 record = _record(
                     "firefox-addons", item.get("id") or slug, "browser-extensions",
                     name, url, developer=author, summary=summary,
