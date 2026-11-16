@@ -348,7 +348,7 @@ async def _fetch_appbrain_platform(
                 name = item.get("name")
                 if platform == "IOS":
                     # AppBrain addresses App Store records as ios-<trackId>.
-                    match = re.fullmatch(r"ios-(\\d+)", str(package or ""), re.IGNORECASE)
+                    match = re.fullmatch(r"ios-(\d+)", str(package or ""), re.IGNORECASE)
                     track_id = match.group(1) if match else str(item.get("trackId") or "")
                     if not track_id.isdigit():
                         continue
