@@ -19,7 +19,7 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Mac App Store | macOS | Apple public Search API with `macSoftware` entity |
 | MTA curated web catalogue | Web | Maintained in `web_apps.json` |
 
-The complete 32-store directory and each store's integration state are maintained in `store_sources.json`. Only entries marked `live_api` are included in ingestion; `external_only` entries remain direct links until a supported public API or approved partner feed is available. This prevents a store link from being misrepresented as an indexed catalogue.
+The complete store directory and each store's integration state are maintained in `store_sources.json`. New live metadata connectors include Mozilla Firefox Add-ons, WordPress.org Plugins, Homebrew/core formulae, Scoop buckets, Alpine Linux APKINDEX, JetBrains Marketplace plugins, GNOME Shell extensions, and Fedora's public package index. Google Play has an optional AppBrain API connector and remains credential-gated until `APPBRAIN_API_KEY` is configured. JetBrains and GNOME search endpoints are public website endpoints rather than versioned public API contracts, so their collectors are isolated and failure-tolerant. Only entries marked `live_api` are included in ingestion; `external_only` entries remain direct links until a supported public API or approved partner feed is available. This prevents a store link from being misrepresented as an indexed catalogue.
 
 Connectors fail independently. A temporary outage at one source should not stop ingestion from the others. Results are deduplicated by source key and external identifier, and non-HTTPS source links are rejected.
 
@@ -55,6 +55,8 @@ Required production variables:
 
 Optional catalogue controls:
 - `APPLE_COUNTRY`, `APPLE_SEARCH_TERMS`, `APPLE_LIMIT`
+- `FIREFOX_ADDON_TERMS`, `FIREFOX_ADDON_PAGES`, `WORDPRESS_PLUGIN_TERMS`, `WORDPRESS_PLUGIN_PAGES`
+- `APPBRAIN_API_KEY` (optional; enables the Google Play connector; API usage is metered by AppBrain)
 - `WINGET_SEARCH_TERMS`, `WINGET_LIMIT`
 - `FLATHUB_MAX_APPS`, `CATALOG_CONCURRENCY`
 

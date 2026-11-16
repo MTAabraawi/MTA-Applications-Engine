@@ -11,6 +11,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 from sqlalchemy.pool import NullPool
 
 from catalog_sources import fetch_all_catalogs, fetch_fdroid
+from expanded_catalog_sources import fetch_expanded_catalogs
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mta_engine.db")
 ADMIN_API_TOKEN = os.getenv("ADMIN_API_TOKEN", "")
@@ -211,6 +212,7 @@ async def ingest_catalogs(
 ):
     require_admin(x_admin_token, request)
     catalog_results = await fetch_all_catalogs()
+    catalog_results.update(await fetch_expanded_catalogs())
     summary = {}
     for source_key, records in catalog_results.items():
         # Each source is committed independently so a later failure cannot erase earlier work.

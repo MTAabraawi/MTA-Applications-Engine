@@ -1,0 +1,50 @@
+name: Expanded Catalogue Discovery
+
+on:
+  push:
+    branches: [feature/global-store-catalog-expansion]
+    paths:
+      - "expanded_catalog_sources.py"
+      - "fedora_catalog_source.py"
+      - "tests/test_expanded_catalog_sources.py"
+      - "tests/test_store_registry_and_connectors.py"
+      - "scripts/discover_expanded_catalogs.py"
+      - ".github/workflows/expanded-catalog-discovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mta-expanded-catalog-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run unit tests
+        run: pytest -q
+      - name: Fetch expanded public catalogues
+        env:
+          CATALOG_CONCURRENCY: "5"
+          FIREFOX_ADDON_PAGES: "5"
+          WORDPRESS_PLUGIN_PAGES: "5"
+        run: python scripts/discover_expanded_catalogs.py
+      - name: Upload metadata snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-expanded-catalog-snapshot
+          path: expanded-catalog-snapshot.json
+          if-no-files-found: error
+          retention-days: 14

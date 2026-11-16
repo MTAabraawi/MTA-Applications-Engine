@@ -3,8 +3,9 @@
     "id": "google-play",
     "name": "Google Play",
     "platform": "android",
-    "integration_mode": "external_only",
-    "reason": "No supported public catalogue feed for bulk metadata ingestion."
+    "integration_mode": "credential_required",
+    "reason": "Optional AppBrain documented API connector is implemented but requires an AppBrain API key. Google's official Play Catalog Access Program is limited to eligible US third-party app stores and has a $5,000 annual review fee.",
+    "source_key": "google-play"
   },
   {
     "id": "apkmirror",
@@ -248,5 +249,69 @@
     "integration_mode": "live_api",
     "reason": "Debian Sources public package search API plus official Debian package detail pages.",
     "source_key": "debian-packages"
+  },
+  {
+    "id": "firefox-addons",
+    "name": "Firefox Add-ons",
+    "platform": "browser-extensions",
+    "integration_mode": "live_api",
+    "reason": "Mozilla Add-ons public API v5.",
+    "source_key": "firefox-addons"
+  },
+  {
+    "id": "wordpress-plugins",
+    "name": "WordPress Plugin Directory",
+    "platform": "web-plugins",
+    "integration_mode": "live_api",
+    "reason": "Official WordPress.org plugin directory API.",
+    "source_key": "wordpress-plugins"
+  },
+  {
+    "id": "homebrew-formulae",
+    "name": "Homebrew Formulae",
+    "platform": "macos",
+    "integration_mode": "live_api",
+    "reason": "Official Homebrew core formula JSON feed; formulae may also be usable on Linux.",
+    "source_key": "homebrew-formulae"
+  },
+  {
+    "id": "scoop",
+    "name": "Scoop Buckets",
+    "platform": "windows",
+    "integration_mode": "live_api",
+    "reason": "Public JSON manifests from official Scoop main, extras, games and versions GitHub buckets.",
+    "source_key": "scoop"
+  },
+  {
+    "id": "alpine-linux",
+    "name": "Alpine Linux Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Official Alpine edge APKINDEX archives for main and community on x86_64.",
+    "source_key": "alpine-linux"
+  },
+  {
+    "id": "jetbrains-marketplace",
+    "name": "JetBrains Marketplace",
+    "platform": "ide-plugins",
+    "integration_mode": "live_api",
+    "reason": "Public JetBrains Marketplace search endpoint used by its website; response schema is not a versioned public API contract.",
+    "source_key": "jetbrains-marketplace"
+  },
+  {
+    "id": "gnome-extensions",
+    "name": "GNOME Extensions",
+    "platform": "desktop-extensions",
+    "integration_mode": "live_api",
+    "reason": "Public extensions.gnome.org catalogue search endpoint.",
+    "source_key": "gnome-extensions"
+  },
+  {
+    "id": "fedora-packages",
+    "name": "Fedora Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Fedora's public alphabetic static package index; stores package names and official detail links without crawling every detail page.",
+    "source_key": "fedora-packages"
   }
 ]
