@@ -2,7 +2,10 @@
 import asyncio
 import json
 import logging
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from expanded_catalog_sources import fetch_expanded_catalogs
 
