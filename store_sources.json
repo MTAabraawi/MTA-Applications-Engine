@@ -3,8 +3,9 @@
     "id": "google-play",
     "name": "Google Play",
     "platform": "android",
-    "integration_mode": "external_only",
-    "reason": "No supported public catalogue feed for bulk metadata ingestion."
+    "integration_mode": "credential_required",
+    "reason": "Optional AppBrain documented API connector is implemented but requires an AppBrain API key. Google's official Play Catalog Access Program is limited to eligible US third-party app stores and has a $5,000 annual review fee.",
+    "source_key": "google-play"
   },
   {
     "id": "apkmirror",
