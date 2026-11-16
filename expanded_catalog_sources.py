@@ -430,8 +430,8 @@ async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, An
 
 
 
-async def fetch_expanded_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
-    """Fetch all new public catalogues independently; one source failure is isolated."""
+async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None = None) -> dict[str, list[dict[str, Any]]]:
+    """Fetch selected public catalogues independently; isolate source failures."""
     async def collect(name: str, job):
         try:
             records = await job
@@ -445,20 +445,25 @@ async def fetch_expanded_catalogs(on_source=None) -> dict[str, list[dict[str, An
         return records
 
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
-        jobs = {
-            "firefox-addons": fetch_firefox_addons(client),
-            "wordpress-plugins": fetch_wordpress_plugins(client),
-            "homebrew-formulae": fetch_homebrew_formulae(client),
-            "scoop": fetch_scoop_buckets(client),
-            "alpine-linux": fetch_alpine_packages(client),
-            "google-play": fetch_google_play_appbrain(client),
-            "jetbrains-marketplace": fetch_jetbrains_plugins(client),
-            "gnome-extensions": fetch_gnome_extensions(client),
-            "fedora-packages": fetch_fedora_packages(client),
+        available_jobs = {
+            "firefox-addons": lambda: fetch_firefox_addons(client),
+            "wordpress-plugins": lambda: fetch_wordpress_plugins(client),
+            "homebrew-formulae": lambda: fetch_homebrew_formulae(client),
+            "scoop": lambda: fetch_scoop_buckets(client),
+            "alpine-linux": lambda: fetch_alpine_packages(client),
+            "google-play": lambda: fetch_google_play_appbrain(client),
+            "jetbrains-marketplace": lambda: fetch_jetbrains_plugins(client),
+            "gnome-extensions": lambda: fetch_gnome_extensions(client),
+            "fedora-packages": lambda: fetch_fedora_packages(client),
         }
+        selected = set(source_filter) if source_filter else set(available_jobs)
+        unknown = selected - set(available_jobs)
+        if unknown:
+            raise ValueError("Unknown expanded catalogue source(s): " + ", ".join(sorted(unknown)))
+        jobs = {name: collect(name, available_jobs[name]()) for name in available_jobs if name in selected}
         names = list(jobs)
-        jobs = {name: collect(name, job) for name, job in jobs.items()}
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
+
     output: dict[str, list[dict[str, Any]]] = {}
     for name, result in zip(names, results):
         if isinstance(result, Exception):
