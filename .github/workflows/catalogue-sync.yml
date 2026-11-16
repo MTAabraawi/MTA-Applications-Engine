@@ -24,7 +24,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
@@ -40,6 +40,7 @@ jobs:
       STEAM_SEARCH_TERMS: "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer,racing,sports,casual,platformer,puzzle,shooter,role playing"
       APPLE_LIMIT: "100"
       WINGET_LIMIT: "100"
+      CATALOG_CONCURRENCY: "4"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
