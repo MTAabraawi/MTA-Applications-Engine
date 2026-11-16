@@ -333,6 +333,99 @@ async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str
     return _unique(records)
 
 
+async def fetch_jetbrains_plugins(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Collect public JetBrains Marketplace plugin listings from its website search API."""
+    terms = [x.strip() for x in os.getenv(
+        "JETBRAINS_PLUGIN_TERMS",
+        "python,kotlin,java,web,ide,git,database,theme,editor,testing,ai,markdown,docker,cloud,security",
+    ).split(",") if x.strip()]
+    limit = max(1, min(int(os.getenv("JETBRAINS_PLUGIN_LIMIT", "100")), 100))
+    records: list[dict[str, Any]] = []
+    for term in terms:
+        try:
+            payload = await _json(
+                client, "https://plugins.jetbrains.com/api/searchPlugins",
+                params={"search": term, "max": limit},
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("JetBrains Marketplace search failed for %r: %s", term, exc)
+            continue
+        items = payload.get("plugins", []) if isinstance(payload, dict) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            plugin_id = item.get("id")
+            name = item.get("name")
+            link = item.get("link")
+            if not plugin_id or not name:
+                continue
+            icon = item.get("icon")
+            if isinstance(icon, str) and icon.startswith("/"):
+                icon = "https://plugins.jetbrains.com" + icon
+            vendor = item.get("vendor") or {}
+            listing = "https://plugins.jetbrains.com" + link if isinstance(link, str) and link.startswith("/") else (
+                f"https://plugins.jetbrains.com/plugin/{plugin_id}" if plugin_id else None
+            )
+            record = _record(
+                "jetbrains-marketplace", plugin_id, "ide-plugins", name, listing,
+                developer=vendor.get("name") if isinstance(vendor, dict) else None,
+                summary=item.get("preview"), description=item.get("preview"),
+                category=", ".join(item.get("tags") or []) if isinstance(item.get("tags"), list) else None,
+                icon_url=icon,
+                metadata_json={"xml_id": item.get("xmlId"), "downloads": item.get("downloads"),
+                               "rating": item.get("rating"), "pricing_model": item.get("pricingModel"),
+                               "vendor_verified": vendor.get("isVerified") if isinstance(vendor, dict) else None},
+            )
+            if record:
+                records.append(record)
+        await asyncio.sleep(0.08)
+    return _unique(records)
+
+
+async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Collect GNOME Shell extensions from the public extensions.gnome.org search endpoint."""
+    terms = [x.strip() for x in os.getenv(
+        "GNOME_EXTENSION_TERMS",
+        "system,desktop,appearance,weather,productivity,network,clipboard,window,monitor,media,keyboard,menu,privacy,accessibility",
+    ).split(",") if x.strip()]
+    records: list[dict[str, Any]] = []
+    for term in terms:
+        try:
+            payload = await _json(
+                client, "https://extensions.gnome.org/extension-query/",
+                params={"search": term},
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("GNOME Extensions search failed for %r: %s", term, exc)
+            continue
+        items = payload.get("extensions", []) if isinstance(payload, dict) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            extension_id = item.get("uuid") or item.get("pk")
+            name = item.get("name")
+            link = item.get("link")
+            if not extension_id or not name:
+                continue
+            listing = "https://extensions.gnome.org" + link if isinstance(link, str) and link.startswith("/") else None
+            icon = item.get("icon")
+            if isinstance(icon, str) and icon.startswith("/"):
+                icon = "https://extensions.gnome.org" + icon
+            record = _record(
+                "gnome-extensions", extension_id, "desktop-extensions", name, listing,
+                developer=item.get("creator"), summary=item.get("description"),
+                description=item.get("description"), icon_url=icon,
+                app_url=item.get("url"),
+                metadata_json={"downloads": item.get("downloads"), "shell_version_map": item.get("shell_version_map"),
+                               "extension_id": item.get("pk")},
+            )
+            if record:
+                records.append(record)
+        await asyncio.sleep(0.08)
+    return _unique(records)
+
+
+
 async def fetch_expanded_catalogs() -> dict[str, list[dict[str, Any]]]:
     """Fetch all new public catalogues independently; one source failure is isolated."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
@@ -343,6 +436,8 @@ async def fetch_expanded_catalogs() -> dict[str, list[dict[str, Any]]]:
             "scoop": fetch_scoop_buckets(client),
             "alpine-linux": fetch_alpine_packages(client),
             "google-play": fetch_google_play_appbrain(client),
+            "jetbrains-marketplace": fetch_jetbrains_plugins(client),
+            "gnome-extensions": fetch_gnome_extensions(client),
         }
         names = list(jobs)
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
