@@ -30,6 +30,7 @@ WINGET_SEARCH_TERMS = [x.strip() for x in os.getenv(
 ).split(",") if x.strip()]
 APPLE_LIMIT = max(1, min(int(os.getenv("APPLE_LIMIT", "100")), 200))
 WINGET_LIMIT = max(1, min(int(os.getenv("WINGET_LIMIT", "24")), 24))
+WINGET_PAGES = max(1, min(int(os.getenv("WINGET_PAGES", "3")), 10))
 ARCH_SEARCH_TERMS = [x.strip() for x in os.getenv("ARCH_SEARCH_TERMS", "browser,office,photo,video,education,security,finance,communication,developer,utilities").split(",") if x.strip()]
 ARCH_LIMIT = max(1, min(int(os.getenv("ARCH_LIMIT", "100")), 200))
 DEBIAN_SEARCH_TERMS = [x.strip() for x in os.getenv(
@@ -395,44 +396,55 @@ async def fetch_debian_packages(client: httpx.AsyncClient) -> list[dict[str, Any
 
 
 async def fetch_winget_community(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Query the winget.run community index. Installer URLs are intentionally discarded."""
+    """Query the public winget.run index backed by WinGet community manifests.
+
+    This is a search index rather than a Microsoft-operated bulk API. We use
+    bounded pagination per broad query and keep the original WinGet package ID.
+    """
     records = []
     for term in WINGET_SEARCH_TERMS:
-        try:
-            payload = await _get_json(
-                client, "https://api.winget.run/v2/packages",
-                params={"query": term, "take": WINGET_LIMIT, "page": 0},
-            )
-        except (httpx.HTTPError, ValueError) as exc:
-            log.warning("WinGet community search failed for %r: %s", term, exc)
-            continue
-        if isinstance(payload, list):
-            items = payload
-        elif isinstance(payload, dict):
-            items = payload.get("Packages") or payload.get("packages") or payload.get("value") or []
-        else:
-            items = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            latest = item.get("Latest") or item.get("latest") or {}
-            package_id = item.get("Id") or item.get("id")
-            name = latest.get("Name") or item.get("name") or package_id
-            homepage = latest.get("Homepage") or item.get("homePageUrl")
-            description = latest.get("Description") or item.get("description")
-            publisher = latest.get("Publisher") or item.get("publisher")
-            license_name = latest.get("License") or item.get("license")
-            record = _record(
-                "winget-run-community", package_id, "windows", name,
-                f"https://winget.run/pkg/{package_id}" if package_id else None,
-                developer=publisher, summary=description, description=description,
-                license=license_name, app_url=homepage,
-                icon_url=item.get("IconUrl") or item.get("iconUrl"),
-                metadata_json={"version": latest.get("Version") or item.get("version"),
-                               "tags": latest.get("Tags") or item.get("tags")},
-            )
-            if record:
-                records.append(record)
+        for page in range(WINGET_PAGES):
+            try:
+                payload = await _get_json(
+                    client, "https://api.winget.run/v2/packages",
+                    params={"query": term, "take": WINGET_LIMIT, "page": page},
+                )
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("WinGet community search failed for %r page %d: %s", term, page, exc)
+                break
+            if isinstance(payload, list):
+                items = payload
+            elif isinstance(payload, dict):
+                items = payload.get("Packages") or payload.get("packages") or payload.get("value") or []
+            else:
+                items = []
+            if not isinstance(items, list) or not items:
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                latest = item.get("Latest") or item.get("latest") or {}
+                package_id = item.get("Id") or item.get("id")
+                name = latest.get("Name") or item.get("name") or package_id
+                homepage = latest.get("Homepage") or item.get("homePageUrl")
+                description = latest.get("Description") or item.get("description")
+                publisher = latest.get("Publisher") or item.get("publisher")
+                license_name = latest.get("License") or item.get("license")
+                record = _record(
+                    "winget-run-community", package_id, "windows", name,
+                    f"https://winget.run/pkg/{package_id}" if package_id else None,
+                    developer=publisher, summary=description, description=description,
+                    license=license_name, app_url=homepage,
+                    icon_url=item.get("IconUrl") or item.get("iconUrl"),
+                    metadata_json={"version": latest.get("Version") or item.get("version"),
+                                   "tags": latest.get("Tags") or item.get("tags"),
+                                   "catalog_source": "WinGet community manifests via winget.run"},
+                )
+                if record:
+                    records.append(record)
+            if len(items) < WINGET_LIMIT:
+                break
+            await asyncio.sleep(0.05)
     return _unique(records)
 
 

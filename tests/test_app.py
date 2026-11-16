@@ -45,7 +45,11 @@ def test_catalog_ingestion_upserts_and_reports_counts(monkeypatch):
     async def fake_fetch():
         return {"test-source": [record]}
 
+    async def fake_fetch_expanded():
+        return {}
+
     monkeypatch.setattr(app_module, "fetch_all_catalogs", fake_fetch)
+    monkeypatch.setattr(app_module, "fetch_expanded_catalogs", fake_fetch_expanded)
     try:
         first = client.post("/api/v1/ingest/catalogs", headers={"X-Admin-Token": "test-token"})
         assert first.status_code == 200
