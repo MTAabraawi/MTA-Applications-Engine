@@ -156,7 +156,8 @@
     "name": "Chocolatey",
     "platform": "windows",
     "integration_mode": "cli_search",
-    "reason": "Community Repository queried through the supported Chocolatey CLI on a Windows runner; direct custom OData querying is intentionally not used."
+    "reason": "Community Repository queried through the supported Chocolatey CLI on a Windows runner; direct custom OData querying is intentionally not used.",
+    "source_key": "chocolatey"
   },
   {
     "id": "flathub",
