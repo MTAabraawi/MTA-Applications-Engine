@@ -27,7 +27,7 @@ async def main() -> None:
         started = datetime.now(timezone.utc).isoformat()
         if error is not None:
             result = {"fetched": 0, "error": str(error)}
-            logging.exception("Catalogue source %s failed during fetch", source, exc_info=error)
+            logging.error("Catalogue source %s failed during fetch: %s", source, error)
         else:
             try:
                 result = {"fetched": len(records), **upsert_records(db, records)}
