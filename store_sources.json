@@ -248,5 +248,45 @@
     "integration_mode": "live_api",
     "reason": "Debian Sources public package search API plus official Debian package detail pages.",
     "source_key": "debian-packages"
+  },
+  {
+    "id": "firefox-addons",
+    "name": "Firefox Add-ons",
+    "platform": "browser-extensions",
+    "integration_mode": "live_api",
+    "reason": "Mozilla Add-ons public API v5.",
+    "source_key": "firefox-addons"
+  },
+  {
+    "id": "wordpress-plugins",
+    "name": "WordPress Plugin Directory",
+    "platform": "web-plugins",
+    "integration_mode": "live_api",
+    "reason": "Official WordPress.org plugin directory API.",
+    "source_key": "wordpress-plugins"
+  },
+  {
+    "id": "homebrew-formulae",
+    "name": "Homebrew Formulae",
+    "platform": "macos",
+    "integration_mode": "live_api",
+    "reason": "Official Homebrew core formula JSON feed; formulae may also be usable on Linux.",
+    "source_key": "homebrew-formulae"
+  },
+  {
+    "id": "scoop",
+    "name": "Scoop Buckets",
+    "platform": "windows",
+    "integration_mode": "live_api",
+    "reason": "Public JSON manifests from official Scoop main, extras, games and versions GitHub buckets.",
+    "source_key": "scoop"
+  },
+  {
+    "id": "alpine-linux",
+    "name": "Alpine Linux Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Official Alpine edge APKINDEX archives for main and community on x86_64.",
+    "source_key": "alpine-linux"
   }
 ]
