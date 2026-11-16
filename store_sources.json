@@ -289,5 +289,21 @@
     "integration_mode": "live_api",
     "reason": "Official Alpine edge APKINDEX archives for main and community on x86_64.",
     "source_key": "alpine-linux"
+  },
+  {
+    "id": "jetbrains-marketplace",
+    "name": "JetBrains Marketplace",
+    "platform": "ide-plugins",
+    "integration_mode": "live_api",
+    "reason": "Public JetBrains Marketplace search endpoint used by its website; response schema is not a versioned public API contract.",
+    "source_key": "jetbrains-marketplace"
+  },
+  {
+    "id": "gnome-extensions",
+    "name": "GNOME Extensions",
+    "platform": "desktop-extensions",
+    "integration_mode": "live_api",
+    "reason": "Public extensions.gnome.org catalogue search endpoint.",
+    "source_key": "gnome-extensions"
   }
 ]
