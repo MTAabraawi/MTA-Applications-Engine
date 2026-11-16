@@ -316,48 +316,104 @@ async def fetch_alpine_packages(client: httpx.AsyncClient) -> list[dict[str, Any
     return _unique(records)
 
 
+def _appbrain_categories(env_name: str, default: str) -> list[str]:
+    return [x.strip().upper() for x in os.getenv(env_name, default).split(",") if x.strip()]
+
+
+async def _fetch_appbrain_platform(
+    client: httpx.AsyncClient, *, platform: str, source_key: str,
+    categories: list[str], max_pages: int,
+) -> list[dict[str, Any]]:
+    """Fetch AppBrain browse pages while respecting its documented offset ceiling."""
+    records: list[dict[str, Any]] = []
+    for category in categories:
+        for page in range(max_pages):
+            offset = page * 50
+            try:
+                params = {"apikey": os.getenv("APPBRAIN_API_KEY", "").strip(),
+                          "category": category, "offset": offset, "limit": 50}
+                if platform == "IOS":
+                    params["platform"] = "IOS"
+                payload = await _json(client, "https://api.appbrain.com/v2/info/browse", params=params)
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("AppBrain %s category %s offset %d failed: %s", platform, category, offset, exc)
+                break
+            items = payload.get("apps", []) if isinstance(payload, dict) else []
+            if not isinstance(items, list) or not items:
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                package = item.get("package")
+                name = item.get("name")
+                if platform == "IOS":
+                    # AppBrain addresses App Store records as ios-<trackId>.
+                    match = re.fullmatch(r"ios-(\\d+)", str(package or ""), re.IGNORECASE)
+                    track_id = match.group(1) if match else str(item.get("trackId") or "")
+                    if not track_id.isdigit():
+                        continue
+                    external_id = track_id
+                    listing_url = f"https://apps.apple.com/app/id{track_id}"
+                    record_platform = "ios"
+                else:
+                    if not package:
+                        continue
+                    external_id = str(package)
+                    listing_url = f"https://play.google.com/store/apps/details?id={package}"
+                    record_platform = "android"
+                # Keep the complete public AppBrain record so newly exposed fields are
+                # not silently discarded when AppBrain expands its response schema.
+                metadata = dict(item)
+                metadata["source_provider"] = "AppBrain"
+                metadata["appbrain_platform"] = platform
+                record = _record(
+                    source_key, external_id, record_platform, name, listing_url,
+                    developer=item.get("developer") or item.get("publisher") or item.get("artistName"),
+                    summary=item.get("shortDescription"), description=item.get("description"),
+                    category=item.get("marketCategory") or category,
+                    icon_url=item.get("iconUrl") or item.get("icon") or item.get("iconURL"),
+                    app_url=listing_url, metadata_json=metadata,
+                )
+                if record:
+                    records.append(record)
+            if len(items) < 50:
+                break
+            await asyncio.sleep(0.08)
+    return _unique(records)
+
+
 async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Optional Google Play connector using AppBrain's documented API; requires a key."""
+    """Fetch Google Play metadata through AppBrain's documented browse API."""
     api_key = os.getenv("APPBRAIN_API_KEY", "").strip()
     if not api_key:
         log.info("Google Play/AppBrain connector skipped: APPBRAIN_API_KEY is not configured")
         return []
-    categories = [x.strip().upper() for x in os.getenv(
+    categories = _appbrain_categories(
         "APPBRAIN_CATEGORIES",
         "BOOKS,BUSINESS,EDUCATION,ENTERTAINMENT,FINANCE,FOOD_AND_DRINK,GAMES,HEALTH_AND_FITNESS,LIFESTYLE,MAGAZINES_AND_NEWSPAPERS,MEDICAL,MUSIC,NAVIGATION,NEWS,PHOTO_AND_VIDEO,PRODUCTIVITY,REFERENCE,SHOPPING,SOCIAL_NETWORKING,SPORTS,TRAVEL,UTILITIES,WEATHER",
-    ).split(",") if x.strip()]
-    records: list[dict[str, Any]] = []
-    for category in categories:
-        try:
-            payload = await _json(
-                client, "https://api.appbrain.com/v2/info/browse",
-                params={"apikey": api_key, "category": category, "offset": 0, "limit": 50},
-            )
-        except (httpx.HTTPError, ValueError) as exc:
-            log.warning("AppBrain Google Play category %s failed: %s", category, exc)
-            continue
-        items = payload.get("apps", []) if isinstance(payload, dict) else []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            package = item.get("package")
-            name = item.get("name")
-            record = _record(
-                "google-play", package, "android", name,
-                f"https://play.google.com/store/apps/details?id={package}" if package else None,
-                developer=item.get("developer") or item.get("publisher"),
-                summary=item.get("shortDescription"), description=item.get("description"),
-                category=item.get("marketCategory") or category, icon_url=item.get("iconUrl") or item.get("icon"),
-                metadata_json={"version": item.get("versionString"), "version_code": item.get("versionCode"),
-                               "downloads_category": item.get("downloadsCategory"),
-                               "estimated_downloads": item.get("estimatedDownloads"),
-                               "last_updated": item.get("lastAppUpdateTime"),
-                               "price": item.get("price"), "min_sdk": item.get("minSdkVersion"),
-                               "source_provider": "AppBrain"},
-            )
-            if record:
-                records.append(record)
-    return _unique(records)
+    )
+    max_pages = max(1, min(int(os.getenv("APPBRAIN_MAX_PAGES", "1")), 11))
+    return await _fetch_appbrain_platform(
+        client, platform="ANDROID", source_key="google-play",
+        categories=categories, max_pages=max_pages,
+    )
+
+
+async def fetch_apple_appbrain(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Fetch Apple App Store metadata through AppBrain's documented iOS browse API."""
+    api_key = os.getenv("APPBRAIN_API_KEY", "").strip()
+    if not api_key:
+        log.info("Apple App Store/AppBrain connector skipped: APPBRAIN_API_KEY is not configured")
+        return []
+    categories = _appbrain_categories(
+        "APPBRAIN_IOS_CATEGORIES",
+        "BOOKS,BUSINESS,EDUCATION,ENTERTAINMENT,FINANCE,FOOD_AND_DRINK,GAMES,HEALTH_AND_FITNESS,LIFESTYLE,MAGAZINES_AND_NEWSPAPERS,MEDICAL,MUSIC,NAVIGATION,NEWS,PHOTO_AND_VIDEO,PRODUCTIVITY,REFERENCE,SHOPPING,SOCIAL_NETWORKING,SPORTS,TRAVEL,UTILITIES,WEATHER",
+    )
+    max_pages = max(1, min(int(os.getenv("APPBRAIN_IOS_MAX_PAGES", os.getenv("APPBRAIN_MAX_PAGES", "1"))), 11))
+    return await _fetch_appbrain_platform(
+        client, platform="IOS", source_key="apple-itunes",
+        categories=categories, max_pages=max_pages,
+    )
 
 
 async def fetch_jetbrains_plugins(client: httpx.AsyncClient) -> list[dict[str, Any]]:
@@ -475,6 +531,7 @@ async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None
             "scoop": lambda: fetch_scoop_buckets(client),
             "alpine-linux": lambda: fetch_alpine_packages(client),
             "google-play": lambda: fetch_google_play_appbrain(client),
+            "apple-appbrain": lambda: fetch_apple_appbrain(client),
             "jetbrains-marketplace": lambda: fetch_jetbrains_plugins(client),
             "gnome-extensions": lambda: fetch_gnome_extensions(client),
             "fedora-packages": lambda: fetch_fedora_packages(client),
