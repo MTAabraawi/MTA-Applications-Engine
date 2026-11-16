@@ -5,6 +5,7 @@ on:
     branches: [feature/global-store-catalog-expansion]
     paths:
       - "expanded_catalog_sources.py"
+      - "fedora_catalog_source.py"
       - "tests/test_expanded_catalog_sources.py"
       - "tests/test_store_registry_and_connectors.py"
       - "scripts/discover_expanded_catalogs.py"
