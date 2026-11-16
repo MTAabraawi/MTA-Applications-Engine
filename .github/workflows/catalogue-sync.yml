@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "catalog_sources.py"
+      - "expanded_catalog_sources.py"
+      - "sync_catalogs.py"
+      - "store_sources.json"
       - ".github/workflows/catalogue-sync.yml"
   schedule:
     - cron: "17 2 * * *"
