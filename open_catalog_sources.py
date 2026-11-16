@@ -106,12 +106,10 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             break
 
         items = payload.get("data", []) if isinstance(payload, dict) else []
-        if not isinstance(items, list) or not items:
-            meta = payload.get("meta", {}) if isinstance(payload, dict) else {}
-            next_url = meta.get("next") if isinstance(meta, dict) else None
-            if not next_url:
-                break
-        for item in items if isinstance(items, list) else []:
+        if not isinstance(items, list):
+            log.warning("Blue Jetty returned an unrecognised index page at %s", url)
+            break
+        for item in items:
             if not isinstance(item, dict):
                 continue
             app_id = str(item.get("blueJettyId") or item.get("blue_jetty_id") or item.get("id") or item.get("appId") or "").strip()
@@ -158,8 +156,16 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                         "packet_url": item.get("packetUrl") or item.get("packet_url"),
                         "platforms": platforms,
                         "store_destinations": [{"platform": p, "url": u} for p, u in destinations],
-                        "source_observation": item.get("lastSuccessfulCheckAt") or item.get("recordModifiedAt"),
+                        "source_observation": item.get("lastSuccessfulCheckAt") or item.get("sourceObservedAt") or item.get("updatedAt") or item.get("recordModifiedAt"),
                         "source_provider": "Blue Jetty public app index",
+                        "bluejetty_html_url": item.get("htmlUrl"),
+                        "publisher_website": item.get("websiteUrl"),
+                        "provenance": item.get("provenance"),
+                        "attribution": item.get("attribution") or [],
+                        "source_observed_at": item.get("sourceObservedAt"),
+                        "record_updated_at": item.get("updatedAt"),
+                        "last_successful_check_at": item.get("lastSuccessfulCheckAt"),
+                        "record_format": (payload.get("meta") or {}).get("format") if isinstance(payload.get("meta"), dict) else None,
                     },
                 ))
         pages += 1
