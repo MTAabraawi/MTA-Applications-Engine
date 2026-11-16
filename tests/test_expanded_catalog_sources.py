@@ -146,7 +146,7 @@ def test_apple_appbrain_uses_ios_platform_and_app_store_listing(monkeypatch):
     monkeypatch.setenv("APPBRAIN_IOS_MAX_PAGES", "1")
     monkeypatch.setenv("APPBRAIN_ENABLE_IOS", "true")
     client = FakeClient(lambda url, kwargs: {"apps": [{
-        "package": "ios-123456789", "name": "Example iOS App",
+        "package": "ios-123456789", "trackId": "123456789", "name": "Example iOS App",
         "artistName": "Example Developer", "description": "iOS description",
         "iconUrl": "https://cdn.example/ios.png", "price": "$0.00",
     }]})
