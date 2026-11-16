@@ -21,6 +21,8 @@ jobs:
       WINGET_SEARCH_TERMS: browser,office
       WINGET_LIMIT: "24"
       FLATHUB_MAX_APPS: "20"
+      BLUEJETTY_MAX_APPS: "500"
+      OPENUSE_MAX_APPS: "500"
       CATALOG_CONCURRENCY: "4"
     steps:
       - name: Check out repository
