@@ -63,6 +63,9 @@ async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]
                 summary = item.get("summary")
                 if isinstance(summary, dict):
                     summary = summary.get("en-US") or summary.get("en") or next(iter(summary.values()), None)
+                description = item.get("description")
+                if isinstance(description, dict):
+                    description = description.get("en-US") or description.get("en") or next(iter(description.values()), None)
                 authors = item.get("authors") or []
                 author = authors[0].get("name") if authors and isinstance(authors[0], dict) else None
                 icons = item.get("icons") or {}
@@ -71,7 +74,7 @@ async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]
                 record = _record(
                     "firefox-addons", item.get("id") or slug, "browser-extensions",
                     name, url, developer=author, summary=summary,
-                    description=item.get("description") if isinstance(item.get("description"), str) else None,
+                    description=description if isinstance(description, str) else None,
                     category=", ".join(item.get("categories") or []) if isinstance(item.get("categories"), list) else None,
                     icon_url=icon,
                     metadata_json={"slug": slug, "weekly_downloads": item.get("weekly_downloads"),
