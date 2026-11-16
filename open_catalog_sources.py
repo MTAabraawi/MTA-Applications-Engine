@@ -59,7 +59,7 @@ def _walk_store_urls(value: Any, depth: int = 0) -> list[tuple[str, str]]:
                     platform = "android"
                 elif host == "apps.apple.com" or host.endswith(".apps.apple.com"):
                     platform = "ios"
-                elif any(token in key.casefold() for token in ("store", "listing", "destination", "trackview")):
+                elif any(token in key.casefold() for token in ("store", "listing", "destination", "trackview")) or key.casefold() in {"url", "href", "link"}:
                     platform = _platform(value.get("platform") or value.get("os"))
                 if platform:
                     found.append((platform, child))
@@ -170,7 +170,7 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         url = next_url if isinstance(next_url, str) and next_url.startswith("https://") else None
         if pages % 25 == 0:
             log.info("Blue Jetty index progress: pages=%d apps=%d records=%d", pages, len(seen_apps), len(records))
-        await asyncio.sleep(0.03)
+        await asyncio.sleep(0.20)
 
     log.info("Blue Jetty index complete/limited: pages=%d apps=%d records=%d max_apps=%d",
              pages, len(seen_apps), len(records), max_apps)
@@ -250,7 +250,7 @@ async def fetch_openuse(client: httpx.AsyncClient) -> list[dict[str, Any]]:
         offset += len(items)
         if len(items) < page_size or (isinstance(total, int) and offset >= total):
             break
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.55)
 
     log.info("OpenUse catalogue: %d platform records from %d app entries (cap=%d)",
              len(records), len(seen), max_apps)
