@@ -1,4 +1,6 @@
 import asyncio
+import json
+import logging
 
 from expanded_catalog_sources import (
     fetch_firefox_addons,
