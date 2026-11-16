@@ -157,7 +157,7 @@ async def fetch_homebrew_formulae(client: httpx.AsyncClient) -> list[dict[str, A
             "homebrew-formulae", name, "macos", item.get("full_name") or name,
             f"https://formulae.brew.sh/formula/{name}",
             developer=item.get("tap"), summary=item.get("desc"), description=item.get("desc"),
-            category=", ".join(item.get(" rack") or []) if isinstance(item.get("rack"), list) else None,
+            category=None,
             license=item.get("license"), app_url=item.get("homepage"),
             metadata_json={"version": versions.get("stable"), "tap": item.get("tap"),
                            "bottle": bool(item.get("bottle")),
@@ -288,7 +288,7 @@ async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str
         return []
     categories = [x.strip().upper() for x in os.getenv(
         "APPBRAIN_CATEGORIES",
-        "APPLICATION,ART_AND_DESIGN,AUTO_AND_VEHICLES,BEAUTY,BOOKS_AND_REFERENCE,BUSINESS,COMICS,COMMUNICATION,DATING,EDUCATION,ENTERTAINMENT,FINANCE,FOOD_AND_DRINK,GAME,HEALTH_AND_FITNESS,LIFESTYLE,MAPS_AND_NAVIGATION,MUSIC_AND_AUDIO,NEWS_AND_MAGAZINES,PERSONALIZATION,PHOTOGRAPHY,PRODUCTIVITY,SHOPPING,SOCIAL,SPORTS,TOOLS,TRAVEL_AND_LOCAL,VIDEO_PLAYERS,WEATHER",
+        "BOOKS,BUSINESS,EDUCATION,ENTERTAINMENT,FINANCE,FOOD_AND_DRINK,GAMES,HEALTH_AND_FITNESS,LIFESTYLE,MAGAZINES_AND_NEWSPAPERS,MEDICAL,MUSIC,NAVIGATION,NEWS,PHOTO_AND_VIDEO,PRODUCTIVITY,REFERENCE,SHOPPING,SOCIAL_NETWORKING,SPORTS,TRAVEL,UTILITIES,WEATHER",
     ).split(",") if x.strip()]
     records: list[dict[str, Any]] = []
     for category in categories:
