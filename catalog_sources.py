@@ -631,9 +631,21 @@ async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     return _unique(records)
 
 
-async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
+async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
     """Fetch independent sources concurrently; isolate source failures."""
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
+    async def collect(name: str, job):
+        try:
+            records = await job
+        except Exception as exc:
+            log.exception("Catalogue %s failed: %s", name, exc)
+            if on_source:
+                on_source(name, [], exc)
+            return []
+        if on_source:
+            on_source(name, records)
+        return records
+
         jobs = {
             "fdroid": fetch_fdroid(client),
             "izzyondroid": fetch_izzyondroid(client),
@@ -648,6 +660,7 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
             "steam": fetch_steam(client),
         }
         names = list(jobs)
+        jobs = {name: collect(name, job) for name, job in jobs.items()}
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
     output: dict[str, list[dict[str, Any]]] = {}
     for name, result in zip(names, results):
@@ -656,5 +669,8 @@ async def fetch_all_catalogs() -> dict[str, list[dict[str, Any]]]:
             output[name] = []
         else:
             output[name] = result
-    output["mta-curated-web"] = fetch_curated_web_apps()
+    curated = fetch_curated_web_apps()
+    output["mta-curated-web"] = curated
+    if on_source:
+        on_source("mta-curated-web", curated)
     return output
