@@ -305,5 +305,13 @@
     "integration_mode": "live_api",
     "reason": "Public extensions.gnome.org catalogue search endpoint.",
     "source_key": "gnome-extensions"
+  },
+  {
+    "id": "fedora-packages",
+    "name": "Fedora Packages",
+    "platform": "linux",
+    "integration_mode": "live_api",
+    "reason": "Fedora's public alphabetic static package index; stores package names and official detail links without crawling every detail page.",
+    "source_key": "fedora-packages"
   }
 ]
