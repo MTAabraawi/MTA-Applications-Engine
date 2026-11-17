@@ -219,6 +219,56 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
     return {"selected": len(rows), **counts}
 
 
+
+def _quality_snapshot(db):
+    """Return comparable catalogue completeness counts by source and field."""
+    fields = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
+    expressions = []
+    for field in fields:
+        column = getattr(AppRecord, field)
+        normalized = func.lower(func.trim(func.coalesce(column, "")))
+        condition = normalized.like("https://%") if field.endswith("_url") else func.length(normalized) > 0
+        expressions.append(func.sum(case((condition, 1), else_=0)).label(field))
+    rows = db.execute(
+        select(AppRecord.source_key, func.count().label("total"), *expressions)
+        .group_by(AppRecord.source_key).order_by(AppRecord.source_key)
+    ).all()
+    result = {"total": 0, "sources": {}}
+    for row in rows:
+        source, total = row[0], int(row[1] or 0)
+        counts = {field: int(row[index + 2] or 0) for index, field in enumerate(fields)}
+        result["total"] += total
+        result["sources"][source] = {
+            "total": total,
+            "fields": {
+                field: {
+                    "present": count,
+                    "missing": max(total - count, 0),
+                    "percent": round(count * 100.0 / total, 2) if total else 0.0,
+                }
+                for field, count in counts.items()
+            },
+        }
+    return result
+
+
+def _quality_delta(before, after):
+    """Calculate absolute changes in source totals and populated fields."""
+    delta = {"total": after["total"] - before["total"], "sources": {}}
+    for source in sorted(set(before["sources"]) | set(after["sources"])):
+        old = before["sources"].get(source, {"total": 0, "fields": {}})
+        new = after["sources"].get(source, {"total": 0, "fields": {}})
+        fields = {}
+        for field in sorted(set(old["fields"]) | set(new["fields"])):
+            old_count = old["fields"].get(field, {}).get("present", 0)
+            new_count = new["fields"].get(field, {}).get("present", 0)
+            fields[field] = new_count - old_count
+        delta["sources"][source] = {
+            "total": new["total"] - old["total"],
+            "fields_filled": fields,
+        }
+    return delta
+
 def _empty_totals():
     return {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}}
 
@@ -242,6 +292,7 @@ async def main():
     max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "4")), 10))
     totals = {"bluejetty": _empty_totals(), "fedora": _empty_totals()}
     try:
+        quality_before = _quality_snapshot(db)
         async with httpx.AsyncClient(follow_redirects=False) as client:
             for batch_number in range(1, max_batches + 1):
                 bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
@@ -258,7 +309,14 @@ async def main():
             totals["bluejetty"]["batches"] >= max_batches
             or totals["fedora"]["batches"] >= max_batches
         )
-        print(json.dumps(totals, ensure_ascii=False, indent=2))
+        quality_after = _quality_snapshot(db)
+        report = {
+            "enrichment": totals,
+            "catalog_quality_before": quality_before,
+            "catalog_quality_after": quality_after,
+            "catalog_quality_delta": _quality_delta(quality_before, quality_after),
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
     finally:
         db.close()
 
