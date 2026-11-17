@@ -286,55 +286,72 @@ def _load_icon_provider_index(db):
 
 
 def _crossmatch_bluejetty_icons(db, provider_index: dict, limit: int, now: str):
-    """Backfill icons from existing providers using exact official store IDs only."""
-    rows = db.execute(
-        select(AppRecord)
-        .where(
-            AppRecord.source_key == "bluejetty",
-            _missing_any(AppRecord.icon_url),
-            _due_for_retry("icon_crossmatch_last_attempt_at", 7),
-        )
-        .order_by(
-            AppRecord.metadata_json["icon_crossmatch_last_attempt_at"].as_string().asc().nullsfirst(),
-            AppRecord.id,
-        )
-        .limit(limit)
-    ).scalars().all()
-    counts = {"scanned": len(rows), "matched": 0, "unmatched": 0, "ambiguous": 0}
-    for row in rows:
-        metadata = dict(row.metadata_json or {})
-        candidates = _bluejetty_icon_candidates(metadata, row.platform, provider_index)
-        match = _resolve_bluejetty_icon(metadata, row.platform, provider_index)
-        metadata["icon_crossmatch_last_attempt_at"] = now
-        if match:
-            store_platform, external_id, source_key, icon_url = match
-            row.icon_url = icon_url
-            metadata["icon_crossmatch"] = {
-                "status": "matched",
-                "method": "exact_official_store_listing_id",
-                "store_platform": store_platform,
-                "store_external_id": external_id,
-                "provider_source": source_key,
-                "matched_at": now,
-            }
-            counts["matched"] += 1
-        elif len({item[3] for item in candidates}) > 1:
-            metadata["icon_crossmatch"] = {
-                "status": "ambiguous",
-                "method": "exact_official_store_listing_id",
-                "checked_at": now,
-            }
-            counts["ambiguous"] += 1
-        else:
-            metadata["icon_crossmatch"] = {
-                "status": "unmatched",
-                "method": "exact_official_store_listing_id",
-                "checked_at": now,
-            }
-            counts["unmatched"] += 1
-        row.metadata_json = metadata
-    if rows:
+    """Sweep every currently missing Blue Jetty icon once per run.
+
+    A fixed run-start cursor prevents a just-checked unmatched record from
+    being selected again in the same sweep, while allowing the next run to
+    revisit it after the provider index changes.
+    """
+    run_started_at = now
+    counts = {"scanned": 0, "matched": 0, "unmatched": 0, "ambiguous": 0}
+    last_attempt = AppRecord.metadata_json["icon_crossmatch_last_attempt_at"].as_string()
+
+    while True:
+        rows = db.execute(
+            select(AppRecord)
+            .where(
+                AppRecord.source_key == "bluejetty",
+                _missing_any(AppRecord.icon_url),
+                or_(last_attempt.is_(None), last_attempt < run_started_at),
+            )
+            .order_by(last_attempt.asc().nullsfirst(), AppRecord.id)
+            .limit(limit)
+        ).scalars().all()
+        if not rows:
+            break
+
+        for row in rows:
+            metadata = dict(row.metadata_json or {})
+            candidates = _bluejetty_icon_candidates(metadata, row.platform, provider_index)
+            match = _resolve_bluejetty_icon(metadata, row.platform, provider_index)
+            metadata["icon_crossmatch_last_attempt_at"] = now
+            if match:
+                store_platform, external_id, source_key, icon_url = match
+                row.icon_url = icon_url
+                metadata["icon_crossmatch"] = {
+                    "status": "matched",
+                    "method": "exact_official_store_listing_id",
+                    "store_platform": store_platform,
+                    "store_external_id": external_id,
+                    "provider_source": source_key,
+                    "matched_at": now,
+                }
+                counts["matched"] += 1
+            elif len({item[3] for item in candidates}) > 1:
+                metadata["icon_crossmatch"] = {
+                    "status": "ambiguous",
+                    "method": "exact_official_store_listing_id",
+                    "checked_at": now,
+                }
+                counts["ambiguous"] += 1
+            else:
+                metadata["icon_crossmatch"] = {
+                    "status": "unmatched",
+                    "method": "exact_official_store_listing_id",
+                    "checked_at": now,
+                }
+                counts["unmatched"] += 1
+            row.metadata_json = metadata
+
         db.commit()
+        counts["scanned"] += len(rows)
+        log.info(
+            "Blue Jetty icon cross-match progress: scanned=%s matched=%s unmatched=%s ambiguous=%s",
+            counts["scanned"], counts["matched"], counts["unmatched"], counts["ambiguous"],
+        )
+        if len(rows) < limit:
+            break
+
     return counts
 
 
@@ -416,26 +433,29 @@ async def main():
         log.info("Exact store-ID icon providers available: %d", len(provider_index))
         stopped_early = False
         batches_run = 0
+        crossmatch = _crossmatch_bluejetty_icons(
+            db, provider_index,
+            max(1, min(int(os.getenv("BLUEJETTY_ICON_CROSSMATCH_BATCH_SIZE", "10000")), 10000)),
+            datetime.now(timezone.utc).isoformat(),
+        )
+        for key in icon_crossmatch_totals:
+            icon_crossmatch_totals[key] += crossmatch.get(key, 0)
+        log.info(
+            "Blue Jetty full-catalogue icon cross-match finished: scanned=%s matched=%s unmatched=%s ambiguous=%s",
+            crossmatch["scanned"], crossmatch["matched"], crossmatch["unmatched"], crossmatch["ambiguous"],
+        )
         async with httpx.AsyncClient(follow_redirects=False) as client:
             for batch_number in range(1, max_batches + 1):
                 batches_run = batch_number
                 bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
                 fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
-                crossmatch = _crossmatch_bluejetty_icons(
-                    db, provider_index,
-                    max(1, min(int(os.getenv("BLUEJETTY_ICON_CROSSMATCH_BATCH_SIZE", "5000")), 10000)),
-                    datetime.now(timezone.utc).isoformat(),
-                )
-                for key in icon_crossmatch_totals:
-                    icon_crossmatch_totals[key] += crossmatch.get(key, 0)
                 _add_totals(totals["bluejetty"], bluejetty)
                 _add_totals(totals["fedora"], fedora)
                 log.info(
-                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s, exact icon crossmatch scanned=%s matched=%s ambiguous=%s",
+                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s",
                     batch_number, max_batches, bluejetty.get("selected", 0), fedora.get("selected", 0),
-                    crossmatch.get("scanned", 0), crossmatch.get("matched", 0), crossmatch.get("ambiguous", 0),
                 )
-                if not bluejetty.get("selected") and not fedora.get("selected") and not crossmatch.get("scanned"):
+                if not bluejetty.get("selected") and not fedora.get("selected"):
                     stopped_early = True
                     break
         totals["max_batches_reached"] = not stopped_early and batches_run >= max_batches
