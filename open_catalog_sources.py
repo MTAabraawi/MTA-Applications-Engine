@@ -298,7 +298,7 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
                     description=item.get("description"),
                     category=item.get("category") or item.get("primaryCategory"),
                     app_url=item.get("websiteUrl") or item.get("website") or (listing_url if destinations else None),
-                    icon_url=item.get("iconUrl") or item.get("icon_url") or item.get("icon"),
+                    icon_url=_bluejetty_icon_url(item, []),
                     metadata_json={
                         "catalog_type": "mobile-app-index",
                         "bluejetty_id": app_id,
