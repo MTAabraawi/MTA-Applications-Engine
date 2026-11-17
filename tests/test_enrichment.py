@@ -12,7 +12,9 @@ def test_bluejetty_detail_parser_maps_publisher_and_store_metadata():
             "category": "Health & Fitness",
             "websiteUrl": "https://www.medidojo.com/",
             "publisherAuthorization": {"status": "verified"},
-            "storeObservations": [{
+            "ratings": {"average": 4.6, "count": 48},
+            "storeCommerce": [{"platform": "ios", "inAppPurchases": False}],
+            "listings": [{
                 "platform": "ios", "description": "A much longer full store description with additional context and details.",
                 "averageRating": 4.6, "ratingCount": 48,
                 "listingUrl": "https://apps.apple.com/us/app/example/id123456789",
@@ -28,7 +30,9 @@ def test_bluejetty_detail_parser_maps_publisher_and_store_metadata():
     assert result["description"] == "A much longer full store description with additional context and details."
     assert result["category"] == "Health & Fitness"
     assert result["app_url"] == "https://www.medidojo.com/"
-    assert result["metadata_json"]["bluejetty_detail"]["store_observations"][0]["averageRating"] == 4.6
+    assert result["metadata_json"]["bluejetty_detail"]["listings"][0]["averageRating"] == 4.6
+    assert result["metadata_json"]["bluejetty_detail"]["ratings"]["count"] == 48
+    assert result["metadata_json"]["bluejetty_detail"]["store_commerce"][0]["inAppPurchases"] is False
 
 
 def test_bluejetty_detail_parser_rejects_non_https_icon_and_website():
