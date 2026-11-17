@@ -46,13 +46,29 @@ function corsOrigin(request,env) {
 }
 function safeHttps(value) {
   if(typeof value!=="string")return null;
-  const s=value.trim();return s.startsWith("https://")?s:null;
+  const s=value.trim();
+  try { const u=new URL(s); return u.protocol==="https:"&&u.hostname&&!u.username&&!u.password?s:null; }
+  catch { return null; }
+}
+function cleanText(value,max=10000) {
+  if(typeof value!=="string")return null;
+  let s=value.replace(/<(script|style)[^>]*>[\\s\\S]*?<\\/\\1>/gi," ")
+    .replace(/<(br|\\/p|\\/li|\\/h[1-6]|\\/div)[^>]*>/gi,"\\n").replace(/<[^>]+>/g," ");
+  s=s.replace(/&(#x[0-9a-f]+|#\\d+|[a-z]+);/gi,(match,entity)=>{
+    const key=entity.toLowerCase(),named={amp:"&",lt:"<",gt:">",quot:'"',apos:"'",nbsp:" ",ndash:"–",mdash:"—",hellip:"…",copy:"©",reg:"®"};
+    if(key in named)return named[key];
+    try { const code=key.startsWith("#x")?parseInt(key.slice(2),16):key.startsWith("#")?parseInt(key.slice(1),10):NaN; return Number.isFinite(code)&&code>0&&code<=0x10ffff?String.fromCodePoint(code):match; }
+    catch { return match; }
+  });
+  s=s.replace(/[\\u200B-\\u200D\\uFEFF]/g,"").replace(/\\r\\n?/g,"\\n").replace(/[ \\t]+/g," ").replace(/\\n\\s*\\n+/g,"\\n").trim();
+  return s?s.slice(0,max):null;
 }
 function record(source,id,platform,name,sourceUrl,extra={}) {
-  if(id==null||!String(id).trim()||!name||!safeHttps(sourceUrl))return null;
-  return {source_key:source,external_id:String(id).trim(),platform:platform,name:String(name).trim().slice(0,500),
-    developer:extra.developer??null,summary:extra.summary??null,description:extra.description??null,category:extra.category??null,
-    license:extra.license??null,source_url:safeHttps(sourceUrl),app_url:safeHttps(extra.app_url),icon_url:safeHttps(extra.icon_url),metadata_json:extra.metadata_json||{}};
+  const cleanName=cleanText(name,500),url=safeHttps(sourceUrl);
+  if(id==null||!String(id).trim()||!cleanName||!url)return null;
+  return {source_key:source,external_id:String(id).trim(),platform:platform,name:cleanName,
+    developer:cleanText(extra.developer),summary:cleanText(extra.summary),description:cleanText(extra.description),category:cleanText(extra.category),
+    license:cleanText(extra.license),source_url:url,app_url:safeHttps(extra.app_url),icon_url:safeHttps(extra.icon_url),metadata_json:extra.metadata_json||{}};
 }
 function unique(records) {
   const seen=new Set();return records.filter(r=>{if(!r)return false;const k=r.source_key+"|"+r.external_id;if(seen.has(k))return false;seen.add(k);return true;});
@@ -224,22 +240,35 @@ async function curated() {
     {developer:x.developer,summary:x.summary,description:x.description,category:x.category,app_url:x.app_url||x.homepage,
      icon_url:x.icon_url,metadata_json:{homepage:x.homepage,curated:true}})));
 }
+function hasValue(value) { return value!=null&&(typeof value!=="string"||value.trim().length>0); }
+function mergeMetadata(previous,incoming) {
+  const old=previous&&typeof previous==="object"&&!Array.isArray(previous)?previous:{};
+  const fresh=incoming&&typeof incoming==="object"&&!Array.isArray(incoming)?incoming:{};
+  const merged={...old};
+  for(const [key,value] of Object.entries(fresh)){
+    if(value&&typeof value==="object"&&!Array.isArray(value)&&merged[key]&&typeof merged[key]==="object"&&!Array.isArray(merged[key]))merged[key]=mergeMetadata(merged[key],value);
+    else if(hasValue(value)||!(key in merged))merged[key]=value;
+  }
+  return merged;
+}
 async function upsert(db,records) {
   const counts={inserted:0,updated:0,unchanged:0,skipped:0};
   const columns=["platform","name","developer","summary","description","category","license","source_url","app_url","icon_url"];
   for(const r of records){
     if(!r?.source_key||!r.external_id||!r.name||!r.source_url){counts.skipped++;continue;}
-    const values=[r.platform,r.name,r.developer,r.summary,r.description,r.category,r.license,r.source_url,r.app_url,r.icon_url];
+    const incoming=[r.platform,r.name,r.developer,r.summary,r.description,r.category,r.license,r.source_url,r.app_url,r.icon_url];
     const found=await db.unsafe("SELECT id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata FROM apps WHERE source_key=$1 AND external_id=$2 LIMIT 1",[r.source_key,r.external_id]);
     if(found.length){
-      const old=found[0],same=columns.every((key,i)=>(old[key]??null)===(values[i]??null))&&JSON.stringify(old.metadata||{})===JSON.stringify(r.metadata_json||{});
+      const old=found[0],values=incoming.map((value,index)=>hasValue(value)?value:(old[columns[index]]??null));
+      const metadata=mergeMetadata(old.metadata,r.metadata_json);
+      const same=columns.every((key,i)=>(old[key]??null)===(values[i]??null))&&JSON.stringify(old.metadata||{})===JSON.stringify(metadata);
       if(same){counts.unchanged++;continue;}
       await db.unsafe("UPDATE apps SET platform=$1,name=$2,developer=$3,summary=$4,description=$5,category=$6,license=$7,source_url=$8,app_url=$9,icon_url=$10,metadata=$11::json,updated_at=now() WHERE id=$12",
-        [...values,JSON.stringify(r.metadata_json||{}),old.id]);
+        [...values,JSON.stringify(metadata),old.id]);
       counts.updated++;
     }else{
       await db.unsafe("INSERT INTO apps (source_key,external_id,platform,name,developer,summary,description,category,license,source_url,app_url,icon_url,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::json) ON CONFLICT (source_key,external_id) DO NOTHING",
-        [r.source_key,r.external_id,...values.slice(0,10),JSON.stringify(r.metadata_json||{})]);
+        [r.source_key,r.external_id,...incoming,JSON.stringify(r.metadata_json||{})]);
       counts.inserted++;
     }
   }
@@ -249,6 +278,14 @@ function isAdmin(request,env) {
   const expected=env.ADMIN_API_TOKEN||"",supplied=request.headers.get("X-Admin-Token")||"";
   if(!expected||!supplied||expected.length!==supplied.length)return false;
   let diff=0;for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^supplied.charCodeAt(i);return diff===0;
+}
+function qualityFields(total,counts) {
+  const fields={};
+  for(const field of ["icon_url","description","summary","developer","category","license","app_url","source_url"]){
+    const present=Number(counts[field]||0);
+    fields[field]={present,missing:Math.max(total-present,0),percent:total?Math.round(present*10000/total)/100:0};
+  }
+  return fields;
 }
 async function handle(request,env) {
   const origin=corsOrigin(request,env);
@@ -271,13 +308,20 @@ async function handle(request,env) {
   }
   if(path==="/api/v1/catalog-stats"&&request.method==="GET"){
     const db=database(env),results=await Promise.all([
-      queryWithRetry(env,"SELECT count(*)::int AS total,count(*) FILTER (WHERE icon_url IS NOT NULL AND icon_url <> '')::int AS with_icon,count(*) FILTER (WHERE icon_url IS NULL OR icon_url = '')::int AS without_icon FROM apps"),
       queryWithRetry(env,"SELECT platform,count(*)::int AS count FROM apps GROUP BY platform ORDER BY platform"),
-      queryWithRetry(env,"SELECT source_key,count(*)::int AS count FROM apps GROUP BY source_key ORDER BY source_key")
+      queryWithRetry(env,`SELECT source_key,count(*)::int AS total,\n        count(*) FILTER (WHERE icon_url IS NOT NULL AND btrim(icon_url)<>'' AND lower(icon_url) LIKE 'https://%')::int AS icon_url,\n        count(*) FILTER (WHERE description IS NOT NULL AND btrim(description)<>'')::int AS description,\n        count(*) FILTER (WHERE summary IS NOT NULL AND btrim(summary)<>'')::int AS summary,\n        count(*) FILTER (WHERE developer IS NOT NULL AND btrim(developer)<>'')::int AS developer,\n        count(*) FILTER (WHERE category IS NOT NULL AND btrim(category)<>'')::int AS category,\n        count(*) FILTER (WHERE license IS NOT NULL AND btrim(license)<>'')::int AS license,\n        count(*) FILTER (WHERE app_url IS NOT NULL AND btrim(app_url)<>'' AND lower(app_url) LIKE 'https://%')::int AS app_url,\n        count(*) FILTER (WHERE source_url IS NOT NULL AND btrim(source_url)<>'' AND lower(source_url) LIKE 'https://%')::int AS source_url\n        FROM apps GROUP BY source_key ORDER BY source_key`)
     ]);
-    return response({total:results[0][0]?.total||0,with_icon:results[0][0]?.with_icon||0,without_icon:results[0][0]?.without_icon||0,
-      platforms:Object.fromEntries(results[1].map(x=>[x.platform,x.count])),
-      sources:Object.fromEntries(results[2].map(x=>[x.source_key,x.count])),metadata_only:true},200,origin);
+    const fieldNames=["icon_url","description","summary","developer","category","license","app_url","source_url"];
+    const qualitySources={},sources={},globalCounts=Object.fromEntries(fieldNames.map(key=>[key,0]));
+    let total=0;
+    for(const row of results[1]){
+      const count=Number(row.total||0),counts={};total+=count;sources[row.source_key]=count;
+      for(const field of fieldNames){counts[field]=Number(row[field]||0);globalCounts[field]+=counts[field];}
+      qualitySources[row.source_key]={total:count,fields:qualityFields(count,counts)};
+    }
+    return response({total,with_icon:globalCounts.icon_url,without_icon:Math.max(total-globalCounts.icon_url,0),
+      platforms:Object.fromEntries(results[0].map(x=>[x.platform,x.count])),sources,
+      quality:{fields:qualityFields(total,globalCounts),sources:qualitySources},metadata_only:true},200,origin);
   }
   if((path==="/api/v1/ingest/catalogs"||path==="/api/v1/ingest/fdroid")&&request.method==="POST"){
     if(!isAdmin(request,env))return response({detail:"Ingestion is disabled or unauthorized"},403,origin);
