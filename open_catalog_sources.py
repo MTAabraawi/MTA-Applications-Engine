@@ -99,54 +99,62 @@ def _walk_store_urls(value: Any, depth: int = 0) -> list[tuple[str, str]]:
 
 
 def _bluejetty_icon_url(detail: dict[str, Any], observations: list[Any]) -> str | None:
-    """Find an explicitly labelled app icon/artwork URL in public detail data."""
+    """Find an explicitly labelled app icon URL in arbitrarily nested public detail data."""
     preferred = (
         "iconUrl", "icon_url", "appIconUrl", "app_icon_url", "artworkUrl512",
         "artworkUrl256", "artworkUrl100", "logoUrl", "logo_url", "imageUrl",
         "image_url", "icon", "artwork", "appIcon", "app_icon", "logo",
     )
+    icon_tokens = ("icon", "artwork", "appimage", "app_image", "logo")
 
-    def candidate(value: Any, depth: int = 0) -> str | None:
-        if depth > 5:
+    def is_icon_key(key: Any) -> bool:
+        normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
+        return any(token in normalized for token in icon_tokens)
+
+    def candidate(value: Any, depth: int = 0, labelled: bool = False) -> str | None:
+        if depth > 9:
             return None
         if isinstance(value, str):
-            return _https(value)
+            return _https(value) if labelled else None
         if isinstance(value, list):
             for item in value:
-                found = candidate(item, depth + 1)
+                found = candidate(item, depth + 1, labelled)
                 if found:
                     return found
             return None
-        if isinstance(value, dict):
+        if not isinstance(value, dict):
+            return None
+
+        # Some APIs represent an image as {type: "icon", url: "..."}.
+        image_kind = " ".join(str(value.get(key, "")) for key in ("type", "kind", "purpose", "role")).casefold()
+        if any(token in image_kind for token in icon_tokens):
             for key in ("url", "src", "href", "original", "large", "512", "256"):
-                if key in value:
-                    found = candidate(value[key], depth + 1)
-                    if found:
-                        return found
-            for key in preferred:
-                if key in value:
-                    found = candidate(value[key], depth + 1)
-                    if found:
-                        return found
+                found = candidate(value.get(key), depth + 1, True)
+                if found:
+                    return found
+
+        # First inspect semantically labelled icon fields, including deeply nested variants.
+        for key, child in value.items():
+            if is_icon_key(key):
+                found = candidate(child, depth + 1, True)
+                if found:
+                    return found
+
+        # Continue through wrappers such as media, resources, platform assets, and store records.
+        for child in value.values():
+            if isinstance(child, (dict, list)):
+                found = candidate(child, depth + 1, False)
+                if found:
+                    return found
         return None
 
-    for key in preferred:
-        if key in detail:
-            found = candidate(detail[key])
-            if found:
-                return found
-    for container_key in ("assets", "images", "icons", "artwork", "branding"):
-        if container_key in detail:
-            found = candidate(detail[container_key])
-            if found:
-                return found
+    found = candidate(detail)
+    if found:
+        return found
     for observation in observations:
-        if isinstance(observation, dict):
-            for key in preferred:
-                if key in observation:
-                    found = candidate(observation[key])
-                    if found:
-                        return found
+        found = candidate(observation)
+        if found:
+            return found
     return None
 
 
