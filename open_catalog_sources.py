@@ -98,6 +98,58 @@ def _walk_store_urls(value: Any, depth: int = 0) -> list[tuple[str, str]]:
     return list(dict.fromkeys(found))
 
 
+def _bluejetty_icon_url(detail: dict[str, Any], observations: list[Any]) -> str | None:
+    """Find an explicitly labelled app icon/artwork URL in public detail data."""
+    preferred = (
+        "iconUrl", "icon_url", "appIconUrl", "app_icon_url", "artworkUrl512",
+        "artworkUrl256", "artworkUrl100", "logoUrl", "logo_url", "imageUrl",
+        "image_url", "icon", "artwork", "appIcon", "app_icon", "logo",
+    )
+
+    def candidate(value: Any, depth: int = 0) -> str | None:
+        if depth > 5:
+            return None
+        if isinstance(value, str):
+            return _https(value)
+        if isinstance(value, list):
+            for item in value:
+                found = candidate(item, depth + 1)
+                if found:
+                    return found
+            return None
+        if isinstance(value, dict):
+            for key in ("url", "src", "href", "original", "large", "512", "256"):
+                if key in value:
+                    found = candidate(value[key], depth + 1)
+                    if found:
+                        return found
+            for key in preferred:
+                if key in value:
+                    found = candidate(value[key], depth + 1)
+                    if found:
+                        return found
+        return None
+
+    for key in preferred:
+        if key in detail:
+            found = candidate(detail[key])
+            if found:
+                return found
+    for container_key in ("assets", "images", "icons", "artwork", "branding"):
+        if container_key in detail:
+            found = candidate(detail[container_key])
+            if found:
+                return found
+    for observation in observations:
+        if isinstance(observation, dict):
+            for key in preferred:
+                if key in observation:
+                    found = candidate(observation[key])
+                    if found:
+                        return found
+    return None
+
+
 def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     """Map the public Blue Jetty detail envelope into safe catalogue fields."""
     detail = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
@@ -117,7 +169,7 @@ def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     if not summary and isinstance(detail_description, str):
         summary = detail_description[:240]
     website = detail.get("websiteUrl") or detail.get("website") or detail.get("homepage")
-    icon = detail.get("iconUrl") or detail.get("icon_url") or detail.get("icon") or detail.get("artworkUrl512")
+    icon = _bluejetty_icon_url(detail, observations)
     metadata = {
         "bluejetty_detail": {
             "record_kind": detail.get("recordKind"),
