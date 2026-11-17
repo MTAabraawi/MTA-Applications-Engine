@@ -6,12 +6,14 @@ are never downloaded, mirrored, or hosted by this service.
 from __future__ import annotations
 
 import asyncio
+import html as html_module
 import json
 import logging
 import re
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -43,36 +45,56 @@ TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 HEADERS = {"User-Agent": "MTA-Applications-Engine/0.2 (+https://github.com/MTAabraawi/MTA-Applications-Engine)"}
 
 
+def _clean_text(value: Any, max_length: int = 10000) -> str | None:
+    """Normalize HTML fragments, entities, control characters, and whitespace."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    value = re.sub(r"<(script|style)[^>]*>[\\s\\S]*?</\\1>", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"<(?:br|/p|/li|/h[1-6]|/div)[^>]*>", "\\n", value, flags=re.IGNORECASE)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = html_module.unescape(value)
+    value = re.sub(r"[\\u200b-\\u200d\\ufeff]", "", value)
+    value = re.sub(r"[\\t\\r ]+", " ", value)
+    value = re.sub(r"\\n\\s*\\n+", "\\n", value).strip()
+    return value[:max_length] if value else None
+
+
 def _https(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     value = value.strip()
-    return value if value.startswith("https://") else None
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme.lower() != "https" or not parsed.hostname or parsed.username or parsed.password:
+            return None
+        _ = parsed.port  # Reject malformed ports.
+    except ValueError:
+        return None
+    return value
 
 
 def _record(source_key: str, external_id: Any, platform: str, name: Any,
             source_url: Any, **kwargs: Any) -> dict[str, Any] | None:
     external_id = str(external_id or "").strip()
-    name = str(name or "").strip()
+    name = _clean_text(name, 500)
     source_url = _https(source_url)
     if not external_id or not name or not source_url:
         return None
     result = {
         "source_key": source_key, "external_id": external_id,
-        "platform": platform, "name": name[:500],
-        "developer": kwargs.get("developer"),
-        "summary": kwargs.get("summary"),
-        "description": kwargs.get("description"),
-        "category": kwargs.get("category"),
-        "license": kwargs.get("license"),
+        "platform": platform, "name": name,
+        "developer": _clean_text(kwargs.get("developer")),
+        "summary": _clean_text(kwargs.get("summary")),
+        "description": _clean_text(kwargs.get("description")),
+        "category": _clean_text(kwargs.get("category")),
+        "license": _clean_text(kwargs.get("license")),
         "source_url": source_url,
         "app_url": _https(kwargs.get("app_url")),
         "icon_url": _https(kwargs.get("icon_url")),
         "metadata_json": kwargs.get("metadata_json") or {},
     }
-    for key in ("developer", "summary", "description", "category", "license"):
-        if result[key] is not None:
-            result[key] = str(result[key])[:10000]
     return result
 
 
