@@ -57,4 +57,4 @@ jobs:
       - name: Compile enrichment code
         run: python -m py_compile app.py catalog_sources.py open_catalog_sources.py fedora_catalog_source.py scripts/enrich_catalog_details.py
       - name: Enrich existing public catalogue metadata
-        run: python scripts/enrich_catalog_details.py
+        run: PYTHONPATH=. python scripts/enrich_catalog_details.py
