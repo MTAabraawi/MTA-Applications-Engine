@@ -66,3 +66,13 @@ def test_fedora_detail_parser_extracts_description_release_rows_and_source_repo(
     assert detail["source_repository_url"] == "https://src.fedoraproject.org/rpms/0ad"
     assert detail["releases"][0]["release"] == "Fedora 45"
     assert detail["releases"][0]["stable"] == "0.28.0-7.fc45"
+
+
+def test_enrichment_metadata_merge_keeps_non_empty_lists():
+    from scripts.enrich_catalog_details import _merge_dict
+
+    previous = {"bluejetty_detail": {"listings": [{"platform": "ios"}], "rating": 4.5}}
+    incoming = {"bluejetty_detail": {"listings": [], "rating": None}}
+    merged = _merge_dict(previous, incoming)
+    assert merged["bluejetty_detail"]["listings"] == [{"platform": "ios"}]
+    assert merged["bluejetty_detail"]["rating"] == 4.5
