@@ -9,6 +9,8 @@ on:
       - "open_catalog_sources.py"
       - "fedora_catalog_source.py"
       - "tests/test_enrichment.py"
+  schedule:
+    - cron: "11 */6 * * *"
   workflow_run:
     workflows: ["Daily Catalogue Sync"]
     types: [completed]
@@ -37,13 +39,14 @@ jobs:
   enrich:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 350
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       BLUEJETTY_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.bluejetty_batch || '500' }}
       FEDORA_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.fedora_batch || '100' }}
       ENRICH_CONCURRENCY: "4"
-      ENRICHMENT_MAX_BATCHES: "10"
+      ENRICHMENT_MAX_BATCHES: "1000"
+      ENRICHMENT_MAX_RUNTIME_MINUTES: "340"
     steps:
       - name: Check database configuration
         shell: bash
