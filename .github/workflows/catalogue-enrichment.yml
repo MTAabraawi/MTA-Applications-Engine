@@ -29,8 +29,8 @@ jobs:
     timeout-minutes: 30
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      BLUEJETTY_ENRICH_BATCH_SIZE: ${{ inputs.bluejetty_batch || '200' }}
-      FEDORA_ENRICH_BATCH_SIZE: ${{ inputs.fedora_batch || '25' }}
+      BLUEJETTY_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.bluejetty_batch || '200' }}
+      FEDORA_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.fedora_batch || '25' }}
       ENRICH_CONCURRENCY: "2"
     steps:
       - name: Check database configuration
