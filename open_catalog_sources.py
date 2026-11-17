@@ -125,6 +125,14 @@ def _bluejetty_icon_url(detail: dict[str, Any], observations: list[Any]) -> str 
         if not isinstance(value, dict):
             return None
 
+        # Once a parent field is explicitly labelled as an icon, follow common
+        # URL-bearing wrappers such as {"icon": {"url": ...}} or {"src": ...}.
+        if labelled:
+            for key in ("url", "src", "href", "original", "large", "512", "256"):
+                found = candidate(value.get(key), depth + 1, True)
+                if found:
+                    return found
+
         # Some APIs represent an image as {type: "icon", url: "..."}.
         image_kind = " ".join(str(value.get(key, "")) for key in ("type", "kind", "purpose", "role")).casefold()
         if any(token in image_kind for token in icon_tokens):
