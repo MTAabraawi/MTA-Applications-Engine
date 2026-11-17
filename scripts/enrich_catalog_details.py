@@ -162,7 +162,10 @@ async def enrich_bluejetty(db, client, limit: int, concurrency: int):
             ),
             _due_for_retry("bluejetty_enrichment_last_attempt_at", 7),
         )
-        .order_by(AppRecord.id)
+        .order_by(
+            AppRecord.metadata_json["bluejetty_enrichment_last_attempt_at"].as_string().asc().nullsfirst(),
+            AppRecord.id,
+        )
         .limit(limit)
     ).scalars().all()
     if not rows:
@@ -182,7 +185,12 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
             _missing_any(AppRecord.summary, AppRecord.description),
             _due_for_retry("fedora_enrichment_last_attempt_at", 30),
         )
-        .order_by(priority_order, AppRecord.name, AppRecord.id)
+        .order_by(
+            priority_order,
+            AppRecord.metadata_json["fedora_enrichment_last_attempt_at"].as_string().asc().nullsfirst(),
+            AppRecord.name,
+            AppRecord.id,
+        )
         .limit(limit)
     ).scalars().all()
     if not rows:
