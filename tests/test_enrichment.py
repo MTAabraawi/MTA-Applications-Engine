@@ -76,3 +76,13 @@ def test_enrichment_metadata_merge_keeps_non_empty_lists():
     merged = _merge_dict(previous, incoming)
     assert merged["bluejetty_detail"]["listings"] == [{"platform": "ios"}]
     assert merged["bluejetty_detail"]["rating"] == 4.5
+
+
+def test_enrichment_restricts_detail_urls_and_redirects_to_trusted_https_hosts():
+    from scripts.enrich_catalog_details import _trusted_url
+
+    assert _trusted_url("https://bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
+    assert _trusted_url("https://packages.fedoraproject.org/pkgs/0ad/0ad/index.html", "packages.fedoraproject.org")
+    assert not _trusted_url("http://bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
+    assert not _trusted_url("https://bluejetty.ai.evil.test/v1/index/apps/123", "bluejetty.ai")
+    assert not _trusted_url("https://user@bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
