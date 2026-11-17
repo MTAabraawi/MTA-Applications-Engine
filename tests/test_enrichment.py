@@ -13,7 +13,7 @@ def test_bluejetty_detail_parser_maps_publisher_and_store_metadata():
             "websiteUrl": "https://www.medidojo.com/",
             "publisherAuthorization": {"status": "verified"},
             "storeObservations": [{
-                "platform": "ios", "description": "A longer store description",
+                "platform": "ios", "description": "A much longer full store description with additional context and details.",
                 "averageRating": 4.6, "ratingCount": 48,
                 "listingUrl": "https://apps.apple.com/us/app/example/id123456789",
             }],
@@ -25,7 +25,7 @@ def test_bluejetty_detail_parser_maps_publisher_and_store_metadata():
     result = parse_bluejetty_detail(payload)
     assert result["developer"] == "Medidojo Inc."
     assert result["summary"] == "A personalized meditation app."
-    assert result["description"] == "A longer store description"
+    assert result["description"] == "A much longer full store description with additional context and details."
     assert result["category"] == "Health & Fitness"
     assert result["app_url"] == "https://www.medidojo.com/"
     assert result["metadata_json"]["bluejetty_detail"]["store_observations"][0]["averageRating"] == 4.6
