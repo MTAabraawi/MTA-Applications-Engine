@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from sqlalchemy import DateTime, case, cast, func, or_, select
@@ -47,6 +47,8 @@ def _merge_dict(previous, incoming):
     for key, value in new.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _merge_dict(merged[key], value)
+        elif isinstance(value, list) and not value and key in merged and merged[key]:
+            continue
         elif _has_value(value) or key not in merged:
             merged[key] = value
     return merged
@@ -73,22 +75,32 @@ def _due_for_retry(key: str, days: int):
     return or_(value.is_(None), cast(value, DateTime(timezone=True)) < cutoff)
 
 
-async def _get_response(client: httpx.AsyncClient, url: str):
+async def _get_response(client: httpx.AsyncClient, url: str, trusted_host: str):
     last_error = None
     for attempt in range(3):
+        current_url = url
         try:
-            response = await client.get(url, timeout=TIMEOUT, headers=HEADERS)
-            if response.status_code == 429 or response.status_code in {500, 502, 503, 504}:
-                if attempt < 2:
-                    retry_after = response.headers.get("Retry-After")
-                    try:
-                        delay = min(max(float(retry_after), 1.0), 20.0) if retry_after else 2 ** attempt
-                    except ValueError:
-                        delay = 2 ** attempt
-                    await asyncio.sleep(delay)
+            for _redirect in range(4):
+                response = await client.get(
+                    current_url,
+                    timeout=TIMEOUT,
+                    headers=HEADERS,
+                    follow_redirects=False,
+                )
+                if response.status_code in {301, 302, 303, 307, 308}:
+                    location = response.headers.get("Location")
+                    if not location:
+                        response.raise_for_status()
+                    target_url = urljoin(current_url, location)
+                    if not _trusted_url(target_url, trusted_host):
+                        raise ValueError("Untrusted detail-page redirect target")
+                    current_url = target_url
                     continue
-            response.raise_for_status()
-            return response
+                response.raise_for_status()
+                if not _trusted_url(str(response.url), trusted_host):
+                    raise ValueError("Untrusted detail-page response host")
+                return response
+            raise ValueError("Too many detail-page redirects")
         except httpx.HTTPError as exc:
             last_error = exc
             if attempt < 2:
@@ -110,7 +122,7 @@ async def _fetch_many(rows, client, parser, trusted_host: str, concurrency: int)
         async with semaphore:
             await asyncio.sleep(0.35)
             try:
-                response = await _get_response(client, url)
+                response = await _get_response(client, url, trusted_host)
                 payload = response.json() if trusted_host == "bluejetty.ai" else response.text
                 return row, parser(payload), None
             except (httpx.HTTPError, ValueError, TypeError) as exc:
@@ -209,7 +221,7 @@ async def main():
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
     try:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=False) as client:
             bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
             fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
         print(json.dumps({"bluejetty": bluejetty, "fedora": fedora}, ensure_ascii=False, indent=2))

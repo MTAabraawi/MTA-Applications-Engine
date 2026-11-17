@@ -247,6 +247,7 @@ function mergeMetadata(previous,incoming) {
   const merged={...old};
   for(const [key,value] of Object.entries(fresh)){
     if(value&&typeof value==="object"&&!Array.isArray(value)&&merged[key]&&typeof merged[key]==="object"&&!Array.isArray(merged[key]))merged[key]=mergeMetadata(merged[key],value);
+    else if(Array.isArray(value)&&value.length===0&&Array.isArray(merged[key])&&merged[key].length>0)continue;
     else if(hasValue(value)||!(key in merged))merged[key]=value;
   }
   return merged;
