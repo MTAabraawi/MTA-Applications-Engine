@@ -68,6 +68,30 @@ def test_catalog_ingestion_upserts_and_reports_counts(monkeypatch):
             db.close()
 
 
+def test_upsert_records_processes_large_catalogues_in_batches_and_is_idempotent():
+    source = "test-batched-source"
+    records = [{
+        "source_key": source,
+        "external_id": f"batch-app-{index:04d}",
+        "platform": "web",
+        "name": f"Batch Application {index}",
+        "source_url": f"https://example.org/apps/batch-app-{index:04d}",
+        "metadata_json": {"batch_test": True},
+    } for index in range(1001)]
+    db = SessionLocal()
+    try:
+        first = app_module.upsert_records(db, records)
+        assert first["inserted"] == 1001
+        assert first["updated"] == 0
+        second = app_module.upsert_records(db, records)
+        assert second["inserted"] == 0
+        assert second["unchanged"] == 1001
+    finally:
+        db.query(AppRecord).filter_by(source_key=source).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
 def test_record_requires_https_source_and_deduplicates():
     assert _record("x", "1", "web", "Example", "http://example.org") is None
     item = _record("x", "1", "web", "Example", "https://example.org")

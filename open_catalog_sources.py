@@ -332,7 +332,7 @@ async def fetch_chocolatey(client: httpx.AsyncClient | None = None) -> list[dict
     if not choco:
         log.info("Chocolatey connector skipped: Chocolatey CLI is not installed on this runner")
         return []
-    page_size = max(25, min(int(os.getenv("CHOCOLATEY_PAGE_SIZE", "1000")), 1000))
+    page_size = max(1, min(int(os.getenv("CHOCOLATEY_PAGE_SIZE", "100")), 100))
     max_pages = max(1, min(int(os.getenv("CHOCOLATEY_MAX_PAGES", "10")), 10))
     found: dict[str, tuple[str, str]] = {}
     for page in range(max_pages):
