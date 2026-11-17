@@ -181,3 +181,21 @@ def test_fedora_detail_parser_retains_official_social_image_metadata():
     """)
     assert result["summary"] == "Package summary from Fedora"
     assert result["metadata_json"]["fedora_detail"]["package_page_image_url"] == "https://packages.fedoraproject.org/static/package-art.png"
+
+def test_bluejetty_detail_parser_finds_deeply_nested_icon_in_platform_assets():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Deep icon app",
+        "resources": {"android": {"media": [
+            {"type": "screenshot", "url": "https://cdn.example.org/screenshot.png"},
+            {"type": "icon", "url": "https://cdn.example.org/deep-icon.png"},
+        ]}},
+    }})
+    assert result["icon_url"] == "https://cdn.example.org/deep-icon.png"
+
+
+def test_bluejetty_detail_parser_finds_icon_with_nonstandard_nested_key():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Nested icon key app",
+        "platformAssets": {"android": {"launcherIcon": {"original": "https://cdn.example.org/launcher.png"}}},
+    }})
+    assert result["icon_url"] == "https://cdn.example.org/launcher.png"
