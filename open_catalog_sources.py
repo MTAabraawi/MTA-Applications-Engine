@@ -107,10 +107,15 @@ def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     if not isinstance(observations, list):
         observations = []
     observation = next((item for item in observations if isinstance(item, dict)), {})
-    description = detail.get("description") or observation.get("description")
+    detail_description = detail.get("description")
+    observation_descriptions = [item.get("description") for item in observations
+                                if isinstance(item, dict) and isinstance(item.get("description"), str)]
+    description_candidates = [value for value in [detail_description, *observation_descriptions]
+                              if isinstance(value, str) and value.strip()]
+    description = max(description_candidates, key=len) if description_candidates else None
     summary = detail.get("summary") or detail.get("shortDescription") or detail.get("tagline")
-    if not summary and isinstance(detail.get("description"), str):
-        summary = detail["description"][:240]
+    if not summary and isinstance(detail_description, str):
+        summary = detail_description[:240]
     website = detail.get("websiteUrl") or detail.get("website") or detail.get("homepage")
     icon = detail.get("iconUrl") or detail.get("icon_url") or detail.get("icon") or detail.get("artworkUrl512")
     metadata = {
