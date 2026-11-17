@@ -8,12 +8,12 @@ on:
       bluejetty_batch:
         description: "Maximum Blue Jetty detail records to inspect (1-500)"
         required: false
-        default: "200"
+        default: "500"
         type: string
       fedora_batch:
         description: "Maximum priority Fedora package pages to inspect (1-100)"
         required: false
-        default: "25"
+        default: "100"
         type: string
 
 permissions:
@@ -29,8 +29,8 @@ jobs:
     timeout-minutes: 30
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      BLUEJETTY_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.bluejetty_batch || '200' }}
-      FEDORA_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.fedora_batch || '25' }}
+      BLUEJETTY_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.bluejetty_batch || '500' }}
+      FEDORA_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.fedora_batch || '100' }}
       ENRICH_CONCURRENCY: "2"
     steps:
       - name: Check database configuration
