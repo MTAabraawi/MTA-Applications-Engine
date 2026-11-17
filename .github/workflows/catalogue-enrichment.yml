@@ -6,6 +6,9 @@ on:
     paths:
       - ".github/workflows/catalogue-enrichment.yml"
       - "scripts/enrich_catalog_details.py"
+      - "open_catalog_sources.py"
+      - "fedora_catalog_source.py"
+      - "tests/test_enrichment.py"
   workflow_run:
     workflows: ["Daily Catalogue Sync"]
     types: [completed]
