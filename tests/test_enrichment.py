@@ -1,3 +1,7 @@
+import asyncio
+
+import httpx
+
 from fedora_catalog_source import parse_fedora_detail
 from open_catalog_sources import parse_bluejetty_detail
 
@@ -86,3 +90,32 @@ def test_enrichment_restricts_detail_urls_and_redirects_to_trusted_https_hosts()
     assert not _trusted_url("http://bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
     assert not _trusted_url("https://bluejetty.ai.evil.test/v1/index/apps/123", "bluejetty.ai")
     assert not _trusted_url("https://user@bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
+
+
+def test_enrichment_rejects_untrusted_redirect_before_following_it():
+    from scripts.enrich_catalog_details import _get_response
+
+    class RedirectClient:
+        def __init__(self):
+            self.requested_urls = []
+
+        async def get(self, url, **kwargs):
+            self.requested_urls.append(url)
+            return httpx.Response(
+                302,
+                headers={"Location": "https://evil.example/metadata"},
+                request=httpx.Request("GET", url),
+            )
+
+    client = RedirectClient()
+
+    async def run():
+        try:
+            await _get_response(client, "https://bluejetty.ai/v1/index/apps/123", "bluejetty.ai")
+        except ValueError as error:
+            assert "Untrusted" in str(error)
+        else:
+            raise AssertionError("An untrusted redirect was followed")
+
+    asyncio.run(run())
+    assert client.requested_urls == ["https://bluejetty.ai/v1/index/apps/123"]
