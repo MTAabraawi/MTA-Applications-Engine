@@ -219,6 +219,18 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
     return {"selected": len(rows), **counts}
 
 
+def _empty_totals():
+    return {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}}
+
+
+def _add_totals(total: dict, batch: dict):
+    total["batches"] += 1
+    for key in ("selected", "checked", "enriched", "failed"):
+        total[key] += int(batch.get(key, 0) or 0)
+    for field, count in (batch.get("fields_filled") or {}).items():
+        total["fields_filled"][field] = total["fields_filled"].get(field, 0) + int(count or 0)
+
+
 async def main():
     db = SessionLocal()
     if db.get_bind().dialect.name != "postgresql":
@@ -227,11 +239,26 @@ async def main():
     bluejetty_limit = max(1, min(int(os.getenv("BLUEJETTY_ENRICH_BATCH_SIZE", "200")), 500))
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
+    max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "4")), 10))
+    totals = {"bluejetty": _empty_totals(), "fedora": _empty_totals()}
     try:
         async with httpx.AsyncClient(follow_redirects=False) as client:
-            bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
-            fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
-        print(json.dumps({"bluejetty": bluejetty, "fedora": fedora}, ensure_ascii=False, indent=2))
+            for batch_number in range(1, max_batches + 1):
+                bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
+                fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
+                _add_totals(totals["bluejetty"], bluejetty)
+                _add_totals(totals["fedora"], fedora)
+                log.info(
+                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s",
+                    batch_number, max_batches, bluejetty.get("selected", 0), fedora.get("selected", 0),
+                )
+                if not bluejetty.get("selected") and not fedora.get("selected"):
+                    break
+        totals["max_batches_reached"] = (
+            totals["bluejetty"]["batches"] >= max_batches
+            or totals["fedora"]["batches"] >= max_batches
+        )
+        print(json.dumps(totals, ensure_ascii=False, indent=2))
     finally:
         db.close()
 
