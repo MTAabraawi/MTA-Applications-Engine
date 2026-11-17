@@ -1,4 +1,4 @@
-name: Daily Catalogue Sync
+name: Manual Catalogue Sync (paused pending storage review)
 
 on:
   push:
@@ -11,8 +11,6 @@ on:
       - "sync_catalogs.py"
       - "store_sources.json"
       - ".github/workflows/catalogue-sync.yml"
-  schedule:
-    - cron: "17 2 * * *"
   workflow_dispatch:
     inputs:
       sync_sources:
