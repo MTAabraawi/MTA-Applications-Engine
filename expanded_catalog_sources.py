@@ -151,36 +151,44 @@ async def fetch_wordpress_plugins(client: httpx.AsyncClient) -> list[dict[str, A
 
 
 async def fetch_homebrew_formulae(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch the complete public Homebrew/core formula metadata feed."""
+    """Fetch the complete public Homebrew/core formula metadata feed with retry."""
     url = "https://formulae.brew.sh/api/formula.json"
     response = None
-    try:
-        response = await client.get(
-            url,
-            timeout=TIMEOUT,
-            headers={"Accept": "application/json"},
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except Exception as exc:
-        # Keep the failure actionable without logging the potentially large feed body.
-        status = getattr(response, "status_code", None)
-        headers = getattr(response, "headers", {}) if response is not None else {}
-        content_type = headers.get("content-type") if hasattr(headers, "get") else None
-        content_encoding = headers.get("content-encoding") if hasattr(headers, "get") else None
-        content_length = headers.get("content-length") if hasattr(headers, "get") else None
+    payload = None
+    for attempt in range(2):
         try:
-            body_bytes = len(response.content) if response is not None else None
-        except Exception:
-            body_bytes = None
-        log.exception(
-            "Homebrew formula feed failed: type=%s status=%s content_type=%r "
-            "content_encoding=%r content_length=%r body_bytes=%s",
-            type(exc).__name__, status, content_type, content_encoding,
-            content_length, body_bytes,
-        )
-        return []
+            response = await client.get(
+                url,
+                timeout=httpx.Timeout(120.0, connect=20.0),
+                headers={"Accept": "application/json"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            break
+        except Exception as exc:
+            if attempt == 0:
+                log.warning("Homebrew formula feed attempt %d failed (%s); retrying", attempt + 1, type(exc).__name__)
+                await asyncio.sleep(3)
+                continue
+            # Keep the failure actionable without logging the potentially large feed body.
+            status = getattr(response, "status_code", None)
+            headers = getattr(response, "headers", {}) if response is not None else {}
+            content_type = headers.get("content-type") if hasattr(headers, "get") else None
+            content_encoding = headers.get("content-encoding") if hasattr(headers, "get") else None
+            content_length = headers.get("content-length") if hasattr(headers, "get") else None
+            try:
+                body_bytes = len(response.content) if response is not None else None
+            except Exception:
+                body_bytes = None
+            log.exception(
+                "Homebrew formula feed failed after retry: type=%s status=%s content_type=%r "
+                "content_encoding=%r content_length=%r body_bytes=%s",
+                type(exc).__name__, status, content_type, content_encoding,
+                content_length, body_bytes,
+            )
+            return []
     if not isinstance(payload, list):
+        log.warning("Homebrew formula feed returned an unexpected payload type: %s", type(payload).__name__)
         return []
     records = []
     for item in payload:
