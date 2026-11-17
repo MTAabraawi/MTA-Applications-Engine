@@ -240,7 +240,7 @@ def _bluejetty_store_ids(value, depth: int = 0) -> set[tuple[str, str]]:
                     found.add(("android", package))
             elif parsed.hostname == "apps.apple.com":
                 import re
-                match = re.search(r"/id(\\d+)(?:/|$)", parsed.path)
+                match = re.search(r"/id(\d+)(?:/|$)", parsed.path)
                 if match:
                     found.add(("ios", match.group(1)))
         except ValueError:
