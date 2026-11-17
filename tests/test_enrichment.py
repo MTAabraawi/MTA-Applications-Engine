@@ -152,3 +152,32 @@ def test_fedora_detail_parser_uses_meta_description_and_keeps_page_image_as_prov
     assert result["summary"] == "A public description from Fedora package metadata."
     assert result["description"] is None
     assert result["metadata_json"]["fedora_detail"]["package_page_image_url"] == "https://packages.fedoraproject.org/static/package-preview.png"
+
+
+
+def test_bluejetty_detail_parser_extracts_nested_icon_url():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Nested icon app",
+        "assets": {"appIcon": {"url": "https://cdn.example.org/apps/icon-512.png"}},
+        "storeObservations": [{"platform": "android"}],
+    }})
+    assert result["icon_url"] == "https://cdn.example.org/apps/icon-512.png"
+
+
+def test_bluejetty_detail_parser_ignores_untrusted_nested_icon_url():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Unsafe icon app",
+        "assets": {"appIcon": {"url": "http://cdn.example.org/icon.png"}},
+    }})
+    assert result["icon_url"] is None
+
+
+def test_fedora_detail_parser_retains_official_social_image_metadata():
+    result = parse_fedora_detail("""
+    <html><head>
+      <meta property="og:description" content="Package summary from Fedora">
+      <meta property="og:image" content="https://packages.fedoraproject.org/static/package-art.png">
+    </head><body></body></html>
+    """)
+    assert result["summary"] == "Package summary from Fedora"
+    assert result["metadata_json"]["fedora_detail"]["package_page_image_url"] == "https://packages.fedoraproject.org/static/package-art.png"
