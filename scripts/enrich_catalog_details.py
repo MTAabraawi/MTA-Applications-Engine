@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urljoin, urlsplit
@@ -424,7 +425,9 @@ async def main():
     bluejetty_limit = max(1, min(int(os.getenv("BLUEJETTY_ENRICH_BATCH_SIZE", "200")), 500))
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
-    max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "4")), 10))
+    max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "1000")), 1000))
+    runtime_minutes = max(5, min(int(os.getenv("ENRICHMENT_MAX_RUNTIME_MINUTES", "340")), 340))
+    deadline = time.monotonic() + runtime_minutes * 60
     totals = {"bluejetty": _empty_totals(), "fedora": _empty_totals()}
     icon_crossmatch_totals = {"scanned": 0, "matched": 0, "unmatched": 0, "ambiguous": 0}
     try:
@@ -432,6 +435,7 @@ async def main():
         provider_index = _load_icon_provider_index(db)
         log.info("Exact store-ID icon providers available: %d", len(provider_index))
         stopped_early = False
+        stopped_by_runtime = False
         batches_run = 0
         crossmatch = _crossmatch_bluejetty_icons(
             db, provider_index,
@@ -446,14 +450,20 @@ async def main():
         )
         async with httpx.AsyncClient(follow_redirects=False) as client:
             for batch_number in range(1, max_batches + 1):
+                if time.monotonic() >= deadline:
+                    stopped_by_runtime = True
+                    log.warning("Enrichment runtime budget reached after %s batches; progress is committed and resumable.", batches_run)
+                    break
                 batches_run = batch_number
                 bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
                 fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
                 _add_totals(totals["bluejetty"], bluejetty)
                 _add_totals(totals["fedora"], fedora)
                 log.info(
-                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s",
-                    batch_number, max_batches, bluejetty.get("selected", 0), fedora.get("selected", 0),
+                    "Enrichment batch %s/%s: Blue Jetty checked=%s enriched=%s failed=%s fields=%s; Fedora checked=%s enriched=%s failed=%s fields=%s",
+                    batch_number, max_batches,
+                    bluejetty.get("checked", 0), bluejetty.get("enriched", 0), bluejetty.get("failed", 0), bluejetty.get("fields_filled", {}),
+                    fedora.get("checked", 0), fedora.get("enriched", 0), fedora.get("failed", 0), fedora.get("fields_filled", {}),
                 )
                 if not bluejetty.get("selected") and not fedora.get("selected"):
                     stopped_early = True
@@ -462,6 +472,8 @@ async def main():
         quality_after = _quality_snapshot(db)
         report = {
             "enrichment": totals,
+            "runtime_limit_minutes": runtime_minutes,
+            "stopped_by_runtime": stopped_by_runtime,
             "exact_store_icon_crossmatch": icon_crossmatch_totals,
             "catalog_quality_before": quality_before,
             "catalog_quality_after": quality_after,
