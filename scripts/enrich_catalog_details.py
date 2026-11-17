@@ -47,6 +47,8 @@ def _merge_dict(previous, incoming):
     for key, value in new.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _merge_dict(merged[key], value)
+        elif isinstance(value, list) and not value and key in merged and merged[key]:
+            continue
         elif _has_value(value) or key not in merged:
             merged[key] = value
     return merged
