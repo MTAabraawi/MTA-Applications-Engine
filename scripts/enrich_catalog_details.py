@@ -201,7 +201,7 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
         select(AppRecord)
         .where(
             AppRecord.source_key == "fedora-packages",
-            _missing_any(AppRecord.summary, AppRecord.description),
+            _missing_any(AppRecord.summary, AppRecord.description, AppRecord.app_url),
             _due_for_retry("fedora_enrichment_last_attempt_at", 7),
         )
         .order_by(
