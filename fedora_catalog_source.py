@@ -10,7 +10,7 @@ import asyncio
 import logging
 from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 
@@ -41,6 +41,97 @@ class AnchorCollector(HTMLParser):
             self.links.append((self.href, " ".join(" ".join(self.parts).split())))
             self.href = None
             self.parts = []
+
+
+class FedoraDetailParser(HTMLParser):
+    """Extract readable package descriptions, repository links, and release rows."""
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.paragraphs: list[str] = []
+        self.links: list[tuple[str, str]] = []
+        self.rows: list[list[str]] = []
+        self._paragraph: list[str] | None = None
+        self._anchor: list[str] | None = None
+        self._anchor_href: str | None = None
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_map = dict(attrs)
+        tag = tag.lower()
+        if tag == "p": self._paragraph = []
+        elif tag == "a": self._anchor, self._anchor_href = [], attrs_map.get("href")
+        elif tag == "tr": self._row = []
+        elif tag in {"td", "th"}: self._cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._paragraph is not None: self._paragraph.append(data)
+        if self._anchor is not None: self._anchor.append(data)
+        if self._cell is not None: self._cell.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag == "p" and self._paragraph is not None:
+            value = " ".join(" ".join(self._paragraph).split())
+            if value: self.paragraphs.append(value)
+            self._paragraph = None
+        elif tag == "a" and self._anchor is not None:
+            label = " ".join(" ".join(self._anchor).split())
+            if self._anchor_href: self.links.append((self._anchor_href, label))
+            self._anchor, self._anchor_href = None, None
+        elif tag in {"td", "th"} and self._cell is not None:
+            value = " ".join(" ".join(self._cell).split())
+            if self._row is not None: self._row.append(value)
+            self._cell = None
+        elif tag == "tr" and self._row is not None:
+            if self._row: self.rows.append(self._row)
+            self._row = None
+
+
+def parse_fedora_detail(page_html: str) -> dict[str, Any]:
+    """Extract only facts explicitly shown on a Fedora package detail page."""
+    parser = FedoraDetailParser()
+    parser.feed(page_html or "")
+    paragraphs = [item for item in parser.paragraphs if not item.lower().startswith("view ")]
+    summary = paragraphs[0] if paragraphs else None
+    description = next((item for item in paragraphs[1:] if "contact the maintainers" not in item.lower()), None)
+    source_repository = None
+    homepage = None
+    for href, _label in parser.links:
+        absolute = urljoin("https://packages.fedoraproject.org/", href)
+        try:
+            parsed = urlsplit(absolute)
+            host = (parsed.hostname or "").lower()
+        except ValueError:
+            continue
+        if parsed.scheme != "https" or not host:
+            continue
+        if host == "src.fedoraproject.org":
+            source_repository = absolute
+        elif host not in {"packages.fedoraproject.org", "fedoraproject.org", "www.fedoraproject.org",
+                          "koji.fedoraproject.org", "bodhi.fedoraproject.org", "bugzilla.redhat.com",
+                          "koschei.fedoraproject.org", "retrace.fedoraproject.org", "pagure.io"}:
+            homepage = homepage or absolute
+
+    releases: list[dict[str, str]] = []
+    if parser.rows:
+        headers = [value.casefold() for value in parser.rows[0]]
+        if "release" in headers:
+            for row in parser.rows[1:]:
+                if not row: continue
+                releases.append({headers[i]: value for i, value in enumerate(row[:len(headers)]) if i < len(headers) and value})
+
+    return {
+        "summary": summary,
+        "description": description,
+        "app_url": homepage,
+        "metadata_json": {
+            "fedora_detail": {
+                "source_repository_url": source_repository,
+                "releases": releases,
+            }
+        },
+    }
 
 
 async def fetch_fedora_packages(client: httpx.AsyncClient) -> list[dict[str, Any]]:

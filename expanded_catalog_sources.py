@@ -392,7 +392,11 @@ async def _fetch_appbrain_platform(
 
 
 async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch Google Play metadata through AppBrain's documented browse API."""
+    """Fetch Google Play metadata through AppBrain only when a run is explicitly enabled."""
+    enabled = os.getenv("APPBRAIN_ENABLE_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        log.info("Google Play/AppBrain connector skipped: APPBRAIN_ENABLE_SYNC is disabled to protect API credits")
+        return []
     api_key = os.getenv("APPBRAIN_API_KEY", "").strip()
     if not api_key:
         log.info("Google Play/AppBrain connector skipped: APPBRAIN_API_KEY is not configured")
@@ -409,7 +413,11 @@ async def fetch_google_play_appbrain(client: httpx.AsyncClient) -> list[dict[str
 
 
 async def fetch_apple_appbrain(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Fetch Apple App Store metadata through AppBrain's documented iOS browse API."""
+    """Fetch Apple App Store metadata through AppBrain's iOS browse API when explicitly enabled."""
+    enabled = os.getenv("APPBRAIN_ENABLE_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        log.info("Apple App Store/AppBrain connector skipped: APPBRAIN_ENABLE_SYNC is disabled to protect API credits")
+        return []
     api_key = os.getenv("APPBRAIN_API_KEY", "").strip()
     if os.getenv("APPBRAIN_ENABLE_IOS", "false").strip().lower() not in {"1", "true", "yes", "on"}:
         log.info("Apple App Store/AppBrain connector skipped: APPBRAIN_ENABLE_IOS is disabled")

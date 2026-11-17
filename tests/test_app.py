@@ -25,6 +25,11 @@ def test_catalog_stats_shape():
     assert "total" in payload
     assert "platforms" in payload
     assert "sources" in payload
+    assert "quality" in payload
+    assert "fields" in payload["quality"]
+    assert "sources" in payload["quality"]
+    for field in ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"):
+        assert field in payload["quality"]["fields"]
     assert payload["metadata_only"] is True
 
 
@@ -67,6 +72,39 @@ def test_catalog_ingestion_upserts_and_reports_counts(monkeypatch):
         finally:
             db.close()
 
+
+
+def test_sparse_catalogue_refresh_preserves_enriched_fields_and_metadata():
+    from app import upsert_records
+
+    source = "enrichment-preservation-test"
+    rich = {
+        "source_key": source, "external_id": "sample-1", "platform": "ios",
+        "name": "Sample App", "developer": "Example Studio",
+        "summary": "Short description", "description": "Full rich description",
+        "category": "Productivity", "source_url": "https://apps.example.org/sample",
+        "app_url": "https://example.org", "icon_url": "https://cdn.example.org/icon.png",
+        "metadata_json": {"record_json_url": "https://bluejetty.ai/v1/index/apps/123",
+                          "bluejetty_detail": {"rating": 4.8, "rating_count": 120}},
+    }
+    sparse = dict(rich, developer=None, summary=None, description=None, category=None,
+                  app_url=None, icon_url=None,
+                  metadata_json={"record_json_url": "https://bluejetty.ai/v1/index/apps/123"})
+    db = SessionLocal()
+    try:
+        first = upsert_records(db, [rich])
+        assert first["inserted"] == 1
+        second = upsert_records(db, [sparse])
+        assert second["unchanged"] == 1
+        row = db.query(AppRecord).filter_by(source_key=source, external_id="sample-1").one()
+        assert row.developer == "Example Studio"
+        assert row.description == "Full rich description"
+        assert row.icon_url == "https://cdn.example.org/icon.png"
+        assert row.metadata_json["bluejetty_detail"]["rating"] == 4.8
+    finally:
+        db.query(AppRecord).filter_by(source_key=source).delete(synchronize_session=False)
+        db.commit()
+        db.close()
 
 def test_record_requires_https_source_and_deduplicates():
     assert _record("x", "1", "web", "Example", "http://example.org") is None

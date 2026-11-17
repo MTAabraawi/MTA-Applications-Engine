@@ -1,0 +1,102 @@
+name: AppBrain Catalogue Sync (Manual, Credit Guarded)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_credit_budget:
+        description: "I checked the AppBrain API Access dashboard and approve the estimated credit use"
+        required: true
+        default: false
+        type: boolean
+      categories:
+        description: "Comma-separated Google Play categories"
+        required: true
+        default: "GAMES,EDUCATION,PRODUCTIVITY,UTILITIES,BUSINESS"
+        type: string
+      max_pages:
+        description: "Pages per category (50 apps per page; 1 page is the safest starting point)"
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+      include_ios:
+        description: "Also query App Store categories (additional credits)"
+        required: true
+        default: false
+        type: boolean
+      ios_categories:
+        description: "Optional comma-separated App Store genres; leave blank to use the connector defaults"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  credit-estimate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Estimate API credits before any request
+        shell: bash
+        env:
+          CATEGORIES: ${{ inputs.categories }}
+          IOS_CATEGORIES: ${{ inputs.ios_categories }}
+          PAGES: ${{ inputs.max_pages }}
+          INCLUDE_IOS: ${{ inputs.include_ios }}
+          CONFIRMED: ${{ inputs.confirm_credit_budget }}
+        run: |
+          category_count=$(printf '%s' "$CATEGORIES" | awk -F, '{print NF}')
+          ios_count=0
+          if [ "$INCLUDE_IOS" = "true" ] && [ -n "$IOS_CATEGORIES" ]; then
+            ios_count=$(printf '%s' "$IOS_CATEGORIES" | awk -F, '{print NF}')
+          elif [ "$INCLUDE_IOS" = "true" ]; then
+            ios_count=24
+          fi
+          estimated=$(( (category_count + ios_count) * PAGES * 12 ))
+          echo "Estimated AppBrain browse credits: $estimated"
+          echo "Google Play categories: $category_count; App Store categories: $ios_count; pages/category: $PAGES"
+          echo "A 50-result browse page is budgeted conservatively at 12 credits."
+          if [ "$estimated" -gt 500 ]; then
+            echo "::warning::Estimate exceeds the published 500-credit free monthly allowance. Confirm an active paid quota and remaining balance in AppBrain first."
+          fi
+          if [ "$CONFIRMED" != "true" ]; then
+            echo "::notice::No API calls will be made. Re-run this workflow only after checking the AppBrain API Access dashboard and confirming the spend."
+          fi
+  sync:
+    if: ${{ inputs.confirm_credit_budget == true }}
+    needs: credit-estimate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
+      APPBRAIN_ENABLE_SYNC: "true"
+      APPBRAIN_ENABLE_IOS: ${{ inputs.include_ios && 'true' || 'false' }}
+      APPBRAIN_CATEGORIES: ${{ inputs.categories }}
+      APPBRAIN_IOS_CATEGORIES: ${{ inputs.ios_categories || 'BOOKS,BUSINESS,EDUCATION,ENTERTAINMENT,FINANCE,FOOD_AND_DRINK,GAMES,HEALTH_AND_FITNESS,LIFESTYLE,MAGAZINES_AND_NEWSPAPERS,MEDICAL,MUSIC,NAVIGATION,NEWS,PHOTO_AND_VIDEO,PRODUCTIVITY,REFERENCE,SHOPPING,SOCIAL_NETWORKING,SPORTS,TRAVEL,UTILITIES,WEATHER' }}
+      APPBRAIN_MAX_PAGES: ${{ inputs.max_pages }}
+      APPBRAIN_IOS_MAX_PAGES: ${{ inputs.max_pages }}
+      SYNC_SOURCES: ${{ inputs.include_ios && 'google-play,apple-appbrain' || 'google-play' }}
+    steps:
+      - name: Check required secrets
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then echo "::error::DATABASE_URL is missing"; exit 1; fi
+          if [ -z "$APPBRAIN_API_KEY" ]; then echo "::error::APPBRAIN_API_KEY is missing"; exit 1; fi
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Import only the selected AppBrain catalogues
+        run: python sync_catalogs.py

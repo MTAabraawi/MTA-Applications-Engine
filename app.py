@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, URL, create_engine, func, or_, select, tuple_
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, URL, case, create_engine, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -122,6 +122,38 @@ def require_admin(x_admin_token: Optional[str], request: Request) -> None:
         raise HTTPException(status_code=403, detail="Ingestion is disabled or unauthorized")
 
 
+QUALITY_FIELDS = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
+
+
+def _has_value(value) -> bool:
+    return value is not None and (not isinstance(value, str) or bool(value.strip()))
+
+
+def _merge_metadata(previous, incoming):
+    """Merge metadata recursively so enrichment survives sparse catalogue refreshes."""
+    old = previous if isinstance(previous, dict) else {}
+    new = incoming if isinstance(incoming, dict) else {}
+    merged = dict(old)
+    for key, value in new.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_metadata(merged[key], value)
+        elif _has_value(value) or key not in merged:
+            merged[key] = value
+    return merged
+
+
+def _quality_fields(total: int, counts: dict) -> dict:
+    fields = {}
+    for field in QUALITY_FIELDS:
+        present = int(counts.get(field, 0) or 0)
+        fields[field] = {
+            "present": present,
+            "missing": max(total - present, 0),
+            "percent": round((present * 100.0 / total), 2) if total else 0.0,
+        }
+    return fields
+
+
 def upsert_records(db: Session, records: list[dict]) -> dict:
     """Bulk upsert catalogue records without one SELECT round-trip per app."""
     inserted = updated = unchanged = skipped = 0
@@ -167,6 +199,10 @@ def upsert_records(db: Session, records: list[dict]) -> dict:
                 continue
             changed = False
             for key, value in values.items():
+                if key == "metadata_json":
+                    value = _merge_metadata(row.metadata_json, value)
+                elif not _has_value(value):
+                    value = getattr(row, key)
                 if getattr(row, key) != value:
                     setattr(row, key, value)
                     changed = True
@@ -211,10 +247,18 @@ def upsert_records(db: Session, records: list[dict]) -> dict:
             previous = existing.get((source_key, external_id))
             if previous is None:
                 new_payloads.append(payload)
-            elif any(previous[column] != payload[column] for column in db_columns):
-                changed_payloads.append(payload)
             else:
-                unchanged += 1
+                # Sparse feeds must never erase richer values acquired by enrichment.
+                for column in db_columns:
+                    incoming = payload[column]
+                    if column == "metadata":
+                        payload[column] = _merge_metadata(previous.get(column), incoming)
+                    elif not _has_value(incoming):
+                        payload[column] = previous.get(column)
+                if any(previous[column] != payload[column] for column in db_columns):
+                    changed_payloads.append(payload)
+                else:
+                    unchanged += 1
 
         if new_payloads:
             statement = insert_fn(table).values(new_payloads)
@@ -269,17 +313,49 @@ def list_apps(
 
 @app.get("/api/v1/catalog-stats")
 def catalog_stats(db: Session = Depends(get_db)):
-    total = db.scalar(select(func.count()).select_from(AppRecord)) or 0
     by_platform = db.execute(
         select(AppRecord.platform, func.count()).group_by(AppRecord.platform).order_by(AppRecord.platform)
     ).all()
-    by_source = db.execute(
-        select(AppRecord.source_key, func.count()).group_by(AppRecord.source_key).order_by(AppRecord.source_key)
+
+    field_expressions = []
+    for field in QUALITY_FIELDS:
+        column = getattr(AppRecord, field)
+        normalized = func.lower(func.trim(func.coalesce(column, "")))
+        condition = normalized.like("https://%") if field.endswith("_url") else func.length(normalized) > 0
+        field_expressions.append(func.sum(case((condition, 1), else_=0)).label(field))
+
+    rows = db.execute(
+        select(AppRecord.source_key, func.count().label("total"), *field_expressions)
+        .group_by(AppRecord.source_key).order_by(AppRecord.source_key)
     ).all()
+
+    source_quality = {}
+    source_counts = {}
+    global_counts = {field: 0 for field in QUALITY_FIELDS}
+    total = 0
+    for row in rows:
+        source = row[0]
+        source_total = int(row[1] or 0)
+        counts = {field: int(row[index + 2] or 0) for index, field in enumerate(QUALITY_FIELDS)}
+        total += source_total
+        for field, count in counts.items():
+            global_counts[field] += count
+        source_counts[source] = source_total
+        source_quality[source] = {
+            "total": source_total,
+            "fields": _quality_fields(source_total, counts),
+        }
+
     return {
         "total": total,
+        "with_icon": global_counts["icon_url"],
+        "without_icon": max(total - global_counts["icon_url"], 0),
         "platforms": {key: count for key, count in by_platform},
-        "sources": {key: count for key, count in by_source},
+        "sources": source_counts,
+        "quality": {
+            "fields": _quality_fields(total, global_counts),
+            "sources": source_quality,
+        },
         "metadata_only": True,
     }
 

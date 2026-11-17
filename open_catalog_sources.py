@@ -17,7 +17,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
-from catalog_sources import _record, _unique
+from catalog_sources import _clean_text, _https, _record, _unique
 
 log = logging.getLogger("mta.catalogs.open")
 TIMEOUT = httpx.Timeout(60.0, connect=15.0)
@@ -96,6 +96,48 @@ def _walk_store_urls(value: Any, depth: int = 0) -> list[tuple[str, str]]:
         for child in value:
             found.extend(_walk_store_urls(child, depth + 1))
     return list(dict.fromkeys(found))
+
+
+def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
+    """Map the public Blue Jetty detail envelope into safe catalogue fields."""
+    detail = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
+    if not isinstance(detail, dict):
+        return {}
+    observations = detail.get("storeObservations") or []
+    if not isinstance(observations, list):
+        observations = []
+    observation = next((item for item in observations if isinstance(item, dict)), {})
+    detail_description = detail.get("description")
+    observation_descriptions = [item.get("description") for item in observations
+                                if isinstance(item, dict) and isinstance(item.get("description"), str)]
+    description_candidates = [value for value in [detail_description, *observation_descriptions]
+                              if isinstance(value, str) and value.strip()]
+    description = max(description_candidates, key=len) if description_candidates else None
+    summary = detail.get("summary") or detail.get("shortDescription") or detail.get("tagline")
+    if not summary and isinstance(detail_description, str):
+        summary = detail_description[:240]
+    website = detail.get("websiteUrl") or detail.get("website") or detail.get("homepage")
+    icon = detail.get("iconUrl") or detail.get("icon_url") or detail.get("icon") or detail.get("artworkUrl512")
+    metadata = {
+        "bluejetty_detail": {
+            "record_modified_at": detail.get("recordModifiedAt"),
+            "canonical_page_url": _https(detail.get("canonicalPageUrl")),
+            "packet_url": _https(detail.get("packetUrl")),
+            "publisher_authorization": detail.get("publisherAuthorization"),
+            "platforms": detail.get("platforms") if isinstance(detail.get("platforms"), list) else [],
+            "store_observations": observations,
+            "provenance": detail.get("provenance"),
+        }
+    }
+    return {
+        "developer": _clean_text(detail.get("developerName") or detail.get("developer") or detail.get("publisher")),
+        "summary": _clean_text(summary),
+        "description": _clean_text(description),
+        "category": _clean_text(detail.get("category") or observation.get("category")),
+        "app_url": _https(website),
+        "icon_url": _https(icon),
+        "metadata_json": metadata,
+    }
 
 
 async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
