@@ -169,7 +169,12 @@ def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     if not summary and isinstance(detail_description, str):
         summary = detail_description[:240]
     website = detail.get("websiteUrl") or detail.get("website") or detail.get("homepage")
-    icon = _bluejetty_icon_url(detail, observations)
+    icon_observations = []
+    for key in ("storeObservations", "listings", "platforms"):
+        values = detail.get(key)
+        if isinstance(values, list):
+            icon_observations.extend(values)
+    icon = _bluejetty_icon_url(detail, icon_observations)
     metadata = {
         "bluejetty_detail": {
             "record_kind": detail.get("recordKind"),
