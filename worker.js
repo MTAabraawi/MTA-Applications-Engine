@@ -52,15 +52,15 @@ function safeHttps(value) {
 }
 function cleanText(value,max=10000) {
   if(typeof value!=="string")return null;
-  let s=value.replace(/<(script|style)[^>]*>[\\s\\S]*?<\\/\\1>/gi," ")
-    .replace(/<(br|\\/p|\\/li|\\/h[1-6]|\\/div)[^>]*>/gi,"\\n").replace(/<[^>]+>/g," ");
-  s=s.replace(/&(#x[0-9a-f]+|#\\d+|[a-z]+);/gi,(match,entity)=>{
+  let s=value.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi," ")
+    .replace(/<(br|\/p|\/li|\/h[1-6]|\/div)[^>]*>/gi,"\n").replace(/<[^>]+>/g," ");
+  s=s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(match,entity)=>{
     const key=entity.toLowerCase(),named={amp:"&",lt:"<",gt:">",quot:'"',apos:"'",nbsp:" ",ndash:"–",mdash:"—",hellip:"…",copy:"©",reg:"®"};
     if(key in named)return named[key];
     try { const code=key.startsWith("#x")?parseInt(key.slice(2),16):key.startsWith("#")?parseInt(key.slice(1),10):NaN; return Number.isFinite(code)&&code>0&&code<=0x10ffff?String.fromCodePoint(code):match; }
     catch { return match; }
   });
-  s=s.replace(/[\\u200B-\\u200D\\uFEFF]/g,"").replace(/\\r\\n?/g,"\\n").replace(/[ \\t]+/g," ").replace(/\\n\\s*\\n+/g,"\\n").trim();
+  s=s.replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/\r\n?/g,"\n").replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim();
   return s?s.slice(0,max):null;
 }
 function record(source,id,platform,name,sourceUrl,extra={}) {
