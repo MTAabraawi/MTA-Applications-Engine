@@ -34,12 +34,13 @@ jobs:
   enrich:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       BLUEJETTY_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.bluejetty_batch || '500' }}
       FEDORA_ENRICH_BATCH_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.fedora_batch || '100' }}
       ENRICH_CONCURRENCY: "2"
+      ENRICHMENT_MAX_BATCHES: "4"
     steps:
       - name: Check database configuration
         shell: bash
