@@ -6,7 +6,9 @@ from typing import Optional
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, URL, create_engine, func, or_, select
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, URL, create_engine, func, or_, select, tuple_
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -121,36 +123,114 @@ def require_admin(x_admin_token: Optional[str], request: Request) -> None:
 
 
 def upsert_records(db: Session, records: list[dict]) -> dict:
+    """Bulk upsert catalogue records without one SELECT round-trip per app."""
     inserted = updated = unchanged = skipped = 0
-    allowed = {
-        "platform", "name", "developer", "summary", "description", "category",
-        "license", "source_url", "app_url", "icon_url", "metadata_json",
+    field_map = {
+        "platform": "platform",
+        "name": "name",
+        "developer": "developer",
+        "summary": "summary",
+        "description": "description",
+        "category": "category",
+        "license": "license",
+        "source_url": "source_url",
+        "app_url": "app_url",
+        "icon_url": "icon_url",
+        "metadata_json": "metadata",
     }
+
+    # Normalize and deduplicate before batching. Some upstream search terms can
+    # surface the same package more than once; PostgreSQL rejects duplicate keys
+    # in a single ON CONFLICT statement.
+    normalized = {}
     for item in records:
         source_key = str(item.get("source_key") or "").strip()
         external_id = str(item.get("external_id") or "").strip()
-        values = {key: item.get(key) for key in allowed}
+        values = {key: item.get(key) for key in field_map}
+        values["metadata_json"] = values["metadata_json"] or {}
         if not source_key or not external_id or not values.get("name") or not values.get("source_url"):
             skipped += 1
             continue
-        row = db.execute(select(AppRecord).where(
-            AppRecord.source_key == source_key,
-            AppRecord.external_id == external_id,
-        )).scalar_one_or_none()
-        if row is None:
-            db.add(AppRecord(source_key=source_key, external_id=external_id, **values))
-            inserted += 1
-            continue
-        changed = False
-        for key, value in values.items():
-            if getattr(row, key) != value:
-                setattr(row, key, value)
-                changed = True
-        if changed:
-            row.updated_at = datetime.now(timezone.utc)
-            updated += 1
-        else:
-            unchanged += 1
+        normalized[(source_key, external_id)] = values
+
+    dialect = db.get_bind().dialect.name
+    if dialect not in {"postgresql", "sqlite"}:
+        # Keep compatibility with any other SQLAlchemy dialect.
+        for (source_key, external_id), values in normalized.items():
+            row = db.execute(select(AppRecord).where(
+                AppRecord.source_key == source_key,
+                AppRecord.external_id == external_id,
+            )).scalar_one_or_none()
+            if row is None:
+                db.add(AppRecord(source_key=source_key, external_id=external_id, **values))
+                inserted += 1
+                continue
+            changed = False
+            for key, value in values.items():
+                if getattr(row, key) != value:
+                    setattr(row, key, value)
+                    changed = True
+            if changed:
+                row.updated_at = datetime.now(timezone.utc)
+                updated += 1
+            else:
+                unchanged += 1
+        db.commit()
+        return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
+
+    table = AppRecord.__table__
+    db_columns = list(field_map.values())
+    insert_fn = postgresql_insert if dialect == "postgresql" else sqlite_insert
+    # Stay below SQLite's conservative bind-parameter limit; PostgreSQL can
+    # safely handle larger batches while remaining far below its 65,535 limit.
+    batch_size = 500 if dialect == "postgresql" else 50
+    items = list(normalized.items())
+    key_columns = [table.c.source_key, table.c.external_id]
+
+    for offset in range(0, len(items), batch_size):
+        chunk = items[offset:offset + batch_size]
+        keys = [key for key, _ in chunk]
+        existing_rows = db.execute(
+            select(table.c.source_key, table.c.external_id,
+                   *(table.c[column] for column in db_columns))
+            .where(tuple_(table.c.source_key, table.c.external_id).in_(keys))
+        ).all()
+        existing = {
+            (row[0], row[1]): dict(zip(db_columns, row[2:]))
+            for row in existing_rows
+        }
+
+        new_payloads = []
+        changed_payloads = []
+        for (source_key, external_id), values in chunk:
+            payload = {
+                "source_key": source_key,
+                "external_id": external_id,
+                **{column: values[attr] for attr, column in field_map.items()},
+            }
+            previous = existing.get((source_key, external_id))
+            if previous is None:
+                new_payloads.append(payload)
+            elif any(previous[column] != payload[column] for column in db_columns):
+                changed_payloads.append(payload)
+            else:
+                unchanged += 1
+
+        if new_payloads:
+            statement = insert_fn(table).values(new_payloads)
+            db.execute(statement.on_conflict_do_nothing(index_elements=key_columns))
+            inserted += len(new_payloads)
+
+        if changed_payloads:
+            statement = insert_fn(table).values(changed_payloads)
+            update_values = {column: statement.excluded[column] for column in db_columns}
+            update_values["updated_at"] = datetime.now(timezone.utc)
+            db.execute(statement.on_conflict_do_update(
+                index_elements=key_columns,
+                set_=update_values,
+            ))
+            updated += len(changed_payloads)
+
     db.commit()
     return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
 

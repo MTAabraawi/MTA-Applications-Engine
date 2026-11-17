@@ -164,3 +164,55 @@ def test_fdroid_endpoint_uses_shared_normalizer(monkeypatch):
                 db.commit()
         finally:
             db.close()
+
+
+
+def test_bulk_upsert_records_batches_and_is_idempotent():
+    from app import upsert_records
+
+    source = "bulk-upsert-regression"
+    records = [
+        {
+            "source_key": source,
+            "external_id": f"sample-{index:04d}",
+            "platform": "web",
+            "name": f"Sample Application {index}",
+            "summary": "initial summary",
+            "source_url": f"https://example.org/apps/{index}",
+            "metadata_json": {"index": index},
+        }
+        for index in range(501)
+    ]
+    db = SessionLocal()
+    try:
+        first = upsert_records(db, records)
+        assert first == {"inserted": 501, "updated": 0, "unchanged": 0, "skipped": 0}
+
+        second = upsert_records(db, records)
+        assert second == {"inserted": 0, "updated": 0, "unchanged": 501, "skipped": 0}
+
+        revised = dict(records[0], summary="revised summary")
+        third = upsert_records(db, [revised, *records[1:]])
+        assert third == {"inserted": 0, "updated": 1, "unchanged": 500, "skipped": 0}
+    finally:
+        db.query(AppRecord).filter_by(source_key=source).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_chocolatey_page_size_is_capped_to_supported_cli_limit(monkeypatch):
+    import asyncio
+    import open_catalog_sources
+
+    monkeypatch.setenv("CHOCOLATEY_PAGE_SIZE", "1000")
+    monkeypatch.setenv("CHOCOLATEY_MAX_PAGES", "10")
+    monkeypatch.setattr(open_catalog_sources.shutil, "which", lambda _: "choco.exe")
+    requested = []
+
+    def fake_search(choco, page, page_size):
+        requested.append(page_size)
+        return []
+
+    monkeypatch.setattr(open_catalog_sources, "_chocolatey_search_page", fake_search)
+    assert asyncio.run(open_catalog_sources.fetch_chocolatey()) == []
+    assert requested == [100]
