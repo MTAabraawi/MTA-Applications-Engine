@@ -234,3 +234,86 @@ def test_fedora_detail_parser_rejects_external_package_icon_host():
     </body></html>
     """)
     assert result["icon_url"] is None
+
+
+def test_bluejetty_store_id_extractor_reads_only_official_exact_store_ids():
+    from scripts.enrich_catalog_details import _bluejetty_store_ids
+
+    metadata = {
+        "store_destinations": [
+            {"platform": "android", "url": "https://play.google.com/store/apps/details?id=com.example.app"},
+            {"platform": "ios", "url": "https://apps.apple.com/us/app/example/id123456789"},
+            {"platform": "android", "url": "https://evil.example/store/apps/details?id=com.example.fake"},
+        ]
+    }
+    assert _bluejetty_store_ids(metadata) == {
+        ("android", "com.example.app"),
+        ("ios", "123456789"),
+    }
+
+
+def test_bluejetty_icon_crossmatch_requires_exact_platform_and_store_id():
+    from scripts.enrich_catalog_details import _resolve_bluejetty_icon
+
+    provider_index = {
+        ("android", "com.example.app"): {
+            "source_key": "google-play",
+            "icon_url": "https://play-lh.googleusercontent.com/example",
+        }
+    }
+    metadata = {
+        "store_destinations": [
+            {"platform": "android", "url": "https://play.google.com/store/apps/details?id=com.example.app"}
+        ]
+    }
+    assert _resolve_bluejetty_icon(metadata, "android", provider_index) == (
+        "android", "com.example.app", "google-play", "https://play-lh.googleusercontent.com/example"
+    )
+    assert _resolve_bluejetty_icon(metadata, "ios", provider_index) is None
+    assert _resolve_bluejetty_icon({
+        "store_destinations": [{"platform": "android",
+                                "url": "https://play.google.com/store/apps/details?id=com.example.other"}]
+    }, "android", provider_index) is None
+
+
+def test_bluejetty_icon_crossmatch_accepts_exact_fdroid_package_identity():
+    from scripts.enrich_catalog_details import _resolve_bluejetty_icon
+
+    provider_index = {
+        ("android", "org.example.reader"): {
+            "source_key": "fdroid",
+            "icon_url": "https://f-droid.org/repo/org.example.reader/en-US/icon.png",
+        }
+    }
+    metadata = {
+        "bluejetty_detail": {
+            "store_observations": [{
+                "listingUrl": "https://play.google.com/store/apps/details?id=org.example.reader"
+            }]
+        }
+    }
+    assert _resolve_bluejetty_icon(metadata, "android", provider_index) == (
+        "android", "org.example.reader", "fdroid",
+        "https://f-droid.org/repo/org.example.reader/en-US/icon.png"
+    )
+
+
+def test_bluejetty_icon_crossmatch_rejects_conflicting_exact_provider_icons():
+    from scripts.enrich_catalog_details import _resolve_bluejetty_icon
+
+    provider_index = {
+        ("android", "com.example.app"): {
+            "source_key": "google-play", "icon_url": "https://cdn.example.org/icon-a.png"
+        },
+        ("android", "com.example.other"): {
+            "source_key": "fdroid", "icon_url": "https://cdn.example.org/icon-b.png"
+        },
+    }
+    metadata = {
+        "store_destinations": [
+            {"url": "https://play.google.com/store/apps/details?id=com.example.app"},
+            {"url": "https://play.google.com/store/apps/details?id=com.example.other"},
+        ]
+    }
+    assert _resolve_bluejetty_icon(metadata, "android", provider_index) is None
+

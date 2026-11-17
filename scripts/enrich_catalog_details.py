@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 import httpx
 from sqlalchemy import DateTime, case, cast, func, or_, select
@@ -220,6 +220,124 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
 
 
 
+def _bluejetty_store_ids(value, depth: int = 0) -> set[tuple[str, str]]:
+    """Extract exact Google Play package IDs and Apple App Store track IDs."""
+    if depth > 12:
+        return set()
+    found: set[tuple[str, str]] = set()
+    if isinstance(value, dict):
+        for child in value.values():
+            found.update(_bluejetty_store_ids(child, depth + 1))
+    elif isinstance(value, list):
+        for child in value:
+            found.update(_bluejetty_store_ids(child, depth + 1))
+    elif isinstance(value, str) and value.startswith("https://"):
+        try:
+            parsed = urlsplit(value)
+            if parsed.hostname == "play.google.com" and parsed.path.rstrip("/") == "/store/apps/details":
+                package = (parse_qs(parsed.query).get("id") or [""])[0].strip()
+                if package:
+                    found.add(("android", package))
+            elif parsed.hostname == "apps.apple.com":
+                import re
+                match = re.search(r"/id(\\d+)(?:/|$)", parsed.path)
+                if match:
+                    found.add(("ios", match.group(1)))
+        except ValueError:
+            pass
+    return found
+
+
+def _bluejetty_icon_candidates(metadata: dict, platform: str, provider_index: dict):
+    candidates = []
+    for store_platform, external_id in sorted(_bluejetty_store_ids(metadata)):
+        if platform in {"android", "ios"} and store_platform != platform:
+            continue
+        provider = provider_index.get((store_platform, external_id))
+        if provider and provider.get("icon_url"):
+            candidates.append((store_platform, external_id, provider["source_key"], provider["icon_url"]))
+    return candidates
+
+
+def _resolve_bluejetty_icon(metadata: dict, platform: str, provider_index: dict):
+    """Resolve an icon only when an official store listing ID matches exactly."""
+    candidates = _bluejetty_icon_candidates(metadata, platform, provider_index)
+    if len({item[3] for item in candidates}) != 1:
+        return None
+    return sorted(candidates)[0]
+
+
+def _load_icon_provider_index(db):
+    """Index existing official-store icon records; performs no external API calls."""
+    rows = db.execute(
+        select(AppRecord.source_key, AppRecord.external_id, AppRecord.platform, AppRecord.icon_url)
+        .where(
+            AppRecord.source_key.in_(("google-play", "apple-itunes", "apple-appbrain", "fdroid", "izzyondroid")),
+            AppRecord.icon_url.is_not(None),
+            func.trim(AppRecord.icon_url) != "",
+        )
+    ).all()
+    index = {}
+    for source_key, external_id, platform, icon_url in rows:
+        if platform not in {"android", "ios"} or not external_id or not icon_url:
+            continue
+        index.setdefault((platform, str(external_id)), {"source_key": source_key, "icon_url": icon_url})
+    return index
+
+
+def _crossmatch_bluejetty_icons(db, provider_index: dict, limit: int, now: str):
+    """Backfill icons from existing providers using exact official store IDs only."""
+    rows = db.execute(
+        select(AppRecord)
+        .where(
+            AppRecord.source_key == "bluejetty",
+            _missing_any(AppRecord.icon_url),
+            _due_for_retry("icon_crossmatch_last_attempt_at", 7),
+        )
+        .order_by(
+            AppRecord.metadata_json["icon_crossmatch_last_attempt_at"].as_string().asc().nullsfirst(),
+            AppRecord.id,
+        )
+        .limit(limit)
+    ).scalars().all()
+    counts = {"scanned": len(rows), "matched": 0, "unmatched": 0, "ambiguous": 0}
+    for row in rows:
+        metadata = dict(row.metadata_json or {})
+        candidates = _bluejetty_icon_candidates(metadata, row.platform, provider_index)
+        match = _resolve_bluejetty_icon(metadata, row.platform, provider_index)
+        metadata["icon_crossmatch_last_attempt_at"] = now
+        if match:
+            store_platform, external_id, source_key, icon_url = match
+            row.icon_url = icon_url
+            metadata["icon_crossmatch"] = {
+                "status": "matched",
+                "method": "exact_official_store_listing_id",
+                "store_platform": store_platform,
+                "store_external_id": external_id,
+                "provider_source": source_key,
+                "matched_at": now,
+            }
+            counts["matched"] += 1
+        elif len({item[3] for item in candidates}) > 1:
+            metadata["icon_crossmatch"] = {
+                "status": "ambiguous",
+                "method": "exact_official_store_listing_id",
+                "checked_at": now,
+            }
+            counts["ambiguous"] += 1
+        else:
+            metadata["icon_crossmatch"] = {
+                "status": "unmatched",
+                "method": "exact_official_store_listing_id",
+                "checked_at": now,
+            }
+            counts["unmatched"] += 1
+        row.metadata_json = metadata
+    if rows:
+        db.commit()
+    return counts
+
+
 def _quality_snapshot(db):
     """Return comparable catalogue completeness counts by source and field."""
     fields = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
@@ -291,29 +409,40 @@ async def main():
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
     max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "4")), 10))
     totals = {"bluejetty": _empty_totals(), "fedora": _empty_totals()}
+    icon_crossmatch_totals = {"scanned": 0, "matched": 0, "unmatched": 0, "ambiguous": 0}
     try:
         quality_before = _quality_snapshot(db)
+        provider_index = _load_icon_provider_index(db)
+        log.info("Exact store-ID icon providers available: %d", len(provider_index))
         stopped_early = False
+        batches_run = 0
         async with httpx.AsyncClient(follow_redirects=False) as client:
             for batch_number in range(1, max_batches + 1):
+                batches_run = batch_number
                 bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
                 fedora = await enrich_fedora(db, client, fedora_limit, concurrency)
+                crossmatch = _crossmatch_bluejetty_icons(
+                    db, provider_index,
+                    max(1, min(int(os.getenv("BLUEJETTY_ICON_CROSSMATCH_BATCH_SIZE", "5000")), 10000)),
+                    datetime.now(timezone.utc).isoformat(),
+                )
+                for key in icon_crossmatch_totals:
+                    icon_crossmatch_totals[key] += crossmatch.get(key, 0)
                 _add_totals(totals["bluejetty"], bluejetty)
                 _add_totals(totals["fedora"], fedora)
                 log.info(
-                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s",
+                    "Enrichment batch %s/%s: Blue Jetty selected=%s, Fedora selected=%s, exact icon crossmatch scanned=%s matched=%s ambiguous=%s",
                     batch_number, max_batches, bluejetty.get("selected", 0), fedora.get("selected", 0),
+                    crossmatch.get("scanned", 0), crossmatch.get("matched", 0), crossmatch.get("ambiguous", 0),
                 )
-                if not bluejetty.get("selected") and not fedora.get("selected"):
+                if not bluejetty.get("selected") and not fedora.get("selected") and not crossmatch.get("scanned"):
                     stopped_early = True
                     break
-        totals["max_batches_reached"] = not stopped_early and (
-            totals["bluejetty"]["batches"] >= max_batches
-            or totals["fedora"]["batches"] >= max_batches
-        )
+        totals["max_batches_reached"] = not stopped_early and batches_run >= max_batches
         quality_after = _quality_snapshot(db)
         report = {
             "enrichment": totals,
+            "exact_store_icon_crossmatch": icon_crossmatch_totals,
             "catalog_quality_before": quality_before,
             "catalog_quality_after": quality_after,
             "catalog_quality_delta": _quality_delta(quality_before, quality_after),
