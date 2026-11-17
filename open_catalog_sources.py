@@ -103,7 +103,7 @@ def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     detail = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
     if not isinstance(detail, dict):
         return {}
-    observations = detail.get("storeObservations") or []
+    observations = detail.get("storeObservations") or detail.get("listings") or []
     if not isinstance(observations, list):
         observations = []
     observation = next((item for item in observations if isinstance(item, dict)), {})
@@ -120,12 +120,27 @@ def parse_bluejetty_detail(payload: Any) -> dict[str, Any]:
     icon = detail.get("iconUrl") or detail.get("icon_url") or detail.get("icon") or detail.get("artworkUrl512")
     metadata = {
         "bluejetty_detail": {
+            "record_kind": detail.get("recordKind"),
+            "claim_state": detail.get("claimState"),
+            "authority": detail.get("authority"),
             "record_modified_at": detail.get("recordModifiedAt"),
+            "store_updated_at": detail.get("storeUpdatedAt"),
+            "last_successful_check_at": detail.get("lastSuccessfulCheckAt"),
             "canonical_page_url": _https(detail.get("canonicalPageUrl")),
             "packet_url": _https(detail.get("packetUrl")),
             "publisher_authorization": detail.get("publisherAuthorization"),
+            "developer_identifier": detail.get("developerIdentifier"),
+            "ratings": detail.get("ratings"),
+            "store_commerce": detail.get("storeCommerce") if isinstance(detail.get("storeCommerce"), list) else [],
             "platforms": detail.get("platforms") if isinstance(detail.get("platforms"), list) else [],
-            "store_observations": observations,
+            "listings": detail.get("listings") if isinstance(detail.get("listings"), list) else observations,
+            "store_observations": detail.get("storeObservations") if isinstance(detail.get("storeObservations"), list) else [],
+            "official_domains": detail.get("officialDomains") if isinstance(detail.get("officialDomains"), list) else [],
+            "destinations": detail.get("destinations") if isinstance(detail.get("destinations"), list) else [],
+            "description_sources": detail.get("descriptionSource") if isinstance(detail.get("descriptionSource"), list) else [],
+            "attribution": detail.get("attribution") if isinstance(detail.get("attribution"), list) else [],
+            "evidence": detail.get("evidence"),
+            "grouping": detail.get("grouping"),
             "provenance": detail.get("provenance"),
         }
     }
