@@ -14,6 +14,20 @@ def test_normalizer_keeps_only_https_optional_urls():
     assert item["platform"] == "windows"
 
 
+
+def test_normalizer_cleans_html_entities_and_rejects_malformed_https_urls():
+    item = _record(
+        "source", "id-2", "web", "<b>App &amp; Tools</b>",
+        "https://catalog.example/item",
+        summary="<p>Fast &amp; reliable</p><script>alert(1)</script>",
+        app_url="https://",
+    )
+    assert item is not None
+    assert item["name"] == "App & Tools"
+    assert item["summary"] == "Fast & reliable"
+    assert item["app_url"] is None
+
+
 def test_normalizer_rejects_missing_identity():
     assert _record("source", "", "web", "Name", "https://example.org") is None
     assert _record("source", "id", "web", "", "https://example.org") is None
