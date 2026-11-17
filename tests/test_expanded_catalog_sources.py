@@ -104,6 +104,15 @@ def test_homebrew_formula_feed_logs_json_failure_diagnostics(caplog):
     assert "body_bytes=14" in caplog.text
 
 
+def test_appbrain_connectors_are_disabled_by_default_even_with_api_key(monkeypatch):
+    monkeypatch.setenv("APPBRAIN_API_KEY", "test-key")
+    monkeypatch.delenv("APPBRAIN_ENABLE_SYNC", raising=False)
+    client = FakeClient(lambda url, kwargs: {})
+    assert asyncio.run(fetch_google_play_appbrain(client)) == []
+    assert asyncio.run(fetch_apple_appbrain(client)) == []
+    assert client.calls == []
+
+
 def test_google_play_appbrain_connector_is_safely_disabled_without_key(monkeypatch):
     monkeypatch.delenv("APPBRAIN_API_KEY", raising=False)
     client = FakeClient(lambda url, kwargs: {})
@@ -115,6 +124,7 @@ def test_google_play_appbrain_connector_is_safely_disabled_without_key(monkeypat
 
 def test_google_play_appbrain_paginates_and_preserves_full_metadata(monkeypatch):
     monkeypatch.setenv("APPBRAIN_API_KEY", "test-key")
+    monkeypatch.setenv("APPBRAIN_ENABLE_SYNC", "true")
     monkeypatch.setenv("APPBRAIN_CATEGORIES", "GAMES")
     monkeypatch.setenv("APPBRAIN_MAX_PAGES", "2")
     def handler(url, kwargs):
@@ -142,6 +152,7 @@ def test_google_play_appbrain_paginates_and_preserves_full_metadata(monkeypatch)
 
 def test_apple_appbrain_uses_ios_platform_and_app_store_listing(monkeypatch):
     monkeypatch.setenv("APPBRAIN_API_KEY", "test-key")
+    monkeypatch.setenv("APPBRAIN_ENABLE_SYNC", "true")
     monkeypatch.setenv("APPBRAIN_IOS_CATEGORIES", "GAMES")
     monkeypatch.setenv("APPBRAIN_IOS_MAX_PAGES", "1")
     monkeypatch.setenv("APPBRAIN_ENABLE_IOS", "true")
