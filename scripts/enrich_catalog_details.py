@@ -179,7 +179,7 @@ async def enrich_bluejetty(db, client, limit: int, concurrency: int):
                 AppRecord.developer, AppRecord.summary, AppRecord.description,
                 AppRecord.category, AppRecord.app_url, AppRecord.icon_url,
             ),
-            _due_for_retry("bluejetty_enrichment_last_attempt_at", 7),
+            _due_for_retry("bluejetty_enrichment_last_attempt_at", 3),
         )
         .order_by(
             AppRecord.metadata_json["bluejetty_enrichment_last_attempt_at"].as_string().asc().nullsfirst(),
@@ -202,7 +202,7 @@ async def enrich_fedora(db, client, limit: int, concurrency: int):
         .where(
             AppRecord.source_key == "fedora-packages",
             _missing_any(AppRecord.summary, AppRecord.description),
-            _due_for_retry("fedora_enrichment_last_attempt_at", 30),
+            _due_for_retry("fedora_enrichment_last_attempt_at", 7),
         )
         .order_by(
             priority_order,
@@ -293,6 +293,7 @@ async def main():
     totals = {"bluejetty": _empty_totals(), "fedora": _empty_totals()}
     try:
         quality_before = _quality_snapshot(db)
+        stopped_early = False
         async with httpx.AsyncClient(follow_redirects=False) as client:
             for batch_number in range(1, max_batches + 1):
                 bluejetty = await enrich_bluejetty(db, client, bluejetty_limit, concurrency)
@@ -304,8 +305,9 @@ async def main():
                     batch_number, max_batches, bluejetty.get("selected", 0), fedora.get("selected", 0),
                 )
                 if not bluejetty.get("selected") and not fedora.get("selected"):
+                    stopped_early = True
                     break
-        totals["max_batches_reached"] = (
+        totals["max_batches_reached"] = not stopped_early and (
             totals["bluejetty"]["batches"] >= max_batches
             or totals["fedora"]["batches"] >= max_batches
         )
