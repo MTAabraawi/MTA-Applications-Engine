@@ -119,3 +119,36 @@ def test_enrichment_rejects_untrusted_redirect_before_following_it():
 
     asyncio.run(run())
     assert client.requested_urls == ["https://bluejetty.ai/v1/index/apps/123"]
+
+
+def test_bluejetty_detail_parser_extracts_nested_icon_artwork():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Icon Example",
+        "icon": {"url": "https://cdn.example.org/apps/icon-512.png"},
+        "description": "Example description",
+    }})
+    assert result["icon_url"] == "https://cdn.example.org/apps/icon-512.png"
+
+
+def test_bluejetty_detail_parser_uses_store_observation_icon():
+    result = parse_bluejetty_detail({"data": {
+        "name": "Store Icon Example",
+        "storeObservations": [{
+            "platform": "android",
+            "icon": {"src": "https://cdn.example.org/apps/store-icon.png"},
+        }],
+    }})
+    assert result["icon_url"] == "https://cdn.example.org/apps/store-icon.png"
+
+
+def test_fedora_detail_parser_uses_meta_description_and_keeps_page_image_as_provenance():
+    page = """
+    <html><head>
+      <meta property="og:description" content="A public description from Fedora package metadata.">
+      <meta property="og:image" content="https://packages.fedoraproject.org/static/package-preview.png">
+    </head><body><a href="https://example.org">Homepage</a></body></html>
+    """
+    result = parse_fedora_detail(page)
+    assert result["summary"] == "A public description from Fedora package metadata."
+    assert result["description"] is None
+    assert result["metadata_json"]["fedora_detail"]["package_page_image_url"] == "https://packages.fedoraproject.org/static/package-preview.png"
