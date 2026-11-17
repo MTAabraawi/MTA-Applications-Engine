@@ -199,3 +199,38 @@ def test_bluejetty_detail_parser_finds_icon_with_nonstandard_nested_key():
         "platformAssets": {"android": {"launcherIcon": {"original": "https://cdn.example.org/launcher.png"}}},
     }})
     assert result["icon_url"] == "https://cdn.example.org/launcher.png"
+
+ 
+ 
+def test_fedora_detail_parser_extracts_only_semantically_marked_package_icon():
+    result = parse_fedora_detail("""
+    <html><head>
+      <meta property="og:image" content="https://packages.fedoraproject.org/static/site-preview.png">
+    </head><body>
+      <img class="site-logo" src="/static/site-logo.png">
+      <img class="package-icon" src="/static/icons/firefox.png">
+    </body></html>
+    """)
+    assert result["icon_url"] == "https://packages.fedoraproject.org/static/icons/firefox.png"
+    assert result["metadata_json"]["fedora_detail"]["app_icon_url"] == result["icon_url"]
+
+
+def test_fedora_detail_parser_does_not_treat_generic_open_graph_image_as_app_icon():
+    result = parse_fedora_detail("""
+    <html><head>
+      <meta property="og:image" content="https://packages.fedoraproject.org/static/site-preview.png">
+    </head><body>
+      <img class="site-logo" src="/static/site-logo.png">
+    </body></html>
+    """)
+    assert result["icon_url"] is None
+    assert result["metadata_json"]["fedora_detail"]["package_page_image_url"] == "https://packages.fedoraproject.org/static/site-preview.png"
+
+
+def test_fedora_detail_parser_rejects_external_package_icon_host():
+    result = parse_fedora_detail("""
+    <html><body>
+      <img class="package-icon" src="https://evil.example/icon.png">
+    </body></html>
+    """)
+    assert result["icon_url"] is None

@@ -57,6 +57,7 @@ class FedoraDetailParser(HTMLParser):
         self._cell: list[str] | None = None
         self.meta_description: str | None = None
         self.page_image_url: str | None = None
+        self.app_icon_url: str | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attrs_map = dict(attrs)
@@ -69,6 +70,15 @@ class FedoraDetailParser(HTMLParser):
                     self.meta_description = content.strip()
                 elif meta_name in {"og:image", "og:image:secure_url", "twitter:image"} and not self.page_image_url:
                     self.page_image_url = content.strip()
+        elif tag == "img" and not self.app_icon_url:
+            markers = " ".join(str(attrs_map.get(key) or "") for key in
+                               ("class", "id", "alt", "title", "data-testid", "data-role")).casefold()
+            is_app_icon = any(token in markers for token in
+                              ("app-icon", "application-icon", "package-icon", "app-image", "package-image",
+                               "app icon", "application icon", "package icon"))
+            if is_app_icon:
+                self.app_icon_url = (attrs_map.get("src") or attrs_map.get("data-src")
+                                     or attrs_map.get("data-original") or "").strip() or None
         elif tag == "p": self._paragraph = []
         elif tag == "a": self._anchor, self._anchor_href = [], attrs_map.get("href")
         elif tag == "tr": self._row = []
@@ -133,14 +143,26 @@ def parse_fedora_detail(page_html: str) -> dict[str, Any]:
                 if not row: continue
                 releases.append({headers[i]: value for i, value in enumerate(row[:len(headers)]) if i < len(headers) and value})
 
+    icon_url = None
+    if parser.app_icon_url:
+        candidate = urljoin("https://packages.fedoraproject.org/", parser.app_icon_url)
+        try:
+            parsed_icon = urlsplit(candidate)
+            if parsed_icon.scheme == "https" and parsed_icon.hostname == "packages.fedoraproject.org" and not parsed_icon.username and not parsed_icon.password:
+                icon_url = candidate
+        except ValueError:
+            icon_url = None
+
     return {
         "summary": summary,
         "description": description,
         "app_url": homepage,
+        "icon_url": icon_url,
         "metadata_json": {
             "fedora_detail": {
                 "source_repository_url": source_repository,
                 "package_page_image_url": parser.page_image_url,
+                "app_icon_url": icon_url,
                 "releases": releases,
             }
         },
