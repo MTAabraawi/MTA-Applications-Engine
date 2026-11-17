@@ -1,6 +1,11 @@
 name: Daily Catalogue Metadata Enrichment
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/catalogue-enrichment.yml"
+      - "scripts/enrich_catalog_details.py"
   workflow_run:
     workflows: ["Daily Catalogue Sync"]
     types: [completed]
