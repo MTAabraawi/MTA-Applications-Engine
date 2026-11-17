@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Compile application and sync runner
-        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
+        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/enrich_catalog_details.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
