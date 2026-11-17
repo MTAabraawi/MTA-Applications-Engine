@@ -51,13 +51,13 @@ def _clean_text(value: Any, max_length: int = 10000) -> str | None:
         return None
     if not isinstance(value, str):
         value = str(value)
-    value = re.sub(r"<(script|style)[^>]*>[\\s\\S]*?</\\1>", " ", value, flags=re.IGNORECASE)
-    value = re.sub(r"<(?:br|/p|/li|/h[1-6]|/div)[^>]*>", "\\n", value, flags=re.IGNORECASE)
+    value = re.sub(r"<(script|style)[^>]*>[\s\S]*?</\1>", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"<(?:br|/p|/li|/h[1-6]|/div)[^>]*>", "\n", value, flags=re.IGNORECASE)
     value = re.sub(r"<[^>]+>", " ", value)
     value = html_module.unescape(value)
-    value = re.sub(r"[\\u200b-\\u200d\\ufeff]", "", value)
-    value = re.sub(r"[\\t\\r ]+", " ", value)
-    value = re.sub(r"\\n\\s*\\n+", "\\n", value).strip()
+    value = re.sub(r"[\u200b-\u200d\ufeff]", "", value)
+    value = re.sub(r"[\t\r ]+", " ", value)
+    value = re.sub(r"\n\s*\n+", "\n", value).strip()
     return value[:max_length] if value else None
 
 
