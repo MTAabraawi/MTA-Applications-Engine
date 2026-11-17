@@ -113,6 +113,8 @@ async def _fetch_many(rows, client, parser, trusted_host: str, concurrency: int)
             await asyncio.sleep(0.35)
             try:
                 response = await _get_response(client, url)
+                if not _trusted_url(str(response.url), trusted_host):
+                    raise ValueError("Untrusted detail-page redirect target")
                 payload = response.json() if trusted_host == "bluejetty.ai" else response.text
                 return row, parser(payload), None
             except (httpx.HTTPError, ValueError, TypeError) as exc:
