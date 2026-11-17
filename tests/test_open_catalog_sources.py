@@ -113,16 +113,18 @@ def test_openuse_imports_each_supported_platform_and_paginates(monkeypatch):
     assert records[0]["metadata_json"]["open_source"] is True
 
 
-def test_chocolatey_uses_supported_cli_and_maps_package_pages(monkeypatch):
+def test_chocolatey_uses_supported_cli_and_caps_page_size_at_100(monkeypatch):
+    monkeypatch.setenv("CHOCOLATEY_PAGE_SIZE", "1000")
     monkeypatch.setattr(module.shutil, "which", lambda name: "C:/ProgramData/chocolatey/bin/choco.exe")
-    monkeypatch.setattr(
-        module,
-        "_chocolatey_search_page",
-        lambda choco, page, page_size: [("Git", "2.45.0"), ("7zip", "24.08")],
-    )
+    requested_sizes = []
+    def fake_search(choco, page, page_size):
+        requested_sizes.append(page_size)
+        return [("Git", "2.45.0"), ("7zip", "24.08")]
+    monkeypatch.setattr(module, "_chocolatey_search_page", fake_search)
 
     records = asyncio.run(module.fetch_chocolatey())
 
+    assert requested_sizes == [100]
     assert len(records) == 2
     assert records[0]["source_key"] == "chocolatey"
     assert records[0]["external_id"] == "Git"
