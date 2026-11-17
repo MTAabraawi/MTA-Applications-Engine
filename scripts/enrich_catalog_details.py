@@ -9,11 +9,18 @@ import asyncio
 import json
 import logging
 import os
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin, urlsplit
 
 import httpx
 from sqlalchemy import DateTime, case, cast, func, or_, select
+
+# Make the repository root importable when this file is executed directly.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app import AppRecord, SessionLocal
 from fedora_catalog_source import parse_fedora_detail
