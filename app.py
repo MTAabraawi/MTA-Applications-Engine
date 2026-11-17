@@ -121,11 +121,19 @@ def require_admin(x_admin_token: Optional[str], request: Request) -> None:
 
 
 def upsert_records(db: Session, records: list[dict]) -> dict:
+    """Upsert a catalogue in bounded batches instead of querying once per row.
+
+    Large public indexes can contain hundreds of thousands of records. A
+    per-record SELECT makes those imports prohibitively slow and leaves the
+    entire source uncommitted until the end. Batch lookups and commits keep
+    imports efficient and safely resumable if a later batch fails.
+    """
     inserted = updated = unchanged = skipped = 0
     allowed = {
         "platform", "name", "developer", "summary", "description", "category",
         "license", "source_url", "app_url", "icon_url", "metadata_json",
     }
+    grouped: dict[str, dict[str, dict]] = {}
     for item in records:
         source_key = str(item.get("source_key") or "").strip()
         external_id = str(item.get("external_id") or "").strip()
@@ -133,25 +141,50 @@ def upsert_records(db: Session, records: list[dict]) -> dict:
         if not source_key or not external_id or not values.get("name") or not values.get("source_url"):
             skipped += 1
             continue
-        row = db.execute(select(AppRecord).where(
-            AppRecord.source_key == source_key,
-            AppRecord.external_id == external_id,
-        )).scalar_one_or_none()
-        if row is None:
-            db.add(AppRecord(source_key=source_key, external_id=external_id, **values))
-            inserted += 1
-            continue
-        changed = False
-        for key, value in values.items():
-            if getattr(row, key) != value:
-                setattr(row, key, value)
-                changed = True
-        if changed:
-            row.updated_at = datetime.now(timezone.utc)
-            updated += 1
-        else:
-            unchanged += 1
-    db.commit()
+        # De-duplicate within the incoming batch; the last observation wins.
+        grouped.setdefault(source_key, {})[external_id] = values
+
+    batch_size = 500
+    for source_key, source_items in grouped.items():
+        items = list(source_items.items())
+        for offset in range(0, len(items), batch_size):
+            batch = items[offset:offset + batch_size]
+            external_ids = [external_id for external_id, _ in batch]
+            existing_rows = db.execute(
+                select(AppRecord).where(
+                    AppRecord.source_key == source_key,
+                    AppRecord.external_id.in_(external_ids),
+                )
+            ).scalars().all()
+            existing = {row.external_id: row for row in existing_rows}
+            pending = []
+            now = datetime.now(timezone.utc)
+            for external_id, values in batch:
+                row = existing.get(external_id)
+                if row is None:
+                    pending.append(AppRecord(
+                        source_key=source_key, external_id=external_id, **values
+                    ))
+                    inserted += 1
+                    continue
+                changed = False
+                for key, value in values.items():
+                    if getattr(row, key) != value:
+                        setattr(row, key, value)
+                        changed = True
+                if changed:
+                    row.updated_at = now
+                    updated += 1
+                else:
+                    unchanged += 1
+            if pending:
+                db.add_all(pending)
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+
     return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
 
 
