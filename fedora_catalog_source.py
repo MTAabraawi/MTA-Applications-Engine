@@ -55,11 +55,21 @@ class FedoraDetailParser(HTMLParser):
         self._anchor_href: str | None = None
         self._row: list[str] | None = None
         self._cell: list[str] | None = None
+        self.meta_description: str | None = None
+        self.page_image_url: str | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attrs_map = dict(attrs)
         tag = tag.lower()
-        if tag == "p": self._paragraph = []
+        if tag == "meta":
+            meta_name = (attrs_map.get("property") or attrs_map.get("name") or "").casefold()
+            content = attrs_map.get("content")
+            if content:
+                if meta_name in {"og:description", "description", "twitter:description"} and not self.meta_description:
+                    self.meta_description = content.strip()
+                elif meta_name in {"og:image", "og:image:secure_url", "twitter:image"} and not self.page_image_url:
+                    self.page_image_url = content.strip()
+        elif tag == "p": self._paragraph = []
         elif tag == "a": self._anchor, self._anchor_href = [], attrs_map.get("href")
         elif tag == "tr": self._row = []
         elif tag in {"td", "th"}: self._cell = []
@@ -93,8 +103,10 @@ def parse_fedora_detail(page_html: str) -> dict[str, Any]:
     parser = FedoraDetailParser()
     parser.feed(page_html or "")
     paragraphs = [item for item in parser.paragraphs if not item.lower().startswith("view ")]
-    summary = paragraphs[0] if paragraphs else None
+    summary = paragraphs[0] if paragraphs else parser.meta_description
     description = next((item for item in paragraphs[1:] if "contact the maintainers" not in item.lower()), None)
+    if not description and parser.meta_description and parser.meta_description != summary:
+        description = parser.meta_description
     source_repository = None
     homepage = None
     for href, _label in parser.links:
@@ -128,6 +140,7 @@ def parse_fedora_detail(page_html: str) -> dict[str, Any]:
         "metadata_json": {
             "fedora_detail": {
                 "source_repository_url": source_repository,
+                "package_page_image_url": parser.page_image_url,
                 "releases": releases,
             }
         },
