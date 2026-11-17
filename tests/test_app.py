@@ -85,11 +85,13 @@ def test_sparse_catalogue_refresh_preserves_enriched_fields_and_metadata():
         "category": "Productivity", "source_url": "https://apps.example.org/sample",
         "app_url": "https://example.org", "icon_url": "https://cdn.example.org/icon.png",
         "metadata_json": {"record_json_url": "https://bluejetty.ai/v1/index/apps/123",
-                          "bluejetty_detail": {"rating": 4.8, "rating_count": 120}},
+                          "bluejetty_detail": {"rating": 4.8, "rating_count": 120,
+                                              "listings": [{"platform": "ios", "rating": 4.8}]}},
     }
     sparse = dict(rich, developer=None, summary=None, description=None, category=None,
                   app_url=None, icon_url=None,
-                  metadata_json={"record_json_url": "https://bluejetty.ai/v1/index/apps/123"})
+                  metadata_json={"record_json_url": "https://bluejetty.ai/v1/index/apps/123",
+                                 "bluejetty_detail": {"listings": []}})
     db = SessionLocal()
     try:
         first = upsert_records(db, [rich])
@@ -101,6 +103,7 @@ def test_sparse_catalogue_refresh_preserves_enriched_fields_and_metadata():
         assert row.description == "Full rich description"
         assert row.icon_url == "https://cdn.example.org/icon.png"
         assert row.metadata_json["bluejetty_detail"]["rating"] == 4.8
+        assert row.metadata_json["bluejetty_detail"]["listings"] == [{"platform": "ios", "rating": 4.8}]
     finally:
         db.query(AppRecord).filter_by(source_key=source).delete(synchronize_session=False)
         db.commit()
