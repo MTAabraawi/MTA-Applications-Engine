@@ -1,0 +1,57 @@
+name: Daily Catalogue Metadata Enrichment
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      bluejetty_batch:
+        description: "Maximum Blue Jetty detail records to inspect (1-500)"
+        required: false
+        default: "200"
+        type: string
+      fedora_batch:
+        description: "Maximum priority Fedora package pages to inspect (1-100)"
+        required: false
+        default: "25"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mta-catalogue-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      BLUEJETTY_ENRICH_BATCH_SIZE: ${{ inputs.bluejetty_batch || '200' }}
+      FEDORA_ENRICH_BATCH_SIZE: ${{ inputs.fedora_batch || '25' }}
+      ENRICH_CONCURRENCY: "2"
+    steps:
+      - name: Check database configuration
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is required; no enrichment was run."
+            exit 1
+          fi
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile enrichment code
+        run: python -m py_compile app.py catalog_sources.py open_catalog_sources.py fedora_catalog_source.py scripts/enrich_catalog_details.py
+      - name: Enrich existing public catalogue metadata
+        run: python scripts/enrich_catalog_details.py
