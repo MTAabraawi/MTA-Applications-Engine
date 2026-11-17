@@ -1,8 +1,10 @@
 name: Daily Catalogue Metadata Enrichment
 
 on:
-  schedule:
-    - cron: "17 4 * * *"
+  workflow_run:
+    workflows: ["Daily Catalogue Sync"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       bluejetty_batch:
@@ -25,6 +27,7 @@ concurrency:
 
 jobs:
   enrich:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
