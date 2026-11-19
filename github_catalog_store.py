@@ -249,6 +249,9 @@ class GitHubCatalogueStore:
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
+        # Remove obsolete prefix-index files before writing the complete trigram set.
+        for stale_path in search_dir.glob("*.json"):
+            stale_path.unlink()
         for bucket, mapping in search_buckets.items():
             for values in mapping.values():
                 values.sort()
@@ -274,6 +277,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
+            "search_index_format": "trigram-v1",
             "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
