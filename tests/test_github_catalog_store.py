@@ -52,6 +52,7 @@ def test_search_filters_and_paginates(tmp_path):
     assert len(store.search(platform="windows")) == 1
     # Arbitrary substring queries remain supported by intersecting trigrams.
     assert [row["name"] for row in store.search(query="irefo")] == ["Mozilla Firefox"]
+    assert [row["name"] for row in store.search(query="fi")] == ["Mozilla Firefox"]
 
 
 def test_invalid_records_are_skipped(tmp_path):
@@ -68,7 +69,7 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     ])
     store.rebuild_indexes()
     indexes = tmp_path / "catalogue_data" / "indexes"
-    bucket = hashlib.sha256(b"firefox").hexdigest()[:2]
+    bucket = hashlib.sha256(b"fir").hexdigest()[:2]
     search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
