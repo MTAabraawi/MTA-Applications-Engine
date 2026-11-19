@@ -97,12 +97,18 @@ def _quality_snapshot(records: Iterable[dict]) -> dict:
 class GitHubCatalogueStore:
     """Deterministic sharded JSON store designed to live in a Git repository."""
 
-    def __init__(self, root: str | Path = "catalogue_data", shard_count: int = DEFAULT_SHARD_COUNT):
+    def __init__(self, root: str | Path = "catalogue_data", shard_count: int | None = None):
+        self.root = Path(root)
+        self.manifest_path = self.root / "manifest.json"
+        if shard_count is None:
+            try:
+                with self.manifest_path.open("r", encoding="utf-8") as stream:
+                    shard_count = int(json.load(stream).get("shard_count", DEFAULT_SHARD_COUNT))
+            except (OSError, ValueError, TypeError):
+                shard_count = DEFAULT_SHARD_COUNT
         if shard_count < 1 or shard_count > 4096:
             raise ValueError("shard_count must be between 1 and 4096")
-        self.root = Path(root)
         self.shard_count = shard_count
-        self.manifest_path = self.root / "manifest.json"
         self.shards_dir = self.root / "shards"
         self.indexes_dir = self.root / "indexes"
 
