@@ -17,9 +17,15 @@ from expanded_catalog_sources import fetch_expanded_catalogs
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mta_engine.db")
 ADMIN_API_TOKEN = os.getenv("ADMIN_API_TOKEN", "")
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+GITHUB_STORAGE = os.getenv("MTA_STORAGE_BACKEND", "sql").strip().casefold() == "github"
+GITHUB_CATALOGUE_DIR = os.getenv("GITHUB_CATALOGUE_DIR", "catalogue_data")
+if GITHUB_STORAGE:
+    engine = None
+    SessionLocal = None
+else:
+    connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 class Base(DeclarativeBase):
@@ -51,7 +57,7 @@ class AppRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
-if os.getenv("SKIP_SCHEMA_CREATE") != "1":
+if not GITHUB_STORAGE and os.getenv("SKIP_SCHEMA_CREATE") != "1":
     Base.metadata.create_all(engine)
 
 _worker_sessionmakers = {}
@@ -78,6 +84,9 @@ def _binding_value(env, name: str):
 
 
 def get_db(request: Request):
+    if GITHUB_STORAGE:
+        yield None
+        return
     # Cloudflare Workers supplies Hyperdrive through the ASGI request scope.
     # Local/Docker/GitHub Actions continue using DATABASE_URL and SessionLocal.
     env = request.scope.get("env")
@@ -283,7 +292,29 @@ def upsert_records(db: Session, records: list[dict]) -> dict:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "MTA Applications Engine", "version": "0.2.0"}
+    return {
+        "status": "ok", "service": "MTA Applications Engine", "version": "0.3.0",
+        "storage": "github-json-shards" if GITHUB_STORAGE else "sql",
+    }
+
+
+def _github_store():
+    from github_catalog_store import GitHubCatalogueStore
+    return GitHubCatalogueStore(GITHUB_CATALOGUE_DIR)
+
+
+def _github_api_record(row: dict) -> dict:
+    return {
+        "id": f"{row['source_key']}:{row['external_id']}",
+        "source": row["source_key"], "external_id": row["external_id"],
+        "platform": row.get("platform"), "name": row.get("name"),
+        "developer": row.get("developer"), "summary": row.get("summary"),
+        "description": row.get("description"), "category": row.get("category"),
+        "license": row.get("license"), "source_url": row.get("source_url"),
+        "app_url": row.get("app_url"), "icon_url": row.get("icon_url"),
+        "metadata_json": row.get("metadata_json") or {},
+        "first_seen_at": row.get("first_seen_at"), "updated_at": row.get("updated_at"),
+    }
 
 
 @app.get("/api/v1/apps")
@@ -295,6 +326,10 @@ def list_apps(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
+    if GITHUB_STORAGE:
+        rows = _github_store().search(query=q, platform=platform, source=source, limit=limit, offset=offset)
+        return [_github_api_record(row) for row in rows]
+
     stmt = select(AppRecord).order_by(AppRecord.name).limit(limit).offset(offset)
     if q:
         term = f"%{q.strip()}%"
@@ -315,6 +350,11 @@ def list_apps(
 
 @app.get("/api/v1/catalog-stats")
 def catalog_stats(db: Session = Depends(get_db)):
+    if GITHUB_STORAGE:
+        path = _github_store().indexes_dir / "stats.json"
+        if not path.exists():
+            raise HTTPException(status_code=503, detail="GitHub catalogue indexes are not built yet")
+        return _github_store()._read_json(path, {})
     by_platform = db.execute(
         select(AppRecord.platform, func.count()).group_by(AppRecord.platform).order_by(AppRecord.platform)
     ).all()
@@ -368,6 +408,8 @@ async def ingest_catalogs(
     x_admin_token: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
+    if GITHUB_STORAGE:
+        raise HTTPException(status_code=405, detail="GitHub-backed catalogue is read-only through the API. Run the GitHub Actions catalogue workflow to update it.")
     require_admin(x_admin_token, request)
     catalog_results = await fetch_all_catalogs()
     catalog_results.update(await fetch_expanded_catalogs())
@@ -393,6 +435,8 @@ async def ingest_fdroid(
     x_admin_token: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
+    if GITHUB_STORAGE:
+        raise HTTPException(status_code=405, detail="GitHub-backed catalogue is read-only through the API. Run the GitHub Actions catalogue workflow to update it.")
     require_admin(x_admin_token, request)
     try:
         async with httpx.AsyncClient(
