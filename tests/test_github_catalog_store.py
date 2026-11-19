@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 from github_catalog_store import GitHubCatalogueStore
@@ -64,7 +65,8 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     ])
     store.rebuild_indexes()
     indexes = tmp_path / "catalogue_data" / "indexes"
-    search = json.loads((indexes / "search.json").read_text())
+    bucket = hashlib.sha256(b"firefox").hexdigest()[:2]
+    search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
     assert "firefox" in search
