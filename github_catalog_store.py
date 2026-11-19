@@ -293,7 +293,7 @@ class GitHubCatalogueStore:
             if source and str(item.get("source_key", "")).casefold() != source:
                 continue
             if term and not any(term in str(item.get(field) or "").casefold()
-                                for field in ("name", "developer", "summary")):
+                                for field in ("name", "developer", "summary", "description", "category")):
                 continue
             matches.append(item)
         matches.sort(key=lambda row: (str(row.get("name") or "").casefold(),
