@@ -1,0 +1,1 @@
+{"schema_version":1,"storage":"git-json-shards","shard_count":256,"record_count":360470,"updated_at":"2026-11-19T17:50:02.516527+00:00","indexes":["platform.json","source.json","category.json","search/*.json","browse.json","stats.json"]}
