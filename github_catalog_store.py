@@ -218,7 +218,7 @@ class GitHubCatalogueStore:
             searchable = " ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
             )).casefold()
-            tokens = set(__import__("re").findall(r"[\\w.+#-]{2,}", searchable))
+            tokens = set(__import__("re").findall(r"[\w.+#-]{2,}", searchable))
             for token in tokens:
                 search.setdefault(token, []).append(key)
 
