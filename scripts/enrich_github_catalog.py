@@ -170,7 +170,7 @@ def store_ids(value, depth=0):
                 if package:
                     found.add(("android", package))
             elif parsed.hostname == "apps.apple.com":
-                match = re.search(r"/id(\\d+)(?:/|$)", parsed.path)
+                match = re.search(r"/id(\d+)(?:/|$)", parsed.path)
                 if match:
                     found.add(("ios", match.group(1)))
         except ValueError:
