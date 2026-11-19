@@ -16,14 +16,14 @@ let githubCatalogueCache = new Map();
 function githubStorageEnabled(env) {
   return String(env.CATALOGUE_STORAGE || "").toLowerCase() === "github";
 }
-async function githubJson(env, relativePath) {
+async function githubJson(env, relativePath, allowMissing = false) {
   const branch = env.GITHUB_CATALOGUE_BRANCH || "main";
   const url = "https://raw.githubusercontent.com/MTAabraawi/MTA-Applications-Engine/" +
     branch + "/catalogue_data/" + relativePath.split("/").map(encodeURIComponent).join("/");
   const cached = githubCatalogueCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const response = await fetch(url, {cf:{cacheTtl:300,cacheEverything:true}});
-  if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
+  if (allowMissing && response.status === 404) return {};\n  if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
   const value = await response.json();
   githubCatalogueCache.set(url, {value, expiresAt:Date.now()+30000});
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
@@ -77,7 +77,7 @@ async function githubListApps(env, url) {
       let candidates = null;
       for (const term of terms) {
         const bucket = await catalogueTokenBucket(term);
-        const index = await githubJson(env, "indexes/search/" + bucket + ".json");
+        const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
         const current = new Set(index[term] || []);
         candidates = candidates === null ? current : new Set([...candidates].filter(key => current.has(key)));
       }
