@@ -83,8 +83,8 @@ def _search_grams(value: str) -> set[str]:
 
     grams: set[str] = set()
     for token in re.findall(r"[\w.+#-]{2,}", value.casefold()):
-        width = 2 if len(token) == 2 else 3
-        grams.update(token[index:index + width] for index in range(len(token) - width + 1))
+        grams.update(token[index:index + 2] for index in range(len(token) - 1))
+        grams.update(token[index:index + 3] for index in range(len(token) - 2))
     return grams
 
 
