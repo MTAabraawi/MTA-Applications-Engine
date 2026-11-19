@@ -279,24 +279,88 @@ class GitHubCatalogueStore:
             "storage": "git-json-shards",
         }
 
+    def _get_key(self, key: str):
+        number = self._shard_number(key)
+        record = self._read_shard(number).get(key)
+        return dict(record) if record is not None else None
+
     def search(self, query: str | None = None, platform: str | None = None,
                source: str | None = None, limit: int = 50, offset: int = 0) -> list[dict]:
         if limit < 1 or limit > 200 or offset < 0:
             raise ValueError("invalid pagination")
+        import re
+
         term = (query or "").casefold().strip()
         platform = platform.casefold() if platform else None
         source = source.casefold() if source else None
+        platform_index = self._read_json(self.indexes_dir / "platform.json", None)
+        source_index = self._read_json(self.indexes_dir / "source.json", None)
+        browse = self._read_json(self.indexes_dir / "browse.json", None)
+
+        candidates = None
+        if platform and isinstance(platform_index, dict):
+            candidates = set(platform_index.get(platform, []))
+        if source and isinstance(source_index, dict):
+            source_keys = set(source_index.get(source, []))
+            candidates = source_keys if candidates is None else candidates & source_keys
+
+        # Prefix buckets narrow ordinary text searches to matching records.
+        # The final substring check preserves the API's established semantics.
+        tokens = re.findall(r"[\\w.+#-]{2,}", term)
+        if tokens and all(len(token) >= 2 for token in tokens):
+            search_dir = self.indexes_dir / "search"
+            for token in tokens:
+                prefix = token[:12]
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                mapping = self._read_json(search_dir / f"{bucket}.json", {})
+                token_keys = set(mapping.get(prefix, []))
+                candidates = token_keys if candidates is None else candidates & token_keys
+
+        if candidates is None:
+            if isinstance(browse, list):
+                ordered_keys = browse
+            else:
+                rows = list(self.iter_records())
+                rows.sort(key=lambda row: (str(row.get("name") or "").casefold(),
+                                           str(row.get("source_key") or ""),
+                                           str(row.get("external_id") or "")))
+                return self._filter_rows(rows, term, platform, source, limit, offset)
+        elif isinstance(browse, list):
+            ordered_keys = [key for key in browse if key in candidates]
+        else:
+            rows = [self._get_key(key) for key in candidates]
+            rows = [row for row in rows if row is not None]
+            rows.sort(key=lambda row: (str(row.get("name") or "").casefold(),
+                                       str(row.get("source_key") or ""),
+                                       str(row.get("external_id") or "")))
+            return self._filter_rows(rows, term, platform, source, limit, offset)
+
         matches = []
-        for item in self.iter_records():
+        for key in ordered_keys:
+            if candidates is not None and key not in candidates:
+                continue
+            item = self._get_key(key)
+            if item is None:
+                continue
+            if term and term not in " ".join(str(item.get(field) or "") for field in (
+                "name", "developer", "summary", "description", "category"
+            )).casefold():
+                continue
+            matches.append(item)
+        return matches[offset:offset + limit]
+
+    @staticmethod
+    def _filter_rows(rows, term, platform, source, limit, offset):
+        matches = []
+        for item in rows:
             if platform and str(item.get("platform", "")).casefold() != platform:
                 continue
             if source and str(item.get("source_key", "")).casefold() != source:
                 continue
-            if term and not any(term in str(item.get(field) or "").casefold()
-                                for field in ("name", "developer", "summary", "description", "category")):
+            searchable = " ".join(str(item.get(field) or "") for field in (
+                "name", "developer", "summary", "description", "category"
+            )).casefold()
+            if term and term not in searchable:
                 continue
             matches.append(item)
-        matches.sort(key=lambda row: (str(row.get("name") or "").casefold(),
-                                      str(row.get("source_key") or ""),
-                                      str(row.get("external_id") or "")))
         return matches[offset:offset + limit]
