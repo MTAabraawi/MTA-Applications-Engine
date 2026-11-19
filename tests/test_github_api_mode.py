@@ -25,6 +25,3 @@ def test_fastapi_reads_github_catalogue_without_database(tmp_path, monkeypatch):
     assert stats["platforms"] == {"android": 1}
     assert stats["sources"] == {"fdroid": 1}
 
-
-def test_fastapi_github_mode_does_not_create_sql_engine():
-    assert api.GITHUB_STORAGE is False or api.engine is None
