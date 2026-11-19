@@ -59,7 +59,7 @@ async def main() -> None:
         else:
             try:
                 if github_store is not None:
-                    result = {"fetched": len(records), **github_store.upsert_many(records)}
+                    result = {"fetched": len(records), **github_store.upsert_many(records, rebuild_indexes=False)}
                 else:
                     result = {"fetched": len(records), **upsert_records(db, records)}
             except Exception as exc:
@@ -85,6 +85,10 @@ async def main() -> None:
     finally:
         if db is not None:
             db.close()
+
+    if github_store is not None:
+        manifest = github_store.rebuild_indexes()
+        logging.info("Git-backed catalogue manifest: %s", json.dumps(manifest, ensure_ascii=False))
 
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
     if not any("error" not in result and result.get("fetched", 0) for result in summary.values()):
