@@ -68,10 +68,10 @@ Optional catalogue controls:
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
-uvicorn app:app --reload
+MTA_STORAGE_BACKEND=github GITHUB_CATALOGUE_DIR=catalogue_data uvicorn app:app --reload
 ```
 
-For Docker Compose, set `POSTGRES_PASSWORD` and `ADMIN_API_TOKEN` in the environment, then run `docker compose up --build -d`.
+For Docker Compose, make sure the `catalogue_data/` snapshot is present beside the compose file, then run `docker compose up --build -d`. The default compose stack is read-only and does not start PostgreSQL.
 
 ## Cloudflare deployment
 
