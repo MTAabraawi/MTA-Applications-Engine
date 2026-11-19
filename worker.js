@@ -30,15 +30,6 @@ async function githubJson(env, relativePath, allowMissing = false) {
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
-function catalogueSearchPrefixes(value) {
-  const prefixes = new Set();
-  const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
-  for (const token of tokens) {
-    prefixes.add(token.slice(0, 2));
-    if (token.length >= 3) prefixes.add(token.slice(0, 3));
-  }
-  return [...prefixes];
-}
 function catalogueQueryPrefixes(value) {
   const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
   return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
@@ -68,7 +59,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
-  if (manifest.search_index_format !== "prefix3-v1") throw new Error("Unsupported GitHub catalogue search index format");
+  if (manifest.search_index_format !== "prefix2-3-v1") throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
