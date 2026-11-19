@@ -3,11 +3,11 @@
   "name": "mta-applications-engine",
   "main": "worker.js",
   "compatibility_date": "2026-11-14",
-  "compatibility_flags": ["nodejs_compat"],
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "REPLACE_WITH_HYPERDRIVE_CONFIG_ID"
-    }
-  ]
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "CATALOGUE_STORAGE": "github",
+    "GITHUB_CATALOGUE_BRANCH": "main"
+  }
 }
