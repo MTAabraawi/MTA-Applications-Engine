@@ -284,6 +284,18 @@ class GitHubCatalogueStore:
         record = self._read_shard(number).get(key)
         return dict(record) if record is not None else None
 
+    def _records_for_keys(self, keys: Iterable[str]) -> dict[str, dict]:
+        grouped: dict[int, list[str]] = {}
+        for key in keys:
+            grouped.setdefault(self._shard_number(key), []).append(key)
+        found = {}
+        for number, shard_keys in grouped.items():
+            shard = self._read_shard(number)
+            for key in shard_keys:
+                if key in shard:
+                    found[key] = dict(shard[key])
+        return found
+
     def search(self, query: str | None = None, platform: str | None = None,
                source: str | None = None, limit: int = 50, offset: int = 0) -> list[dict]:
         if limit < 1 or limit > 200 or offset < 0:
@@ -335,11 +347,12 @@ class GitHubCatalogueStore:
                                        str(row.get("external_id") or "")))
             return self._filter_rows(rows, term, platform, source, limit, offset)
 
+        if candidates is not None:
+            ordered_keys = [key for key in ordered_keys if key in candidates]
+        loaded = self._records_for_keys(ordered_keys)
         matches = []
         for key in ordered_keys:
-            if candidates is not None and key not in candidates:
-                continue
-            item = self._get_key(key)
+            item = loaded.get(key)
             if item is None:
                 continue
             if term and term not in " ".join(str(item.get(field) or "") for field in (
