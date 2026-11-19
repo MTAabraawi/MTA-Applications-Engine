@@ -66,6 +66,34 @@ def _merge_metadata(old, new):
     return merged
 
 
+def _quality_fields(total: int, counts: dict) -> dict:
+    result = {}
+    for field, present in counts.items():
+        result[field] = {
+            "present": int(present),
+            "missing": max(total - int(present), 0),
+            "percent": round((int(present) * 100.0 / total), 2) if total else 0.0,
+        }
+    return result
+
+
+def _quality_snapshot(records: Iterable[dict]) -> dict:
+    by_source: dict[str, dict] = {}
+    fields = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
+    for record in records:
+        source = str(record.get("source_key") or "unknown")
+        item = by_source.setdefault(source, {"total": 0, "counts": {field: 0 for field in fields}})
+        item["total"] += 1
+        for field in fields:
+            value = record.get(field)
+            if _has_value(value) and (not field.endswith("_url") or str(value).lower().startswith("https://")):
+                item["counts"][field] += 1
+    return {
+        source: {"total": item["total"], "fields": _quality_fields(item["total"], item["counts"])}
+        for source, item in sorted(by_source.items())
+    }
+
+
 class GitHubCatalogueStore:
     """Deterministic sharded JSON store designed to live in a Git repository."""
 
@@ -166,18 +194,53 @@ class GitHubCatalogueStore:
         platforms: dict[str, list[str]] = {}
         sources: dict[str, list[str]] = {}
         categories: dict[str, list[str]] = {}
+        search: dict[str, list[str]] = {}
+        browse: list[tuple[str, str]] = []
+        field_counts: dict[str, int] = {name: 0 for name in (
+            "icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"
+        )}
         total = 0
         for record in self.iter_records():
             total += 1
             key = self._key(record)
-            platforms.setdefault(record.get("platform") or "unknown", []).append(key)
-            sources.setdefault(record.get("source_key") or "unknown", []).append(key)
+            platform = record.get("platform") or "unknown"
+            source = record.get("source_key") or "unknown"
+            platforms.setdefault(platform, []).append(key)
+            sources.setdefault(source, []).append(key)
             category = record.get("category")
             if category:
                 categories.setdefault(str(category), []).append(key)
+            browse.append((str(record.get("name") or "").casefold(), key))
+            for field in field_counts:
+                value = record.get(field)
+                if _has_value(value) and (not field.endswith("_url") or str(value).lower().startswith("https://")):
+                    field_counts[field] += 1
+            searchable = " ".join(str(record.get(field) or "") for field in (
+                "name", "developer", "summary", "description", "category"
+            )).casefold()
+            tokens = set(__import__("re").findall(r"[\\w.+#-]{2,}", searchable))
+            for token in tokens:
+                search.setdefault(token, []).append(key)
 
-        for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
+        browse.sort(key=lambda item: (item[0], item[1]))
+        for name, mapping in (("platform", platforms), ("source", sources), ("category", categories), ("search", search)):
+            for values in mapping.values():
+                values.sort()
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
+        _atomic_json(self.indexes_dir / "browse.json", [key for _, key in browse])
+        _atomic_json(self.indexes_dir / "stats.json", {
+            "total": total,
+            "with_icon": field_counts["icon_url"],
+            "without_icon": max(total - field_counts["icon_url"], 0),
+            "platforms": {key: len(value) for key, value in platforms.items()},
+            "sources": {key: len(value) for key, value in sources.items()},
+            "quality": {
+                "fields": _quality_fields(total, field_counts),
+                "sources": _quality_snapshot(self.iter_records()),
+            },
+            "metadata_only": True,
+            "storage": "github-json-shards",
+        })
 
         manifest = {
             "schema_version": SCHEMA_VERSION,
@@ -185,7 +248,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "indexes": ["platform.json", "source.json", "category.json"],
+            "indexes": ["platform.json", "source.json", "category.json", "search.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
         return manifest
