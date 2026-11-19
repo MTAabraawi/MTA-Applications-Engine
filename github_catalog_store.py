@@ -194,7 +194,7 @@ class GitHubCatalogueStore:
         platforms: dict[str, list[str]] = {}
         sources: dict[str, list[str]] = {}
         categories: dict[str, list[str]] = {}
-        search: dict[str, list[str]] = {}
+        search_buckets: dict[str, dict[str, list[str]]] = {}
         browse: list[tuple[str, str]] = []
         field_counts: dict[str, int] = {name: 0 for name in (
             "icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"
@@ -220,13 +220,25 @@ class GitHubCatalogueStore:
             )).casefold()
             tokens = set(__import__("re").findall(r"[\w.+#-]{2,}", searchable))
             for token in tokens:
-                search.setdefault(token, []).append(key)
+                for size in range(2, min(len(token), 12) + 1):
+                    prefix = token[:size]
+                    bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                    search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
+                if len(token) > 12:
+                    bucket = hashlib.sha256(token.encode("utf-8")).hexdigest()[:2]
+                    search_buckets.setdefault(bucket, {}).setdefault(token, []).append(key)
 
         browse.sort(key=lambda item: (item[0], item[1]))
-        for name, mapping in (("platform", platforms), ("source", sources), ("category", categories), ("search", search)):
+        for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
             for values in mapping.values():
                 values.sort()
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
+        search_dir = self.indexes_dir / "search"
+        search_dir.mkdir(parents=True, exist_ok=True)
+        for bucket, mapping in search_buckets.items():
+            for values in mapping.values():
+                values.sort()
+            _atomic_json(search_dir / f"{bucket}.json", mapping)
         _atomic_json(self.indexes_dir / "browse.json", [key for _, key in browse])
         _atomic_json(self.indexes_dir / "stats.json", {
             "total": total,
@@ -248,7 +260,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "indexes": ["platform.json", "source.json", "category.json", "search.json", "browse.json", "stats.json"],
+            "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
         return manifest
