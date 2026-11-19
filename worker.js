@@ -292,7 +292,7 @@ async function handle(request,env) {
   const origin=corsOrigin(request,env);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, X-Admin-Token","vary":"Origin"}});
   const url=new URL(request.url),path=url.pathname;
-  if(path==="/health"&&request.method==="GET")return response({status:"ok",service:"MTA Applications Engine",version:"0.3.0"},200,origin);
+  if(path==="/health"&&request.method==="GET")return response({status:"ok",service:"MTA Applications Engine",version:"0.4.0",storage:githubStorageEnabled(env)?"github-json-shards":"postgresql"},200,origin);
   if(path==="/api/v1/apps"&&request.method==="GET"){
     const limit=Math.max(1,Math.min(Number(url.searchParams.get("limit")||50),200)),offset=Math.max(0,Number(url.searchParams.get("offset")||0));
     const clauses=[],quote=value=>"'"+String(value).replace(/'/g,"''")+"'";
