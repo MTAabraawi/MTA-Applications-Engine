@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: compact-search-validation-${{ github.ref }}
@@ -26,10 +26,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
-          sparse-checkout: |
-            /*
-            !/catalogue_data/
-          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -46,3 +42,49 @@ jobs:
         run: node --check worker.js
       - name: Run Git-backed catalogue tests
         run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py
+      - name: Rebuild and measure compact search snapshot
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+          from github_catalog_store import GitHubCatalogueStore
+
+          root = Path("catalogue_data")
+          before = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          expected = int(before["record_count"])
+          listing = subprocess.check_output(
+              ["git", "ls-tree", "-rl", "HEAD", "catalogue_data/indexes/search"],
+              text=True,
+          )
+          old_bytes = sum(
+              int(parts[3]) for line in listing.splitlines()
+              if len(parts := line.split()) >= 4 and parts[3].isdigit()
+          )
+          rebuilt = GitHubCatalogueStore(root).rebuild_indexes()
+          if int(rebuilt["record_count"]) != expected:
+              raise SystemExit(
+                  f"Record count changed during index rebuild: expected {expected}, got {rebuilt['record_count']}"
+              )
+          new_bytes = sum(path.stat().st_size for path in (root / "indexes" / "search").glob("*.json"))
+          print(json.dumps({
+              "record_count": expected,
+              "old_search_index_bytes": old_bytes,
+              "new_search_index_bytes": new_bytes,
+              "reduction_percent": round((old_bytes - new_bytes) * 100 / old_bytes, 2) if old_bytes else 0,
+              "search_index_format": rebuilt["search_index_format"],
+          }, indent=2))
+          if old_bytes and new_bytes >= old_bytes:
+              raise SystemExit("Compact search index did not reduce the committed search-index size")
+          PY
+      - name: Commit rebuilt compact search snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/indexes/ catalogue_data/manifest.json
+          if git diff --cached --quiet; then
+            echo "Search snapshot already uses the compact index format."
+            exit 0
+          fi
+          git commit -m "Rebuild compact 2/3-character search index"
+          git push origin "HEAD:repair/compact-search-index"
