@@ -247,6 +247,11 @@ async def main():
     cross_updates, cross_counts = crossmatch_icons(records, providers, datetime.now(timezone.utc).isoformat())
     if cross_updates:
         store.upsert_many(cross_updates, rebuild_indexes=False)
+        cross_by_key = {(row["source_key"], row["external_id"]): row for row in cross_updates}
+        for index, row in enumerate(records):
+            replacement = cross_by_key.get((row.get("source_key"), row.get("external_id")))
+            if replacement is not None:
+                records[index] = replacement
         log.info("Exact official-store icon cross-match: %s", cross_counts)
 
     async with httpx.AsyncClient(follow_redirects=False) as client:
