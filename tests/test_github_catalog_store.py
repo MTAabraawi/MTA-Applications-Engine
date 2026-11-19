@@ -54,3 +54,21 @@ def test_invalid_records_are_skipped(tmp_path):
     store = GitHubCatalogueStore(tmp_path / "catalogue_data")
     result = store.upsert_many([{"source_key": "x", "external_id": "y"}])
     assert result["skipped"] == 1
+
+
+def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
+    store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
+    store.upsert_many([
+        record(external="firefox", name="Mozilla Firefox", developer="Mozilla"),
+        record(external="browser", name="Browser Tools", developer="Example"),
+    ])
+    store.rebuild_indexes()
+    indexes = tmp_path / "catalogue_data" / "indexes"
+    search = json.loads((indexes / "search.json").read_text())
+    browse = json.loads((indexes / "browse.json").read_text())
+    stats = json.loads((indexes / "stats.json").read_text())
+    assert "firefox" in search
+    assert len(browse) == 2
+    assert stats["total"] == 2
+    assert stats["quality"]["fields"]["source_url"]["present"] == 2
+    assert browse[0].endswith(":browser")
