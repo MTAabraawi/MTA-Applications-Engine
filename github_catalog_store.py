@@ -77,6 +77,17 @@ def _quality_fields(total: int, counts: dict) -> dict:
     return result
 
 
+def _search_grams(value: str) -> set[str]:
+    """Return unique 3-character grams (2-character for short tokens)."""
+    import re
+
+    grams: set[str] = set()
+    for token in re.findall(r"[\w.+#-]{2,}", value.casefold()):
+        width = 2 if len(token) == 2 else 3
+        grams.update(token[index:index + width] for index in range(len(token) - width + 1))
+    return grams
+
+
 def _quality_snapshot(records: Iterable[dict]) -> dict:
     by_source: dict[str, dict] = {}
     fields = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
@@ -227,15 +238,9 @@ class GitHubCatalogueStore:
             searchable = " ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
             )).casefold()
-            tokens = set(__import__("re").findall(r"[\w.+#-]{2,}", searchable))
-            for token in tokens:
-                for size in range(2, min(len(token), 12) + 1):
-                    prefix = token[:size]
-                    bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
-                    search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
-                if len(token) > 12:
-                    bucket = hashlib.sha256(token.encode("utf-8")).hexdigest()[:2]
-                    search_buckets.setdefault(bucket, {}).setdefault(token, []).append(key)
+            for gram in _search_grams(searchable):
+                bucket = hashlib.sha256(gram.encode("utf-8")).hexdigest()[:2]
+                search_buckets.setdefault(bucket, {}).setdefault(gram, []).append(key)
 
         browse.sort(key=lambda item: item[:4])
         for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
@@ -325,17 +330,18 @@ class GitHubCatalogueStore:
             source_keys = set(source_index.get(source, []))
             candidates = source_keys if candidates is None else candidates & source_keys
 
-        # Prefix buckets narrow ordinary text searches to matching records.
-        # The final substring check preserves the API's established semantics.
-        tokens = re.findall(r"[\w.+#-]{2,}", term)
-        if tokens and all(len(token) >= 2 for token in tokens):
+        # Trigram postings preserve arbitrary substring matching while avoiding
+        # the many overlapping prefix postings produced by the previous index.
+        grams = _search_grams(term)
+        if term and not grams:
+            candidates = set()
+        elif grams:
             search_dir = self.indexes_dir / "search"
-            for token in tokens:
-                prefix = token[:12]
-                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+            for gram in sorted(grams):
+                bucket = hashlib.sha256(gram.encode("utf-8")).hexdigest()[:2]
                 mapping = self._read_json(search_dir / f"{bucket}.json", {})
-                token_keys = set(mapping.get(prefix, []))
-                candidates = token_keys if candidates is None else candidates & token_keys
+                gram_keys = set(mapping.get(gram, []))
+                candidates = gram_keys if candidates is None else candidates & gram_keys
 
         if candidates is None:
             if isinstance(browse, list):
