@@ -32,7 +32,7 @@ Connectors fail independently. A temporary outage at one source should not stop 
 - `POST /api/v1/ingest/catalogs` — ingest all configured catalogues (admin token required).
 - `POST /api/v1/ingest/fdroid` — ingest F-Droid only (admin token required).
 
-The ingestion endpoints require the `X-Admin-Token` header. Keep the token server-side; never place it in browser JavaScript or a public website bundle.
+In the optional legacy SQL mode, the ingestion endpoints require the `X-Admin-Token` header. In GitHub mode, the API is read-only and POST ingestion requests return HTTP 405; use the GitHub Actions workflows to update the catalogue. Never place admin tokens in browser JavaScript or a public website bundle.
 
 Example browser-side catalogue request:
 
