@@ -30,8 +30,14 @@ async function githubJson(env, relativePath, allowMissing = false) {
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
-function catalogueTokens(value) {
-  return [...new Set((String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || []).map(token => token.slice(0,12)))];
+function catalogueSearchGrams(value) {
+  const grams = new Set();
+  const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
+  for (const token of tokens) {
+    const width = token.length === 2 ? 2 : 3;
+    for (let index = 0; index <= token.length - width; index++) grams.add(token.slice(index, index + width));
+  }
+  return [...grams];
 }
 async function catalogueTokenBucket(token) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
@@ -72,14 +78,14 @@ async function githubListApps(env, url) {
   const q = url.searchParams.get("q");
   let keys;
   if (q) {
-    const terms = catalogueTokens(q);
-    if (!terms.length) keys = [];
+    const grams = catalogueSearchGrams(q);
+    if (!grams.length) keys = [];
     else {
       let candidates = null;
-      for (const term of terms) {
-        const bucket = await catalogueTokenBucket(term);
+      for (const gram of grams) {
+        const bucket = await catalogueTokenBucket(gram);
         const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
-        const current = new Set(index[term] || []);
+        const current = new Set(index[gram] || []);
         candidates = candidates === null ? current : new Set([...candidates].filter(key => current.has(key)));
       }
       keys = [...(candidates || [])].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
