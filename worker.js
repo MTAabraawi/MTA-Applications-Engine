@@ -82,14 +82,18 @@ async function githubListApps(env, url) {
     const grams = catalogueSearchGrams(q);
     if (!grams.length) keys = [];
     else {
-      let candidates = null;
-      for (const gram of grams) {
+      const postings = await Promise.all(grams.map(async gram => {
         const bucket = await catalogueTokenBucket(gram);
         const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
-        const current = new Set(index[gram] || []);
-        candidates = candidates === null ? current : new Set([...candidates].filter(key => current.has(key)));
+        return new Set(index[gram] || []);
+      }));
+      postings.sort((left, right) => left.size - right.size);
+      let candidates = postings[0] || new Set();
+      for (const current of postings.slice(1)) {
+        candidates = new Set([...candidates].filter(key => current.has(key)));
+        if (!candidates.size) break;
       }
-      keys = [...(candidates || [])].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
+      keys = [...candidates].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
       const records = await githubRecordsForKeys(env, keys, manifest.shard_count);
       const needle = q.trim().toLowerCase();
       const filtered = records.filter(row => ["name","developer","summary","description","category"]
