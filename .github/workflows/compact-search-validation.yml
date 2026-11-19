@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: compact-search-validation-${{ github.ref }}
+  group: compact-search-validation-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
