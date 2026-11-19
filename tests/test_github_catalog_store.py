@@ -43,6 +43,7 @@ def test_search_filters_and_paginates(tmp_path):
     store.upsert_many([
         record(external="a", name="Alpha Browser"),
         record(external="b", name="Beta Editor"),
+        record(external="firefox", name="Mozilla Firefox"),
         record(source="winget", external="c", platform="windows", name="Alpha Desktop"),
     ])
     found = store.search(query="alpha", limit=1, offset=0)
@@ -50,7 +51,7 @@ def test_search_filters_and_paginates(tmp_path):
     assert found[0]["name"] == "Alpha Browser"
     assert len(store.search(platform="windows")) == 1
     # Arbitrary substring queries remain supported by intersecting trigrams.
-    assert [row["name"] for row in store.search(query="irefo")] == ["Alpha Browser"] if False else True
+    assert [row["name"] for row in store.search(query="irefo")] == ["Mozilla Firefox"]
 
 
 def test_invalid_records_are_skipped(tmp_path):
