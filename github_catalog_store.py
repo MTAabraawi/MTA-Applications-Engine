@@ -324,7 +324,7 @@ class GitHubCatalogueStore:
 
         # Prefix buckets narrow ordinary text searches to matching records.
         # The final substring check preserves the API's established semantics.
-        tokens = re.findall(r"[\\w.+#-]{2,}", term)
+        tokens = re.findall(r"[\w.+#-]{2,}", term)
         if tokens and all(len(token) >= 2 for token in tokens):
             search_dir = self.indexes_dir / "search"
             for token in tokens:
