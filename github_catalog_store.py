@@ -260,7 +260,7 @@ class GitHubCatalogueStore:
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
-        # Remove obsolete prefix-index files before writing the complete trigram set.
+        # Remove obsolete search-index files before writing the complete compact prefix set.
         for stale_path in search_dir.glob("*.json"):
             stale_path.unlink()
         for bucket, mapping in search_buckets.items():
