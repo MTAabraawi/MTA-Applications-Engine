@@ -1,22 +1,10 @@
 name: Daily Catalogue Sync
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "catalog_sources.py"
-      - "expanded_catalog_sources.py"
-      - "open_catalog_sources.py"
-      - "fedora_catalog_source.py"
-      - "sync_catalogs.py"
-      - "store_sources.json"
-      - ".github/workflows/catalogue-sync.yml"
-  schedule:
-    - cron: "17 2 * * *"
   workflow_dispatch:
     inputs:
       sync_sources:
-        description: "Comma-separated source keys to retry; leave blank for the full catalogue"
+        description: "Legacy SQL compatibility only. Leave blank for the full catalogue."
         required: false
         type: string
         default: ""
