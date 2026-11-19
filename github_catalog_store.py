@@ -77,15 +77,26 @@ def _quality_fields(total: int, counts: dict) -> dict:
     return result
 
 
-def _search_grams(value: str) -> set[str]:
-    """Return unique 3-character grams (2-character for short tokens)."""
+def _search_prefixes(value: str) -> set[str]:
+    """Return compact 2- and 3-character token prefixes."""
     import re
 
-    grams: set[str] = set()
+    prefixes: set[str] = set()
     for token in re.findall(r"[\w.+#-]{2,}", value.casefold()):
-        grams.update(token[index:index + 2] for index in range(len(token) - 1))
-        grams.update(token[index:index + 3] for index in range(len(token) - 2))
-    return grams
+        prefixes.add(token[:2])
+        if len(token) >= 3:
+            prefixes.add(token[:3])
+    return prefixes
+
+
+def _search_query_prefixes(value: str) -> set[str]:
+    """Use a 2-character prefix for short terms and 3 for longer terms."""
+    import re
+
+    return {
+        token[:2] if len(token) == 2 else token[:3]
+        for token in re.findall(r"[\w.+#-]{2,}", value.casefold())
+    }
 
 
 def _quality_snapshot(records: Iterable[dict]) -> dict:
@@ -238,9 +249,9 @@ class GitHubCatalogueStore:
             searchable = " ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
             )).casefold()
-            for gram in _search_grams(searchable):
-                bucket = hashlib.sha256(gram.encode("utf-8")).hexdigest()[:2]
-                search_buckets.setdefault(bucket, {}).setdefault(gram, []).append(key)
+            for prefix in _search_prefixes(searchable):
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
 
         browse.sort(key=lambda item: item[:4])
         for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
@@ -277,7 +288,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "search_index_format": "trigram-v1",
+            "search_index_format": "prefix3-v1",
             "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
@@ -334,18 +345,17 @@ class GitHubCatalogueStore:
             source_keys = set(source_index.get(source, []))
             candidates = source_keys if candidates is None else candidates & source_keys
 
-        # Trigram postings preserve arbitrary substring matching while avoiding
-        # the many overlapping prefix postings produced by the previous index.
-        grams = _search_grams(term)
-        if term and not grams:
+        # Compact prefix postings preserve the existing prefix-search behavior.
+        prefixes = _search_query_prefixes(term)
+        if term and not prefixes:
             candidates = set()
-        elif grams:
+        elif prefixes:
             search_dir = self.indexes_dir / "search"
-            for gram in sorted(grams):
-                bucket = hashlib.sha256(gram.encode("utf-8")).hexdigest()[:2]
+            for prefix in sorted(prefixes):
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
                 mapping = self._read_json(search_dir / f"{bucket}.json", {})
-                gram_keys = set(mapping.get(gram, []))
-                candidates = gram_keys if candidates is None else candidates & gram_keys
+                prefix_keys = set(mapping.get(prefix, []))
+                candidates = prefix_keys if candidates is None else candidates & prefix_keys
 
         if candidates is None:
             if isinstance(browse, list):
