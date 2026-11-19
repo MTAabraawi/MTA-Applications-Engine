@@ -105,7 +105,7 @@ class GitHubCatalogueStore:
         record = self._read_shard(self._shard_number(key)).get(key)
         return dict(record) if record is not None else None
 
-    def upsert_many(self, records: Iterable[dict]) -> dict:
+    def upsert_many(self, records: Iterable[dict], rebuild_indexes: bool = True) -> dict:
         changed_shards: dict[int, dict] = {}
         inserted = updated = unchanged = skipped = 0
         now = _now()
@@ -150,7 +150,7 @@ class GitHubCatalogueStore:
         for number, payload in changed_shards.items():
             _atomic_json(self._shard_path(number), payload)
 
-        if inserted or updated:
+        if rebuild_indexes and (inserted or updated):
             self.rebuild_indexes()
         return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
 
