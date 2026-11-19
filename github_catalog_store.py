@@ -216,7 +216,10 @@ class GitHubCatalogueStore:
             category = record.get("category")
             if category:
                 categories.setdefault(str(category), []).append(key)
-            browse.append((str(record.get("name") or "").casefold(), key))
+            browse.append((str(record.get("name") or "").casefold(),
+                           str(record.get("platform") or "").casefold(),
+                           str(record.get("source_key") or "").casefold(),
+                           str(record.get("external_id") or "").casefold(), key))
             for field in field_counts:
                 value = record.get(field)
                 if _has_value(value) and (not field.endswith("_url") or str(value).lower().startswith("https://")):
@@ -234,7 +237,7 @@ class GitHubCatalogueStore:
                     bucket = hashlib.sha256(token.encode("utf-8")).hexdigest()[:2]
                     search_buckets.setdefault(bucket, {}).setdefault(token, []).append(key)
 
-        browse.sort(key=lambda item: (item[0], item[1]))
+        browse.sort(key=lambda item: item[:4])
         for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
             for values in mapping.values():
                 values.sort()
@@ -245,7 +248,7 @@ class GitHubCatalogueStore:
             for values in mapping.values():
                 values.sort()
             _atomic_json(search_dir / f"{bucket}.json", mapping)
-        _atomic_json(self.indexes_dir / "browse.json", [key for _, key in browse])
+        _atomic_json(self.indexes_dir / "browse.json", [item[4] for item in browse])
         _atomic_json(self.indexes_dir / "stats.json", {
             "total": total,
             "with_icon": field_counts["icon_url"],
