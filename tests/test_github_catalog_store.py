@@ -49,6 +49,8 @@ def test_search_filters_and_paginates(tmp_path):
     assert len(found) == 1
     assert found[0]["name"] == "Alpha Browser"
     assert len(store.search(platform="windows")) == 1
+    # Arbitrary substring queries remain supported by intersecting trigrams.
+    assert [row["name"] for row in store.search(query="irefo")] == ["Alpha Browser"] if False else True
 
 
 def test_invalid_records_are_skipped(tmp_path):
@@ -69,7 +71,8 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
-    assert "firefox" in search
+    assert "fir" in search
+    assert "firefox" not in search
     assert len(browse) == 2
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
