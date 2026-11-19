@@ -50,7 +50,7 @@ def test_search_filters_and_paginates(tmp_path):
     assert len(found) == 1
     assert found[0]["name"] == "Alpha Browser"
     assert len(store.search(platform="windows")) == 1
-    # Arbitrary substring queries remain supported by intersecting trigrams.
+    # Partial token-prefix queries remain supported by compact prefix postings.
     assert [row["name"] for row in store.search(query="firef")] == ["Mozilla Firefox"]
     assert [row["name"] for row in store.search(query="fi")] == ["Mozilla Firefox"]
 
