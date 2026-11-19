@@ -69,19 +69,18 @@ async function githubListApps(env, url) {
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
   const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
+  const q = (url.searchParams.get("q") || "").trim();
   const [browse, platforms, sources] = await Promise.all([
-    url.searchParams.get("q") ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
+    q ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
     platform ? githubJson(env, "indexes/platform.json") : Promise.resolve({}),
     source ? githubJson(env, "indexes/source.json") : Promise.resolve({})
   ]);
   const platformSet = platform ? new Set(platforms[platform] || []) : null;
   const sourceSet = source ? new Set(sources[source] || []) : null;
-  const q = (url.searchParams.get("q") || "").trim();
   let keys;
   if (q) {
     const grams = catalogueSearchGrams(q);
-    if (!q) keys = browse.filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
-    else if (!grams.length) keys = [];
+    if (!grams.length) keys = [];
     else {
       let candidates = null;
       for (const gram of grams) {
