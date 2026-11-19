@@ -64,6 +64,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
+  if (manifest.search_index_format !== "trigram-v1") throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
@@ -75,11 +76,12 @@ async function githubListApps(env, url) {
   ]);
   const platformSet = platform ? new Set(platforms[platform] || []) : null;
   const sourceSet = source ? new Set(sources[source] || []) : null;
-  const q = url.searchParams.get("q");
+  const q = (url.searchParams.get("q") || "").trim();
   let keys;
   if (q) {
     const grams = catalogueSearchGrams(q);
-    if (!grams.length) keys = [];
+    if (!q) keys = browse.filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
+    else if (!grams.length) keys = [];
     else {
       let candidates = null;
       for (const gram of grams) {
