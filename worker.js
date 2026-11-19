@@ -30,14 +30,18 @@ async function githubJson(env, relativePath, allowMissing = false) {
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
-function catalogueSearchGrams(value) {
-  const grams = new Set();
+function catalogueSearchPrefixes(value) {
+  const prefixes = new Set();
   const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
   for (const token of tokens) {
-    for (let index = 0; index < token.length - 1; index++) grams.add(token.slice(index, index + 2));
-    for (let index = 0; index < token.length - 2; index++) grams.add(token.slice(index, index + 3));
+    prefixes.add(token.slice(0, 2));
+    if (token.length >= 3) prefixes.add(token.slice(0, 3));
   }
-  return [...grams];
+  return [...prefixes];
+}
+function catalogueQueryPrefixes(value) {
+  const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
+  return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
 }
 async function catalogueTokenBucket(token) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
@@ -64,7 +68,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
-  if (manifest.search_index_format !== "trigram-v1") throw new Error("Unsupported GitHub catalogue search index format");
+  if (manifest.search_index_format !== "prefix3-v1") throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
@@ -79,13 +83,13 @@ async function githubListApps(env, url) {
   const sourceSet = source ? new Set(sources[source] || []) : null;
   let keys;
   if (q) {
-    const grams = catalogueSearchGrams(q);
-    if (!grams.length) keys = [];
+    const prefixes = catalogueQueryPrefixes(q);
+    if (!prefixes.length) keys = [];
     else {
-      const postings = await Promise.all(grams.map(async gram => {
-        const bucket = await catalogueTokenBucket(gram);
+      const postings = await Promise.all(prefixes.map(async prefix => {
+        const bucket = await catalogueTokenBucket(prefix);
         const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
-        return new Set(index[gram] || []);
+        return new Set(index[prefix] || []);
       }));
       postings.sort((left, right) => left.size - right.size);
       let candidates = postings[0] || new Set();
