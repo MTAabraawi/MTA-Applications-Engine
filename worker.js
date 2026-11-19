@@ -34,8 +34,8 @@ function catalogueSearchGrams(value) {
   const grams = new Set();
   const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
   for (const token of tokens) {
-    const width = token.length === 2 ? 2 : 3;
-    for (let index = 0; index <= token.length - width; index++) grams.add(token.slice(index, index + width));
+    for (let index = 0; index < token.length - 1; index++) grams.add(token.slice(index, index + 2));
+    for (let index = 0; index < token.length - 2; index++) grams.add(token.slice(index, index + 3));
   }
   return [...grams];
 }
