@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 
 from sqlalchemy import inspect, text
 
-from app import SessionLocal, engine, upsert_records
 from catalog_sources import fetch_all_catalogs
 from expanded_catalog_sources import fetch_expanded_catalogs
 
@@ -19,12 +18,24 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(
 
 
 async def main() -> None:
-    if not os.getenv("DATABASE_URL"):
-        raise SystemExit("DATABASE_URL must point to a persistent database (for example PostgreSQL).")
+    backend = os.getenv("MTA_STORAGE_BACKEND", "sql").strip().casefold()
+    github_store = None
+    db = None
+    if backend == "github":
+        from github_catalog_store import GitHubCatalogueStore
+        github_store = GitHubCatalogueStore(os.getenv("GITHUB_CATALOGUE_DIR", "catalogue_data"))
+        logging.info("Using Git-backed JSON catalogue storage at %s", github_store.root)
+    elif backend == "sql":
+        if not os.getenv("DATABASE_URL"):
+            raise SystemExit("DATABASE_URL must point to a persistent database (for example PostgreSQL).")
+        from app import SessionLocal, engine, upsert_records
+        db = SessionLocal()
+    else:
+        raise SystemExit("MTA_STORAGE_BACKEND must be either sql or github.")
 
     # Widen bounded metadata fields in place. PostgreSQL otherwise rejects long
     # category tag lists and SPDX license expressions; existing rows are preserved.
-    if engine.dialect.name == "postgresql":
+    if backend == "sql" and engine.dialect.name == "postgresql":
         columns = {column["name"]: column for column in inspect(engine).get_columns("apps")}
         with engine.begin() as connection:
             for column_name in ("category", "license"):
@@ -39,7 +50,6 @@ async def main() -> None:
         item.strip() for item in os.getenv("SYNC_SOURCES", "").split(",") if item.strip()
     }
     summary = {}
-    db = SessionLocal()
 
     def save_source(source: str, records: list[dict], error: Exception | None = None) -> None:
         started = datetime.now(timezone.utc).isoformat()
@@ -48,9 +58,13 @@ async def main() -> None:
             logging.error("Catalogue source %s failed during fetch: %s", source, error)
         else:
             try:
-                result = {"fetched": len(records), **upsert_records(db, records)}
+                if github_store is not None:
+                    result = {"fetched": len(records), **github_store.upsert_many(records)}
+                else:
+                    result = {"fetched": len(records), **upsert_records(db, records)}
             except Exception as exc:
-                db.rollback()
+                if db is not None:
+                    db.rollback()
                 logging.exception("Could not save source %s", source)
                 result = {"fetched": len(records), "error": str(exc)}
         summary[source] = result
@@ -69,7 +83,8 @@ async def main() -> None:
             logging.info("Starting expanded catalogue sources")
             await fetch_expanded_catalogs(on_source=save_source)
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
     if not any("error" not in result and result.get("fetched", 0) for result in summary.values()):
