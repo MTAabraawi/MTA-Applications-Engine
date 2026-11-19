@@ -23,14 +23,15 @@ async function githubJson(env, relativePath, allowMissing = false) {
   const cached = githubCatalogueCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const response = await fetch(url, {cf:{cacheTtl:300,cacheEverything:true}});
-  if (allowMissing && response.status === 404) return {};\n  if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
+  if (allowMissing && response.status === 404) return {};
+  if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
   const value = await response.json();
   githubCatalogueCache.set(url, {value, expiresAt:Date.now()+30000});
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
 function catalogueTokens(value) {
-  return [...new Set((String(value || "").toLowerCase().match(/[\w.+#-]{2,}/g) || []).map(token => token.slice(0,12)))];
+  return [...new Set((String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || []).map(token => token.slice(0,12)))];
 }
 async function catalogueTokenBucket(token) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
