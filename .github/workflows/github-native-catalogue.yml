@@ -10,6 +10,10 @@ on:
       - "fedora_catalog_source.py"
       - "sync_catalogs.py"
       - "github_catalog_store.py"
+      - "scripts/enrich_github_catalog.py"
+      - "worker.js"
+      - "wrangler.jsonc"
+      - "tests/test_github_catalog_store.py"
       - "store_sources.json"
       - ".github/workflows/github-native-catalogue.yml"
   schedule:
