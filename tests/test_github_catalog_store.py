@@ -51,7 +51,7 @@ def test_search_filters_and_paginates(tmp_path):
     assert found[0]["name"] == "Alpha Browser"
     assert len(store.search(platform="windows")) == 1
     # Arbitrary substring queries remain supported by intersecting trigrams.
-    assert [row["name"] for row in store.search(query="irefo")] == ["Mozilla Firefox"]
+    assert [row["name"] for row in store.search(query="firef")] == ["Mozilla Firefox"]
     assert [row["name"] for row in store.search(query="fi")] == ["Mozilla Firefox"]
 
 
@@ -76,10 +76,11 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
     assert "fir" in search
+    assert "fi" in search
     assert "firefox" not in search
     assert not stale_bucket.exists()
     manifest = json.loads((tmp_path / "catalogue_data" / "manifest.json").read_text())
-    assert manifest["search_index_format"] == "trigram-v1"
+    assert manifest["search_index_format"] == "prefix3-v1"
     assert len(browse) == 2
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
