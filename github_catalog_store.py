@@ -288,7 +288,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "search_index_format": "prefix3-v1",
+            "search_index_format": "prefix2-3-v1",
             "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
