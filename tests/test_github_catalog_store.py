@@ -87,3 +87,16 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
     assert browse[0].endswith(":browser")
+
+
+def test_search_normalization_handles_underscores_unicode_and_arabic(tmp_path):
+    store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
+    store.upsert_many([
+        record(external="underscore", name="MTA_Net_Blocker"),
+        record(external="german", name="Straße Browser"),
+        record(external="arabic", name="مكتبة التطبيقات"),
+    ])
+
+    assert [row["name"] for row in store.search(query="mta_net")] == ["MTA_Net_Blocker"]
+    assert [row["name"] for row in store.search(query="straße")] == ["Straße Browser"]
+    assert [row["name"] for row in store.search(query="مكتبة")] == ["مكتبة التطبيقات"]
