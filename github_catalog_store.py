@@ -77,12 +77,17 @@ def _quality_fields(total: int, counts: dict) -> dict:
     return result
 
 
+def _search_normalize(value: str) -> str:
+    import unicodedata
+    return unicodedata.normalize("NFC", str(value or "")).lower()
+
+
 def _search_prefixes(value: str) -> set[str]:
     """Return compact 2- and 3-character token prefixes."""
     import re
 
     prefixes: set[str] = set()
-    for token in re.findall(r"[\w.+#-]{2,}", value.casefold()):
+    for token in re.findall(r"[\w.+#-]{2,}", _search_normalize(value)):
         prefixes.add(token[:2])
         if len(token) >= 3:
             prefixes.add(token[:3])
@@ -95,7 +100,7 @@ def _search_query_prefixes(value: str) -> set[str]:
 
     return {
         token[:2] if len(token) == 2 else token[:3]
-        for token in re.findall(r"[\w.+#-]{2,}", value.casefold())
+        for token in re.findall(r"[\w.+#-]{2,}", _search_normalize(value))
     }
 
 
@@ -248,7 +253,8 @@ class GitHubCatalogueStore:
                     field_counts[field] += 1
             searchable = " ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            )).casefold()
+            ))
+            searchable = _search_normalize(searchable)
             for prefix in _search_prefixes(searchable):
                 bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
                 search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
@@ -331,7 +337,7 @@ class GitHubCatalogueStore:
             raise ValueError("invalid pagination")
         import re
 
-        term = (query or "").casefold().strip()
+        term = _search_normalize(query).strip()
         platform = platform.casefold() if platform else None
         source = source.casefold() if source else None
         platform_index = self._read_json(self.indexes_dir / "platform.json", None)
@@ -384,9 +390,9 @@ class GitHubCatalogueStore:
             item = loaded.get(key)
             if item is None:
                 continue
-            if term and term not in " ".join(str(item.get(field) or "") for field in (
+            if term and term not in _search_normalize(" ".join(str(item.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            )).casefold():
+            ))):
                 continue
             matches.append(item)
         return matches[offset:offset + limit]
