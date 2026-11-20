@@ -77,6 +77,33 @@ def _quality_fields(total: int, counts: dict) -> dict:
     return result
 
 
+def _search_normalize(value: str) -> str:
+    import unicodedata
+    return unicodedata.normalize("NFC", str(value or "")).lower()
+
+
+def _search_prefixes(value: str) -> set[str]:
+    """Return compact 2- and 3-character token prefixes."""
+    import re
+
+    prefixes: set[str] = set()
+    for token in re.findall(r"[\w.+#-]{2,}", _search_normalize(value)):
+        prefixes.add(token[:2])
+        if len(token) >= 3:
+            prefixes.add(token[:3])
+    return prefixes
+
+
+def _search_query_prefixes(value: str) -> set[str]:
+    """Use a 2-character prefix for short terms and 3 for longer terms."""
+    import re
+
+    return {
+        token[:2] if len(token) == 2 else token[:3]
+        for token in re.findall(r"[\w.+#-]{2,}", _search_normalize(value))
+    }
+
+
 def _quality_snapshot(records: Iterable[dict]) -> dict:
     by_source: dict[str, dict] = {}
     fields = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
@@ -226,16 +253,11 @@ class GitHubCatalogueStore:
                     field_counts[field] += 1
             searchable = " ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            )).casefold()
-            tokens = set(__import__("re").findall(r"[\w.+#-]{2,}", searchable))
-            for token in tokens:
-                for size in range(2, min(len(token), 12) + 1):
-                    prefix = token[:size]
-                    bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
-                    search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
-                if len(token) > 12:
-                    bucket = hashlib.sha256(token.encode("utf-8")).hexdigest()[:2]
-                    search_buckets.setdefault(bucket, {}).setdefault(token, []).append(key)
+            ))
+            searchable = _search_normalize(searchable)
+            for prefix in _search_prefixes(searchable):
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
 
         browse.sort(key=lambda item: item[:4])
         for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
@@ -244,6 +266,9 @@ class GitHubCatalogueStore:
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
+        # Remove obsolete search-index files before writing the complete compact prefix set.
+        for stale_path in search_dir.glob("*.json"):
+            stale_path.unlink()
         for bucket, mapping in search_buckets.items():
             for values in mapping.values():
                 values.sort()
@@ -269,6 +294,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
+            "search_index_format": "prefix2-3-v1",
             "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
@@ -311,7 +337,7 @@ class GitHubCatalogueStore:
             raise ValueError("invalid pagination")
         import re
 
-        term = (query or "").casefold().strip()
+        term = _search_normalize(query).strip()
         platform = platform.casefold() if platform else None
         source = source.casefold() if source else None
         platform_index = self._read_json(self.indexes_dir / "platform.json", None)
@@ -325,17 +351,17 @@ class GitHubCatalogueStore:
             source_keys = set(source_index.get(source, []))
             candidates = source_keys if candidates is None else candidates & source_keys
 
-        # Prefix buckets narrow ordinary text searches to matching records.
-        # The final substring check preserves the API's established semantics.
-        tokens = re.findall(r"[\w.+#-]{2,}", term)
-        if tokens and all(len(token) >= 2 for token in tokens):
+        # Compact prefix postings preserve the existing prefix-search behavior.
+        prefixes = _search_query_prefixes(term)
+        if term and not prefixes:
+            candidates = set()
+        elif prefixes:
             search_dir = self.indexes_dir / "search"
-            for token in tokens:
-                prefix = token[:12]
+            for prefix in sorted(prefixes):
                 bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
                 mapping = self._read_json(search_dir / f"{bucket}.json", {})
-                token_keys = set(mapping.get(prefix, []))
-                candidates = token_keys if candidates is None else candidates & token_keys
+                prefix_keys = set(mapping.get(prefix, []))
+                candidates = prefix_keys if candidates is None else candidates & prefix_keys
 
         if candidates is None:
             if isinstance(browse, list):
@@ -364,9 +390,9 @@ class GitHubCatalogueStore:
             item = loaded.get(key)
             if item is None:
                 continue
-            if term and term not in " ".join(str(item.get(field) or "") for field in (
+            if term and term not in _search_normalize(" ".join(str(item.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            )).casefold():
+            ))):
                 continue
             matches.append(item)
         return matches[offset:offset + limit]

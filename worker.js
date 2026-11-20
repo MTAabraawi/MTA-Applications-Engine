@@ -30,8 +30,12 @@ async function githubJson(env, relativePath, allowMissing = false) {
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
-function catalogueTokens(value) {
-  return [...new Set((String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || []).map(token => token.slice(0,12)))];
+function catalogueSearchNormalize(value) {
+  return String(value || "").normalize("NFC").toLowerCase();
+}
+function catalogueQueryPrefixes(value) {
+  const tokens = catalogueSearchNormalize(value).match(/[\p{L}\p{N}_.+#-]{2,}/gu) || [];
+  return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
 }
 async function catalogueTokenBucket(token) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
@@ -58,35 +62,40 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
+  if (manifest.search_index_format !== "prefix2-3-v1") throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
   const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
+  const q = (url.searchParams.get("q") || "").trim();
   const [browse, platforms, sources] = await Promise.all([
-    url.searchParams.get("q") ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
+    q ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
     platform ? githubJson(env, "indexes/platform.json") : Promise.resolve({}),
     source ? githubJson(env, "indexes/source.json") : Promise.resolve({})
   ]);
   const platformSet = platform ? new Set(platforms[platform] || []) : null;
   const sourceSet = source ? new Set(sources[source] || []) : null;
-  const q = url.searchParams.get("q");
   let keys;
   if (q) {
-    const terms = catalogueTokens(q);
-    if (!terms.length) keys = [];
+    const prefixes = catalogueQueryPrefixes(q);
+    if (!prefixes.length) keys = [];
     else {
-      let candidates = null;
-      for (const term of terms) {
-        const bucket = await catalogueTokenBucket(term);
+      const postings = await Promise.all(prefixes.map(async prefix => {
+        const bucket = await catalogueTokenBucket(prefix);
         const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
-        const current = new Set(index[term] || []);
-        candidates = candidates === null ? current : new Set([...candidates].filter(key => current.has(key)));
+        return new Set(index[prefix] || []);
+      }));
+      postings.sort((left, right) => left.size - right.size);
+      let candidates = postings[0] || new Set();
+      for (const current of postings.slice(1)) {
+        candidates = new Set([...candidates].filter(key => current.has(key)));
+        if (!candidates.size) break;
       }
-      keys = [...(candidates || [])].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
+      keys = [...candidates].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
       const records = await githubRecordsForKeys(env, keys, manifest.shard_count);
-      const needle = q.trim().toLowerCase();
+      const needle = catalogueSearchNormalize(q.trim());
       const filtered = records.filter(row => ["name","developer","summary","description","category"]
-        .some(field => String(row[field] || "").toLowerCase().includes(needle)));
+        .some(field => catalogueSearchNormalize(row[field]).includes(needle)));
       filtered.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")) ||
         String(a.platform||"").localeCompare(String(b.platform||"")) ||
         String(a.source_key||"").localeCompare(String(b.source_key||"")) ||

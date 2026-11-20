@@ -43,12 +43,16 @@ def test_search_filters_and_paginates(tmp_path):
     store.upsert_many([
         record(external="a", name="Alpha Browser"),
         record(external="b", name="Beta Editor"),
+        record(external="firefox", name="Mozilla Firefox"),
         record(source="winget", external="c", platform="windows", name="Alpha Desktop"),
     ])
     found = store.search(query="alpha", limit=1, offset=0)
     assert len(found) == 1
     assert found[0]["name"] == "Alpha Browser"
     assert len(store.search(platform="windows")) == 1
+    # Partial token-prefix queries remain supported by compact prefix postings.
+    assert [row["name"] for row in store.search(query="firef")] == ["Mozilla Firefox"]
+    assert [row["name"] for row in store.search(query="fi")] == ["Mozilla Firefox"]
 
 
 def test_invalid_records_are_skipped(tmp_path):
@@ -63,14 +67,36 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
         record(external="firefox", name="Mozilla Firefox", developer="Mozilla"),
         record(external="browser", name="Browser Tools", developer="Example"),
     ])
-    store.rebuild_indexes()
     indexes = tmp_path / "catalogue_data" / "indexes"
-    bucket = hashlib.sha256(b"firefox").hexdigest()[:2]
+    stale_bucket = indexes / "search" / "obsolete.json"
+    stale_bucket.write_text("{}", encoding="utf-8")
+    store.rebuild_indexes()
+    bucket = hashlib.sha256(b"fir").hexdigest()[:2]
     search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
-    assert "firefox" in search
+    assert "fir" in search
+    short_bucket = hashlib.sha256(b"fi").hexdigest()[:2]
+    short_search = json.loads((indexes / "search" / f"{short_bucket}.json").read_text())
+    assert "fi" in short_search
+    assert "firefox" not in search
+    assert not stale_bucket.exists()
+    manifest = json.loads((tmp_path / "catalogue_data" / "manifest.json").read_text())
+    assert manifest["search_index_format"] == "prefix2-3-v1"
     assert len(browse) == 2
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
     assert browse[0].endswith(":browser")
+
+
+def test_search_normalization_handles_underscores_unicode_and_arabic(tmp_path):
+    store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
+    store.upsert_many([
+        record(external="underscore", name="MTA_Net_Blocker"),
+        record(external="german", name="Straße Browser"),
+        record(external="arabic", name="مكتبة التطبيقات"),
+    ])
+
+    assert [row["name"] for row in store.search(query="mta_net")] == ["MTA_Net_Blocker"]
+    assert [row["name"] for row in store.search(query="straße")] == ["Straße Browser"]
+    assert [row["name"] for row in store.search(query="مكتبة")] == ["مكتبة التطبيقات"]
