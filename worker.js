@@ -30,8 +30,11 @@ async function githubJson(env, relativePath, allowMissing = false) {
   if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
   return value;
 }
+function catalogueSearchNormalize(value) {
+  return String(value || "").normalize("NFC").toLowerCase();
+}
 function catalogueQueryPrefixes(value) {
-  const tokens = String(value || "").toLowerCase().match(/[\p{L}\p{N}.+#-]{2,}/gu) || [];
+  const tokens = catalogueSearchNormalize(value).match(/[\p{L}\p{N}_.+#-]{2,}/gu) || [];
   return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
 }
 async function catalogueTokenBucket(token) {
@@ -90,9 +93,9 @@ async function githubListApps(env, url) {
       }
       keys = [...candidates].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
       const records = await githubRecordsForKeys(env, keys, manifest.shard_count);
-      const needle = q.trim().toLowerCase();
+      const needle = catalogueSearchNormalize(q.trim());
       const filtered = records.filter(row => ["name","developer","summary","description","category"]
-        .some(field => String(row[field] || "").toLowerCase().includes(needle)));
+        .some(field => catalogueSearchNormalize(row[field]).includes(needle)));
       filtered.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")) ||
         String(a.platform||"").localeCompare(String(b.platform||"")) ||
         String(a.source_key||"").localeCompare(String(b.source_key||"")) ||
