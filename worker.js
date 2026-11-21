@@ -49,9 +49,10 @@ function catalogueQueryPrefixes(value) {
   const tokens = catalogueSearchNormalize(value).match(/[\p{L}\p{N}_.+#-]{2,}/gu) || [];
   return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
 }
-async function catalogueTokenBucket(token) {
+async function catalogueTokenBucket(token, format) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(digest).slice(0, 2), byte => byte.toString(16).padStart(2, "0")).join("");
+  const bucketBytes = format === "prefix2-3-v2" ? 2 : 1;
+  return Array.from(new Uint8Array(digest).slice(0, bucketBytes), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 async function catalogueShardNumber(key, count) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
@@ -91,7 +92,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
-  if (manifest.search_index_format !== "prefix2-3-v2") throw new Error("Unsupported GitHub catalogue search index format");
+  if (!["prefix2-3-v1", "prefix2-3-v2"].includes(manifest.search_index_format)) throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
@@ -110,7 +111,7 @@ async function githubListApps(env, url) {
     if (!prefixes.length) keys = [];
     else {
       const postings = await Promise.all(prefixes.map(async prefix => {
-        const bucket = await catalogueTokenBucket(prefix);
+        const bucket = await catalogueTokenBucket(prefix, manifest.search_index_format);
         const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
         return new Set(index[prefix] || []);
       }));
