@@ -127,6 +127,7 @@ async function githubListApps(env, url) {
         String(a.external_id||"").localeCompare(String(b.external_id||"")));
       return {rows:filtered.slice(offset, offset + limit).map(cataloguePublicRow),total:filtered.length};
     }
+    if (!q) {
       const [catalogue, stats] = await Promise.all([
         githubJson(env, "indexes/catalogue.json"),
         githubJson(env, "indexes/stats.json")
