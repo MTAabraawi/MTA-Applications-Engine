@@ -357,12 +357,11 @@ class GitHubCatalogueStore:
         manifest = self._read_json(self.manifest_path, None)
         if manifest is None:
             manifest = self.rebuild_indexes()
-        platforms = self._read_json(self.indexes_dir / "platform.json", {})
-        sources = self._read_json(self.indexes_dir / "source.json", {})
+        snapshot = self._read_json(self.indexes_dir / "stats.json", {})
         return {
             "total": int(manifest.get("record_count", 0)),
-            "platforms": {key: len(value) for key, value in platforms.items()},
-            "sources": {key: len(value) for key, value in sources.items()},
+            "platforms": dict(snapshot.get("platforms") or {}),
+            "sources": dict(snapshot.get("sources") or {}),
             "metadata_only": True,
             "storage": "git-json-shards",
         }
