@@ -98,6 +98,69 @@ async function githubListApps(env, url) {
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
   const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
   const q = (url.searchParams.get("q") || "").trim();
+
+  if (manifest.browse_index_format === "paged-v1") {
+    if (q) {
+      const prefixes = catalogueQueryPrefixes(q);
+      if (!prefixes.length) return {rows:[],total:0};
+      const postings = await Promise.all(prefixes.map(async prefix => {
+        const bucket = await catalogueTokenBucket(prefix, manifest.search_index_format);
+        const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
+        return new Set(index[prefix] || []);
+      }));
+      postings.sort((left, right) => left.size - right.size);
+      let candidates = postings[0] || new Set();
+      for (const current of postings.slice(1)) {
+        candidates = new Set([...candidates].filter(key => current.has(key)));
+        if (!candidates.size) break;
+      }
+      const records = await githubRecordsForKeys(env, [...candidates], manifest.shard_count);
+      const needle = catalogueSearchNormalize(q);
+      const filtered = records.filter(row =>
+        (!source || String(row.source_key || "").toLowerCase() === source) &&
+        (!platform || String(row.platform || "").toLowerCase() === platform) &&
+        ["name","developer","summary","description","category"].some(field => catalogueSearchNormalize(row[field]).includes(needle))
+      );
+      filtered.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")) ||
+        String(a.platform||"").localeCompare(String(b.platform||"")) ||
+        String(a.source_key||"").localeCompare(String(b.source_key||"")) ||
+        String(a.external_id||"").localeCompare(String(b.external_id||"")));
+      return {rows:filtered.slice(offset, offset + limit).map(cataloguePublicRow),total:filtered.length};
+    }
+    if (!q) {
+      const [catalogue, stats] = await Promise.all([
+        githubJson(env, "indexes/catalogue.json"),
+        githubJson(env, "indexes/stats.json")
+      ]);
+      const sourceId = source ? catalogue.sources?.[source] : null;
+      const platformId = platform ? catalogue.platforms?.[platform] : null;
+      let base;
+      if (source && platform) base = sourceId && platformId ? "source-platform/" + sourceId + "/" + platformId : null;
+      else if (source) base = sourceId ? "source/" + sourceId : null;
+      else if (platform) base = platformId ? "platform/" + platformId : null;
+      else base = "all";
+      const total = !base ? 0 : source && platform
+        ? (stats.source_platforms?.[source]?.[platform] || 0)
+        : source ? (stats.sources?.[source] || 0)
+        : platform ? (stats.platforms?.[platform] || 0)
+        : (stats.total || 0);
+      if (!base || offset >= total) return {rows:[],total};
+      const pageSize = Math.max(1, Number(catalogue.page_size || manifest.browse_page_size || 1000));
+      const first = Math.floor(offset / pageSize);
+      const last = Math.floor((offset + limit - 1) / pageSize);
+      const pageNumbers = Array.from({length:last-first+1},(_,i)=>first+i);
+      const pages = await Promise.all(pageNumbers.map(n => githubJson(env, "indexes/browse/" + base + "/" + String(n).padStart(6,"0") + ".json", true)));
+      const joined = pages.flat();
+      const start = offset - first * pageSize;
+      const pageKeys = joined.slice(start, start + limit);
+      const records = await githubRecordsForKeys(env, pageKeys, manifest.shard_count);
+      const byKey = new Map(records.map(row => [row.source_key + ":" + row.external_id, row]));
+      return {rows:pageKeys.map(key=>byKey.get(key)).filter(Boolean).map(cataloguePublicRow),total};
+    }
+  }
+
+  // Legacy indexes remain readable during rollout; the paged layout avoids
+  // loading the 12 MB browse/source/platform arrays into Worker memory.
   const [browse, platforms, sources] = await Promise.all([
     q ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
     platform ? githubJson(env, "indexes/platform.json") : Promise.resolve({}),
@@ -130,14 +193,7 @@ async function githubListApps(env, url) {
         String(a.platform||"").localeCompare(String(b.platform||"")) ||
         String(a.source_key||"").localeCompare(String(b.source_key||"")) ||
         String(a.external_id||"").localeCompare(String(b.external_id||"")));
-      const page = filtered.slice(offset, offset + limit).map(row => ({
-        id: row.source_key + ":" + row.external_id, source: row.source_key, external_id: row.external_id,
-        platform: row.platform, name: row.name, developer: row.developer, summary: row.summary,
-        description: row.description, category: row.category, license: row.license,
-        source_url: row.source_url, app_url: row.app_url, icon_url: row.icon_url,
-        metadata_json: row.metadata_json || {}, first_seen_at: row.first_seen_at, updated_at: row.updated_at
-      }));
-      return {rows:page,total:filtered.length};
+      return {rows:filtered.slice(offset, offset + limit).map(cataloguePublicRow),total:filtered.length};
     }
   } else {
     keys = browse.filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
@@ -146,14 +202,28 @@ async function githubListApps(env, url) {
   const pageKeys = keys.slice(offset, offset + limit);
   const records = await githubRecordsForKeys(env, pageKeys, manifest.shard_count);
   const byKey = new Map(records.map(row => [row.source_key + ":" + row.external_id, row]));
-  const rows = pageKeys.map(key => byKey.get(key)).filter(Boolean).map(row => ({
+  return {rows:pageKeys.map(key=>byKey.get(key)).filter(Boolean).map(cataloguePublicRow),total};
+}
+function cataloguePublicRow(row) {
+  return {
     id: row.source_key + ":" + row.external_id, source: row.source_key, external_id: row.external_id,
     platform: row.platform, name: row.name, developer: row.developer, summary: row.summary,
     description: row.description, category: row.category, license: row.license,
     source_url: row.source_url, app_url: row.app_url, icon_url: row.icon_url,
     metadata_json: row.metadata_json || {}, first_seen_at: row.first_seen_at, updated_at: row.updated_at
-  }));
-  return {rows,total};
+  };
+}
+async function countBrowsePair(env, base, pageSize, sourceTotal, platformTotal) {
+  // The source/platform pair count is stored in a compact stats sidecar in
+  // newer catalogues; this fallback scans only the small key pages for the pair.
+  let count = 0, page = 0;
+  while (page < Math.ceil(Math.min(sourceTotal, platformTotal) / pageSize)) {
+    const keys = await githubJson(env, "indexes/browse/" + base + "/" + String(page).padStart(6,"0") + ".json", true);
+    if (!keys.length) break;
+    count += keys.length;
+    page++;
+  }
+  return count;
 }
 
 function database(env) {

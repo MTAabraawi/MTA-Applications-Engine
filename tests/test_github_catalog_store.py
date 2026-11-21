@@ -73,7 +73,10 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     store.rebuild_indexes()
     bucket = hashlib.sha256(b"fir").hexdigest()[:4]
     search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
-    browse = json.loads((indexes / "browse.json").read_text())
+    manifest = json.loads((tmp_path / "catalogue_data" / "manifest.json").read_text())
+    source_id = hashlib.sha256(b"fdroid").hexdigest()[:16]
+    platform_id = hashlib.sha256(b"android").hexdigest()[:16]
+    browse = json.loads((indexes / "browse" / "source-platform" / source_id / platform_id / "000000.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
     assert "fir" in search
     short_bucket = hashlib.sha256(b"fi").hexdigest()[:4]
@@ -83,10 +86,19 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     assert not stale_bucket.exists()
     manifest = json.loads((tmp_path / "catalogue_data" / "manifest.json").read_text())
     assert manifest["search_index_format"] == "prefix2-3-v2"
+    assert manifest["browse_index_format"] == "paged-v1"
+    assert manifest["browse_page_size"] == 1000
     assert len(browse) == 2
+    assert not (indexes / "browse.json").exists()
+    assert not (indexes / "source.json").exists()
+    assert not (indexes / "platform.json").exists()
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
     assert browse[0].endswith(":browser")
+    catalogue = json.loads((indexes / "catalogue.json").read_text())
+    assert catalogue["sources"]["fdroid"] == source_id
+    assert catalogue["platforms"]["android"] == platform_id
+    assert json.loads((indexes / "stats.json").read_text())["source_platforms"]["fdroid"]["android"] == 2
 
 
 def test_search_normalization_handles_underscores_unicode_and_arabic(tmp_path):
@@ -100,3 +112,23 @@ def test_search_normalization_handles_underscores_unicode_and_arabic(tmp_path):
     assert [row["name"] for row in store.search(query="mta_net")] == ["MTA_Net_Blocker"]
     assert [row["name"] for row in store.search(query="straße")] == ["Straße Browser"]
     assert [row["name"] for row in store.search(query="مكتبة")] == ["مكتبة التطبيقات"]
+
+
+def test_browse_indexes_split_into_pages_of_one_thousand(tmp_path):
+    store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=16)
+    store.upsert_many(
+        [record(external=str(index), name=f"App {index:04d}") for index in range(1001)],
+        rebuild_indexes=False,
+    )
+    manifest = store.rebuild_indexes()
+    source_id = hashlib.sha256(b"fdroid").hexdigest()[:16]
+    platform_id = hashlib.sha256(b"android").hexdigest()[:16]
+    browse = tmp_path / "catalogue_data" / "indexes" / "browse" / "source-platform" / source_id / platform_id
+    first_page = json.loads((browse / "000000.json").read_text())
+    second_page = json.loads((browse / "000001.json").read_text())
+
+    assert manifest["browse_page_size"] == 1000
+    assert len(first_page) == 1000
+    assert len(second_page) == 1
+    assert first_page[0].endswith(":0")
+    assert second_page[0].endswith(":1000")
