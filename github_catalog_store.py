@@ -227,7 +227,7 @@ class GitHubCatalogueStore:
         platforms: dict[str, list[str]] = {}
         sources: dict[str, list[str]] = {}
         categories: dict[str, list[str]] = {}
-        search_buckets: dict[str, dict[str, list[str]]] = {}
+        search_buckets: dict[str, dict[str, dict[str, list[str]]]] = {}
         browse: list[tuple[str, str]] = []
         field_counts: dict[str, int] = {name: 0 for name in (
             "icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"
@@ -256,8 +256,10 @@ class GitHubCatalogueStore:
             ))
             searchable = _search_normalize(searchable)
             for prefix in _search_prefixes(searchable):
-                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
-                search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
+                digest = hashlib.sha256(prefix.encode("utf-8")).hexdigest()
+                bucket = digest[:2]
+                shard = f"{self._shard_number(key):04d}"
+                search_buckets.setdefault(bucket, {}).setdefault(digest, {}).setdefault(shard, []).append(key)
 
         browse.sort(key=lambda item: item[:4])
         for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
@@ -266,13 +268,22 @@ class GitHubCatalogueStore:
             _atomic_json(self.indexes_dir / f"{name}.json", mapping)
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
-        # Remove obsolete search-index files before writing the complete compact prefix set.
+        # Prefixes are stored independently, grouped by the record shard. A query
+        # reads only its exact prefix posting file instead of parsing a multi-MB
+        # hash-bucket document, and the shard number avoids per-request SHA-256 work.
         for stale_path in search_dir.glob("*.json"):
             stale_path.unlink()
+        for stale_dir in search_dir.iterdir():
+            if stale_dir.is_dir():
+                import shutil
+                shutil.rmtree(stale_dir)
         for bucket, mapping in search_buckets.items():
-            for values in mapping.values():
-                values.sort()
-            _atomic_json(search_dir / f"{bucket}.json", mapping)
+            bucket_dir = search_dir / bucket
+            bucket_dir.mkdir(parents=True, exist_ok=True)
+            for digest, shard_mapping in mapping.items():
+                for values in shard_mapping.values():
+                    values.sort()
+                _atomic_json(bucket_dir / f"{digest}.json", shard_mapping)
         _atomic_json(self.indexes_dir / "browse.json", [item[4] for item in browse])
         _atomic_json(self.indexes_dir / "stats.json", {
             "total": total,
@@ -294,8 +305,8 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "search_index_format": "prefix2-3-v1",
-            "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
+            "search_index_format": "prefix2-3-v2-sharded",
+            "indexes": ["platform.json", "source.json", "category.json", "search/<bucket>/<prefix-sha256>.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
         return manifest
@@ -358,9 +369,10 @@ class GitHubCatalogueStore:
         elif prefixes:
             search_dir = self.indexes_dir / "search"
             for prefix in sorted(prefixes):
-                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
-                mapping = self._read_json(search_dir / f"{bucket}.json", {})
-                prefix_keys = set(mapping.get(prefix, []))
+                digest = hashlib.sha256(prefix.encode("utf-8")).hexdigest()
+                bucket = digest[:2]
+                mapping = self._read_json(search_dir / bucket / f"{digest}.json", {})
+                prefix_keys = {key for values in mapping.values() for key in values}
                 candidates = prefix_keys if candidates is None else candidates & prefix_keys
 
         if candidates is None:
