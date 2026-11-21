@@ -278,6 +278,9 @@ class GitHubCatalogueStore:
             for values in mapping.values():
                 values.sort()
         _atomic_json(self.indexes_dir / "category.json", categories)
+        # Remove obsolete monolithic indexes so new deployments cannot accidentally use them.
+        for legacy_name in ("platform.json", "source.json", "browse.json"):
+            (self.indexes_dir / legacy_name).unlink(missing_ok=True)
 
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
@@ -325,6 +328,10 @@ class GitHubCatalogueStore:
             "without_icon": max(total - field_counts["icon_url"], 0),
             "platforms": {key: len(value) for key, value in platforms.items()},
             "sources": {key: len(value) for key, value in sources.items()},
+            "source_platforms": {
+                source: {platform: len(keys) for (item_source, platform), keys in browse_pairs.items() if item_source == source}
+                for source in sources
+            },
             "quality": {
                 "fields": _quality_fields(total, field_counts),
                 "sources": _quality_snapshot(self.iter_records()),
