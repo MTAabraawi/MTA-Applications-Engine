@@ -51,7 +51,7 @@ function catalogueQueryPrefixes(value) {
 }
 async function catalogueTokenBucket(token) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return new Uint8Array(digest)[0].toString(16).padStart(2, "0");
+  return Array.from(new Uint8Array(digest).slice(0, 2), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 async function catalogueShardNumber(key, count) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
@@ -91,7 +91,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
 async function githubListApps(env, url) {
   const manifest = await githubJson(env, "manifest.json");
   if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
-  if (manifest.search_index_format !== "prefix2-3-v1") throw new Error("Unsupported GitHub catalogue search index format");
+  if (manifest.search_index_format !== "prefix2-3-v2") throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));

@@ -256,7 +256,7 @@ class GitHubCatalogueStore:
             ))
             searchable = _search_normalize(searchable)
             for prefix in _search_prefixes(searchable):
-                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:4]
                 search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
 
         browse.sort(key=lambda item: item[:4])
@@ -294,7 +294,7 @@ class GitHubCatalogueStore:
             "shard_count": self.shard_count,
             "record_count": total,
             "updated_at": _now(),
-            "search_index_format": "prefix2-3-v1",
+            "search_index_format": "prefix2-3-v2",
             "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
@@ -358,7 +358,7 @@ class GitHubCatalogueStore:
         elif prefixes:
             search_dir = self.indexes_dir / "search"
             for prefix in sorted(prefixes):
-                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:2]
+                bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:4]
                 mapping = self._read_json(search_dir / f"{bucket}.json", {})
                 prefix_keys = set(mapping.get(prefix, []))
                 candidates = prefix_keys if candidates is None else candidates & prefix_keys
