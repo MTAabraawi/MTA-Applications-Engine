@@ -224,11 +224,18 @@ class GitHubCatalogueStore:
                 yield payload[key]
 
     def rebuild_indexes(self) -> dict:
+        """Build bounded, independently fetchable browse pages and compact metadata."""
+        import shutil
+
+        PAGE_SIZE = 1000
         platforms: dict[str, list[str]] = {}
         sources: dict[str, list[str]] = {}
         categories: dict[str, list[str]] = {}
         search_buckets: dict[str, dict[str, list[str]]] = {}
-        browse: list[tuple[str, str]] = []
+        browse_all: list[tuple[tuple[str, ...], str]] = []
+        browse_sources: dict[str, list[tuple[tuple[str, ...], str]]] = {}
+        browse_platforms: dict[str, list[tuple[tuple[str, ...], str]]] = {}
+        browse_pairs: dict[tuple[str, str], list[tuple[tuple[str, ...], str]]] = {}
         field_counts: dict[str, int] = {name: 0 for name in (
             "icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"
         )}
@@ -236,44 +243,82 @@ class GitHubCatalogueStore:
         for record in self.iter_records():
             total += 1
             key = self._key(record)
-            platform = record.get("platform") or "unknown"
-            source = record.get("source_key") or "unknown"
+            platform = str(record.get("platform") or "unknown")
+            source = str(record.get("source_key") or "unknown")
             platforms.setdefault(platform, []).append(key)
             sources.setdefault(source, []).append(key)
             category = record.get("category")
             if category:
                 categories.setdefault(str(category), []).append(key)
-            browse.append((str(record.get("name") or "").casefold(),
-                           str(record.get("platform") or "").casefold(),
-                           str(record.get("source_key") or "").casefold(),
-                           str(record.get("external_id") or "").casefold(), key))
+            sort_key = (
+                str(record.get("name") or "").casefold(),
+                platform.casefold(), source.casefold(),
+                str(record.get("external_id") or "").casefold(),
+            )
+            entry = (sort_key, key)
+            browse_all.append(entry)
+            browse_sources.setdefault(source, []).append(entry)
+            browse_platforms.setdefault(platform, []).append(entry)
+            browse_pairs.setdefault((source, platform), []).append(entry)
             for field in field_counts:
                 value = record.get(field)
                 if _has_value(value) and (not field.endswith("_url") or str(value).lower().startswith("https://")):
                     field_counts[field] += 1
-            searchable = " ".join(str(record.get(field) or "") for field in (
+            searchable = _search_normalize(" ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            ))
-            searchable = _search_normalize(searchable)
+            )))
             for prefix in _search_prefixes(searchable):
                 bucket = hashlib.sha256(prefix.encode("utf-8")).hexdigest()[:4]
                 search_buckets.setdefault(bucket, {}).setdefault(prefix, []).append(key)
 
-        browse.sort(key=lambda item: item[:4])
-        for name, mapping in (("platform", platforms), ("source", sources), ("category", categories)):
+        for mapping in (platforms, sources, categories):
             for values in mapping.values():
                 values.sort()
-            _atomic_json(self.indexes_dir / f"{name}.json", mapping)
+        for mapping in search_buckets.values():
+            for values in mapping.values():
+                values.sort()
+        _atomic_json(self.indexes_dir / "category.json", categories)
+
         search_dir = self.indexes_dir / "search"
         search_dir.mkdir(parents=True, exist_ok=True)
-        # Remove obsolete search-index files before writing the complete compact prefix set.
         for stale_path in search_dir.glob("*.json"):
             stale_path.unlink()
         for bucket, mapping in search_buckets.items():
-            for values in mapping.values():
-                values.sort()
             _atomic_json(search_dir / f"{bucket}.json", mapping)
-        _atomic_json(self.indexes_dir / "browse.json", [item[4] for item in browse])
+
+        # Keep lookup metadata small; records are stored in independently
+        # addressable pages instead of multi-megabyte JSON arrays.
+        browse_dir = self.indexes_dir / "browse"
+        if browse_dir.exists():
+            shutil.rmtree(browse_dir)
+        browse_dir.mkdir(parents=True, exist_ok=True)
+        source_ids = {name: hashlib.sha256(name.encode("utf-8")).hexdigest()[:16] for name in sources}
+        platform_ids = {name: hashlib.sha256(name.encode("utf-8")).hexdigest()[:16] for name in platforms}
+
+        def write_pages(relative: str, entries: list[tuple[tuple[str, ...], str]]) -> None:
+            entries.sort(key=lambda item: item[0])
+            target = browse_dir / relative
+            for offset in range(0, len(entries), PAGE_SIZE):
+                page = [item[1] for item in entries[offset:offset + PAGE_SIZE]]
+                _atomic_json(target / f"{offset // PAGE_SIZE:06d}.json", page)
+
+        write_pages("all", browse_all)
+        for source, entries in browse_sources.items():
+            write_pages(f"source/{source_ids[source]}", entries)
+        for platform, entries in browse_platforms.items():
+            write_pages(f"platform/{platform_ids[platform]}", entries)
+        for (source, platform), entries in browse_pairs.items():
+            write_pages(f"source-platform/{source_ids[source]}/{platform_ids[platform]}", entries)
+
+        _atomic_json(self.indexes_dir / "catalogue.json", {
+            "page_size": PAGE_SIZE,
+            "sources": source_ids,
+            "platforms": platform_ids,
+            "source_platforms": {
+                source: {platform: True for (item_source, platform) in browse_pairs if item_source == source}
+                for source in source_ids
+            },
+        })
         _atomic_json(self.indexes_dir / "stats.json", {
             "total": total,
             "with_icon": field_counts["icon_url"],
@@ -287,7 +332,6 @@ class GitHubCatalogueStore:
             "metadata_only": True,
             "storage": "github-json-shards",
         })
-
         manifest = {
             "schema_version": SCHEMA_VERSION,
             "storage": "git-json-shards",
@@ -295,7 +339,9 @@ class GitHubCatalogueStore:
             "record_count": total,
             "updated_at": _now(),
             "search_index_format": "prefix2-3-v2",
-            "indexes": ["platform.json", "source.json", "category.json", "search/*.json", "browse.json", "stats.json"],
+            "browse_index_format": "paged-v1",
+            "browse_page_size": PAGE_SIZE,
+            "indexes": ["category.json", "catalogue.json", "search/*.json", "browse/**/*.json", "stats.json"],
         }
         _atomic_json(self.manifest_path, manifest)
         return manifest
