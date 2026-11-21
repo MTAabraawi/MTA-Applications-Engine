@@ -113,8 +113,195 @@ async function githubListApps(env, url) {
       else if (platform) base = platformId ? "platform/" + platformId : null;
       else base = "all";
       const total = !base ? 0 : source && platform
-        ? (stats.sources?.[source] && stats.platforms?.[platform]
-            ? await countBrowsePair(env, base, catalogue.page_size, stats.sources[source], stats.platforms[platform]) : 0)
+        ? (stats.source_platforms?.[source]?.[platform] || 0)
+        : source ? (stats.sources?.[source] || 0)
+        : platform ? (stats.platforms?.[platform] || 0)
+        : (stats.total || 0);
+      if (!base || offset >= total) return {rows:[],total};
+      const pageSize = Math.max(1, Number(catalogue.page_size || manifest.browse_page_size || 1000));
+      const first = Math.floor(offset / pageSize);
+      const last = Math.floor((offset + limit - 1) / pageSize);
+      const pageNumbers = Array.from({length:last-first+1},(_,i)=>first+i);
+      const pages = await Promise.all(pageNumbers.map(n => githubJson(env, "indexes/browse/" + base + "/" + String(n).padStart(6,"0") + ".json", true)));
+      const joined = pages.flat();
+      const start = offset - first * pageSize;
+      const pageKeys = joined.slice(start, start + limit);
+      const records = await githubRecordsForKeys(env, pageKeys, manifest.shard_count);
+      const byKey = new Map(records.map(row => [row.source_key + ":" + row.external_id, row]));
+      return {rows:pageKeys.map(key=>byKey.get(key)).filter(Boolean).map(cataloguePublicRow),total};
+    }
+  }
+
+  // Legacy indexes remain readable during rollout; the paged layout avoids
+  // loading the 12 MB browse/source/platform arrays into Worker memory.
+  const [browse, platforms, sources] = await Promise.all([
+    q ? Promise.resolve([]) : githubJson(env, "indexes/browse.json"),
+    platform ? githubJson(env, "indexes/platform.json") : Promise.resolve({}),
+    source ? githubJson(env, "indexes/source.json") : Promise.resolve({})
+  ]);
+  const platformSet = platform ? new Set(platforms[platform] || []) : null;
+  const sourceSet = source ? new Set(sources[source] || []) : null;
+  let keys;
+  if (q) {
+    const prefixes = catalogueQueryPrefixes(q);
+    if (!prefixes.length) keys = [];
+    else {
+      const postings = await Promise.all(prefixes.map(async prefix => {
+        const bucket = await catalogueTokenBucket(prefix, manifest.search_index_format);
+        const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
+        return new Set(index[prefix] || []);
+      }));
+      postings.sort((left, right) => left.size - right.size);
+      let candidates = postings[0] || new Set();
+      for (const current of postings.slice(1)) {
+        candidates = new Set([...candidates].filter(key => current.has(key)));
+        if (!candidates.size) break;
+      }
+      keys = [...candidates].filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
+      const records = await githubRecordsForKeys(env, keys, manifest.shard_count);
+      const needle = catalogueSearchNormalize(q.trim());
+      const filtered = records.filter(row => ["name","developer","summary","description","category"]
+        .some(field => catalogueSearchNormalize(row[field]).includes(needle)));
+      filtered.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")) ||
+        String(a.platform||"").localeCompare(String(b.platform||"")) ||
+        String(a.source_key||"").localeCompare(String(b.source_key||"")) ||
+        String(a.external_id||"").localeCompare(String(b.external_id||"")));
+      return {rows:filtered.slice(offset, offset + limit).map(cataloguePublicRow),total:filtered.length};
+    }
+  } else {
+    keys = browse.filter(key => (!platformSet || platformSet.has(key)) && (!sourceSet || sourceSet.has(key)));
+  }
+  const total = keys.length;
+  const pageKeys = keys.slice(offset, offset + limit);
+  const records = await githubRecordsForKeys(env, pageKeys, manifest.shard_count);
+  const byKey = new Map(records.map(row => [row.source_key + ":" + row.external_id, row]));
+  return {rows:pageKeys.map(key=>byKey.get(key)).filter(Boolean).map(cataloguePublicRow),total};
+}
+function cataloguePublicRow(row) {
+  return {
+    id: row.source_key + ":" + row.external_id, source: row.source_key, external_id: row.external_id,
+    platform: row.platform, name: row.name, developer: row.developer, summary: row.summary,
+    description: row.description, category: row.category, license: row.license,
+    source_url: row.source_url, app_url: row.app_url, icon_url: row.icon_url,
+    metadata_json: row.metadata_json || {}, first_seen_at: row.first_seen_at, updated_at: row.updated_at
+  };
+}
+mport postgres from "postgres";
+
+const DEFAULT_ORIGINS = ["https://www.mtahqq.dpdns.org", "https://mtahqq.dpdns.org"];
+const CURATED_WEB = [
+  {id:"mta-website",name:"MTA Apps Center",developer:"MTA Applications Team",summary:"Official MTA application discovery portal",description:"A web-based application store for discovering multi-platform software catalogs.",category:"portal",app_url:"https://www.mtahqq.dpdns.org",icon_url:"https://www.mtahqq.dpdns.org/icon.png",homepage:"https://www.mtahqq.dpdns.org"},
+  {id:"firefox",name:"Mozilla Firefox",developer:"Mozilla Foundation",summary:"Free and open-source web browser",category:"browser",app_url:"https://www.mozilla.org/firefox",homepage:"https://www.mozilla.org"},
+  {id:"libreoffice",name:"LibreOffice",developer:"The Document Foundation",summary:"Free office suite",category:"office",app_url:"https://www.libreoffice.org",homepage:"https://www.libreoffice.org"},
+  {id:"gimp",name:"GIMP",developer:"GIMP Team",summary:"GNU Image Manipulation Program",category:"photo",app_url:"https://www.gimp.org",homepage:"https://www.gimp.org"},
+  {id:"vivaldi",name:"Vivaldi",developer:"Vivaldi Technologies",summary:"Customizable web browser",category:"browser",app_url:"https://vivaldi.com",homepage:"https://vivaldi.com"},
+  {id:"onlyoffice",name:"ONLYOFFICE",developer:"ONLYOFFICE",summary:"Office suite with collaboration",category:"office",app_url:"https://www.onlyoffice.com",homepage:"https://www.onlyoffice.com"},
+  {id:"blender",name:"Blender",developer:"Blender Foundation",summary:"3D creation suite",category:"utilities",app_url:"https://www.blender.org",homepage:"https://www.blender.org"}
+];
+let cachedSql;
+let githubCatalogueCache = new Map();
+
+function githubStorageEnabled(env) {
+  return String(env.CATALOGUE_STORAGE || "").toLowerCase() === "github";
+}
+async function githubJson(env, relativePath, allowMissing = false) {
+  const branch = env.GITHUB_CATALOGUE_BRANCH || "main";
+  const url = "https://raw.githubusercontent.com/MTAabraawi/MTA-Applications-Engine/" +
+    branch + "/catalogue_data/" + relativePath.split("/").map(encodeURIComponent).join("/");
+  const cached = githubCatalogueCache.get(url);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  let response;
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await fetch(url, {cf:{cacheTtl:300,cacheEverything:true}});
+      if (response.status !== 429 && response.status < 500) break;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  if (!response) throw new Error("GitHub catalogue request failed: " + relativePath + (lastError ? " (" + String(lastError) + ")" : ""));
+  if (allowMissing && response.status === 404) return {};
+  if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
+  const value = await response.json();
+  githubCatalogueCache.set(url, {value, expiresAt:Date.now()+30000});
+  if (githubCatalogueCache.size > 40) githubCatalogueCache.delete(githubCatalogueCache.keys().next().value);
+  return value;
+}
+function catalogueSearchNormalize(value) {
+  return String(value || "").normalize("NFC").toLowerCase();
+}
+function catalogueQueryPrefixes(value) {
+  const tokens = catalogueSearchNormalize(value).match(/[\p{L}\p{N}_.+#-]{2,}/gu) || [];
+  return [...new Set(tokens.map(token => token.length === 2 ? token.slice(0, 2) : token.slice(0, 3)))];
+}
+async function catalogueTokenBucket(token, format) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const bucketBytes = format === "prefix2-3-v2" ? 2 : 1;
+  return Array.from(new Uint8Array(digest).slice(0, bucketBytes), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+async function catalogueShardNumber(key, count) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+  return (new DataView(digest).getUint32(0, false) % count).toString().padStart(4, "0");
+}
+async function githubRecordsForKeys(env, keys, shardCount) {
+  const grouped = new Map();
+  // Hash candidate keys in bounded parallel batches. Serial WebCrypto awaits
+  // make broad searches spend excessive wall time before any shard is fetched.
+  const hashBatchSize = 256;
+  for (let offset = 0; offset < keys.length; offset += hashBatchSize) {
+    const batch = keys.slice(offset, offset + hashBatchSize);
+    const shardPairs = await Promise.all(batch.map(async key => [await catalogueShardNumber(key, shardCount), key]));
+    for (const [shard, key] of shardPairs) {
+      if (!grouped.has(shard)) grouped.set(shard, []);
+      grouped.get(shard).push(key);
+    }
+  }
+  const records = [];
+  // Keep upstream GitHub Raw requests bounded. Large search prefixes can touch
+  // many catalogue shards; firing every request at once can trigger upstream
+  // throttling and turn otherwise valid searches into HTTP 500 responses.
+  const entries = [...grouped.entries()];
+  const concurrency = 8;
+  for (let offset = 0; offset < entries.length; offset += concurrency) {
+    const batch = entries.slice(offset, offset + concurrency);
+    const payloads = await Promise.all(batch.map(async ([shard, wanted]) => {
+      const payload = await githubJson(env, "shards/" + shard + ".json");
+      return { payload, wanted };
+    }));
+    for (const { payload, wanted } of payloads) {
+      for (const key of wanted) if (payload[key]) records.push(payload[key]);
+    }
+  }
+  return records;
+}
+async function githubListApps(env, url) {
+  const manifest = await githubJson(env, "manifest.json");
+  if (manifest.schema_version !== 1 || manifest.storage !== "git-json-shards") throw new Error("Unsupported GitHub catalogue schema");
+  if (!["prefix2-3-v1", "prefix2-3-v2"].includes(manifest.search_index_format)) throw new Error("Unsupported GitHub catalogue search index format");
+  const platform = (url.searchParams.get("platform") || "").toLowerCase();
+  const source = (url.searchParams.get("source") || "").toLowerCase();
+  const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
+  const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
+  const q = (url.searchParams.get("q") || "").trim();
+
+  if (manifest.browse_index_format === "paged-v1") {
+    if (!q) {
+      const [catalogue, stats] = await Promise.all([
+        githubJson(env, "indexes/catalogue.json"),
+        githubJson(env, "indexes/stats.json")
+      ]);
+      const sourceId = source ? catalogue.sources?.[source] : null;
+      const platformId = platform ? catalogue.platforms?.[platform] : null;
+      let base;
+      if (source && platform) base = sourceId && platformId ? "source-platform/" + sourceId + "/" + platformId : null;
+      else if (source) base = sourceId ? "source/" + sourceId : null;
+      else if (platform) base = platformId ? "platform/" + platformId : null;
+      else base = "all";
+      const total = !base ? 0 : source && platform
+        ? (stats.source_platforms?.[source]?.[platform] || 0)
         : source ? (stats.sources?.[source] || 0)
         : platform ? (stats.platforms?.[platform] || 0)
         : (stats.total || 0);
