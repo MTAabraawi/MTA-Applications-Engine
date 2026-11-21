@@ -457,9 +457,9 @@ class GitHubCatalogueStore:
                 continue
             if source and str(item.get("source_key", "")).casefold() != source:
                 continue
-            searchable = " ".join(str(item.get(field) or "") for field in (
+            searchable = _search_normalize(" ".join(str(item.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
-            )).casefold()
+            )))
             if term and term not in searchable:
                 continue
             matches.append(item)
