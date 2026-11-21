@@ -22,7 +22,19 @@ async function githubJson(env, relativePath, allowMissing = false) {
     branch + "/catalogue_data/" + relativePath.split("/").map(encodeURIComponent).join("/");
   const cached = githubCatalogueCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const response = await fetch(url, {cf:{cacheTtl:300,cacheEverything:true}});
+  let response;
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await fetch(url, {cf:{cacheTtl:300,cacheEverything:true}});
+      if (response.status !== 429 && response.status < 500) break;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  if (!response) throw new Error("GitHub catalogue request failed: " + relativePath + (lastError ? " (" + String(lastError) + ")" : ""));
   if (allowMissing && response.status === 404) return {};
   if (!response.ok) throw new Error("GitHub catalogue file unavailable (" + response.status + "): " + relativePath);
   const value = await response.json();
@@ -47,10 +59,16 @@ async function catalogueShardNumber(key, count) {
 }
 async function githubRecordsForKeys(env, keys, shardCount) {
   const grouped = new Map();
-  for (const key of keys) {
-    const shard = await catalogueShardNumber(key, shardCount);
-    if (!grouped.has(shard)) grouped.set(shard, []);
-    grouped.get(shard).push(key);
+  // Hash candidate keys in bounded parallel batches. Serial WebCrypto awaits
+  // make broad searches spend excessive wall time before any shard is fetched.
+  const hashBatchSize = 256;
+  for (let offset = 0; offset < keys.length; offset += hashBatchSize) {
+    const batch = keys.slice(offset, offset + hashBatchSize);
+    const shardPairs = await Promise.all(batch.map(async key => [await catalogueShardNumber(key, shardCount), key]));
+    for (const [shard, key] of shardPairs) {
+      if (!grouped.has(shard)) grouped.set(shard, []);
+      grouped.get(shard).push(key);
+    }
   }
   const records = [];
   // Keep upstream GitHub Raw requests bounded. Large search prefixes can touch
