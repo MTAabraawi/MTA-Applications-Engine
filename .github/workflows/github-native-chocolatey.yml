@@ -1,0 +1,61 @@
+name: GitHub-Native Chocolatey Catalogue Sync
+
+on:
+  workflow_run:
+    workflows: ["GitHub-Native Catalogue Sync"]
+    types: [completed]
+    branches: [main, feature/github-native-catalog-store]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mta-github-native-catalogue
+  cancel-in-progress: false
+
+jobs:
+  chocolatey:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      MTA_STORAGE_BACKEND: github
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      SYNC_SOURCES: chocolatey
+      CHOCOLATEY_PAGE_SIZE: "100"
+      CHOCOLATEY_MAX_PAGES: "10"
+      TARGET_BRANCH: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - name: Check out catalogue branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Verify supported Chocolatey CLI
+        shell: pwsh
+        run: choco --version
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Import Chocolatey catalogue into GitHub shards
+        run: python sync_catalogs.py
+      - name: Commit Chocolatey snapshot
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then
+            echo "No Chocolatey catalogue changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Update GitHub-native Chocolatey catalogue"
+          git fetch origin "${TARGET_BRANCH}"
+          git rebase "origin/${TARGET_BRANCH}"
+          git push origin "HEAD:${TARGET_BRANCH}"

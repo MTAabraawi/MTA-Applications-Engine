@@ -1,0 +1,149 @@
+name: GitHub-Native Catalogue Sync
+
+on:
+  push:
+    branches: [main, feature/github-native-catalog-store]
+    paths:
+      - "catalog_sources.py"
+      - "expanded_catalog_sources.py"
+      - "open_catalog_sources.py"
+      - "fedora_catalog_source.py"
+      - "sync_catalogs.py"
+      - "github_catalog_store.py"
+      - "scripts/enrich_github_catalog.py"
+      - "worker.js"
+      - "wrangler.jsonc"
+      - "tests/test_github_catalog_store.py"
+      - "tests/test_github_api_mode.py"
+      - "store_sources.json"
+      - ".github/workflows/github-native-catalogue.yml"
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+    inputs:
+      sync_sources:
+        description: "Comma-separated source keys to retry; leave blank for the full catalogue"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mta-github-native-catalogue
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_STORAGE_BACKEND: github
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
+      FLATHUB_MAX_APPS: "5000"
+      BLUEJETTY_MAX_APPS: "200000"
+      BLUEJETTY_PAGE_DELAY: "0.55"
+      OPENUSE_MAX_APPS: "50000"
+      FIREFOX_ADDON_PAGES: "5"
+      WORDPRESS_PLUGIN_PAGES: "5"
+      APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
+      APPBRAIN_ENABLE_SYNC: "false"
+      APPBRAIN_MAX_PAGES: "1"
+      APPBRAIN_IOS_MAX_PAGES: "1"
+      APPBRAIN_ENABLE_IOS: "false"
+      APPLE_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather,games,music,social,travel,shopping,news,books,fitness,calendar,notes,scanner,keyboard,cloud,streaming,art,food"
+      WINGET_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+      ARCH_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+      DEBIAN_SEARCH_TERMS: "browser,office,graphics,video,audio,education,security,games,communication,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+      SNAP_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+      STEAM_SEARCH_TERMS: "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer,racing,sports,casual,platformer,puzzle,shooter,role playing"
+      APPLE_LIMIT: "100"
+      WINGET_LIMIT: "24"
+      WINGET_PAGES: "3"
+      CATALOG_CONCURRENCY: "4"
+      SYNC_SOURCES: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_sources || '' }}
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Compile Python catalogue modules
+        run: python -m py_compile sync_catalogs.py github_catalog_store.py catalog_sources.py expanded_catalog_sources.py scripts/enrich_github_catalog.py app.py
+      - name: Check Cloudflare Worker JavaScript syntax
+        run: node --check worker.js
+      - name: Run Git-backed store tests
+        run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py
+      - name: Sync catalogue metadata into JSON shards
+        run: python sync_catalogs.py
+      - name: Commit synced catalogue snapshot
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then
+            echo "No catalogue changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Update GitHub-native application catalogue"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  enrich:
+    needs: sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_STORAGE_BACKEND: github
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      BLUEJETTY_ENRICH_BATCH_SIZE: "100"
+      FEDORA_ENRICH_BATCH_SIZE: "15"
+      ENRICH_CONCURRENCY: "4"
+      ENRICHMENT_MAX_BATCHES: "1000"
+      ENRICHMENT_MAX_RUNTIME_MINUTES: "30"
+    steps:
+      - name: Check out synced catalogue
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Compile enrichment modules
+        run: python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py
+      - name: Enrich Git-backed catalogue metadata
+        run: python scripts/enrich_github_catalog.py
+      - name: Commit enriched catalogue snapshot
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then
+            echo "No enrichment changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Enrich GitHub-native application catalogue metadata"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

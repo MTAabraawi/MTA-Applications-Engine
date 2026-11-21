@@ -1,73 +1,55 @@
 # Cloudflare Workers deployment
 
-The API can run as a Python Worker while keeping PostgreSQL as the durable catalogue database. The Worker uses Cloudflare Hyperdrive to reach PostgreSQL; the daily GitHub Actions job continues to use a direct PostgreSQL connection string for catalogue ingestion.
+The Cloudflare Worker serves the public catalogue directly from the GitHub repository's JSON snapshot. This mode requires no PostgreSQL database, Neon project, Hyperdrive binding, or database connection secret.
 
 ## Architecture
 
-- Cloudflare Worker: FastAPI ASGI application in `worker.py`.
-- Database: managed PostgreSQL, connected to the Worker through the `HYPERDRIVE` binding.
-- Ingestion: GitHub Actions runs `sync_catalogs.py` daily using the repository secret `DATABASE_URL`.
-- Website: MTA Apps Center calls only the public read endpoints over HTTPS.
+- Cloudflare Worker: `worker.js`, serving the public read API.
+- Durable catalogue: `catalogue_data/` in this Git repository, partitioned into JSON shards and generated indexes.
+- Ingestion and enrichment: `.github/workflows/github-native-catalogue.yml`, which runs the existing source collectors, enriches metadata, rebuilds indexes, and commits one catalogue snapshot.
+- Website: calls the same public read endpoints over HTTPS.
 
-The Worker does not create tables at startup. The sync runner creates the SQLAlchemy schema before importing records.
+The Worker reads `manifest.json`, the search/browse indexes, and only the shards needed for a request from `raw.githubusercontent.com`. Responses are cached at the edge and in the Worker isolate. The API is read-only in GitHub mode; POST ingestion requests return HTTP 405. This prevents runtime requests from attempting to mutate the Git repository.
 
-## One-time Cloudflare setup
+## Worker configuration
 
-1. Create or select a PostgreSQL database. Keep its direct connection string private.
-2. In Cloudflare, create a Hyperdrive configuration for that PostgreSQL connection. The CLI equivalent is:
+The repository's `wrangler.jsonc` selects:
 
-   ```bash
-   npx wrangler hyperdrive create mta-applications-engine --connection-string="$DATABASE_URL"
-   ```
+- `CATALOGUE_STORAGE=github`
+- `GITHUB_CATALOGUE_BRANCH=main`
 
-3. Copy the returned Hyperdrive configuration ID into `wrangler.jsonc`, replacing `REPLACE_WITH_HYPERDRIVE_CONFIG_ID`.
-4. Add a strong ingestion token as a Worker secret:
+No Hyperdrive binding is configured. Deploy only after the GitHub-native catalogue workflow has committed `catalogue_data/manifest.json` and the indexes to the default branch.
 
-   ```bash
-   npx wrangler secret put ADMIN_API_TOKEN
-   ```
+## Deploy
 
-5. Deploy from this repository:
+Configure only the Cloudflare deployment credentials required by the existing deployment workflow:
 
-   ```bash
-   uv run pywrangler deploy
-   ```
+- Actions secret: `CLOUDFLARE_API_TOKEN`
+- Actions secret: `CLOUDFLARE_ACCOUNT_ID`
 
-6. Attach a custom domain such as `api.mtahqq.dpdns.org` only if the domain's DNS zone is active on Cloudflare. If its DNS remains with another provider, use the Worker `workers.dev` hostname initially. Do not point the website's existing Pages hostname at the Worker.
+Then run **Actions → Deploy Cloudflare Worker → Run workflow**, or merge a change to the Worker files on `main` to trigger deployment. The workflow no longer requires a Hyperdrive ID or database secret.
 
-Cloudflare's [Python Workers documentation](https://developers.cloudflare.com/workers/languages/python/) supports FastAPI through its [ASGI adapter](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/). [Python Hyperdrive documentation](https://developers.cloudflare.com/hyperdrive/examples/python-workers/) lists psycopg and synchronous SQLAlchemy support.
+## GitHub catalogue updates
 
-## GitHub Actions setup
+The GitHub-native catalogue workflow runs daily and can be started manually once it exists on the default branch. It uses the existing source collectors and retains their independent failure handling. It then enriches Blue Jetty and Fedora records, creates search/browse/statistics indexes, and commits the updated catalogue.
 
-Add a repository Actions secret named `DATABASE_URL` containing the same PostgreSQL database's direct connection string. This is separate from the Worker Hyperdrive binding and is used by `.github/workflows/catalogue-sync.yml`.
-
-The scheduled workflow is already configured for daily UTC execution. It skips safely if `DATABASE_URL` is absent. It becomes active on the default branch only after this pull request is merged.
-
-## GitHub Actions deployment
-
-A manual deployment workflow is included at `.github/workflows/deploy-cloudflare-worker.yml`. After this pull request is merged into the default branch, configure:
-
-- Actions variable: `HYPERDRIVE_CONFIG_ID`
-- Actions secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
-- Actions secret for the daily catalogue sync: `DATABASE_URL`
-
-Then open **Actions → Deploy Cloudflare Worker → Run workflow**. The workflow substitutes the Hyperdrive ID at deploy time; the repository keeps only a placeholder. It does not print or commit database credentials.
-
-The optional `ADMIN_API_TOKEN` Worker secret is needed only if you intend to call the protected HTTP ingestion endpoints. The daily GitHub Actions sync uses `DATABASE_URL` directly and does not need that token.
+The catalogue repository is public, so it must contain only public application metadata and outbound listing links. Never commit API keys, access tokens, personal information, user records, or private datasets. Optional source API credentials belong in GitHub Actions secrets.
 
 ## Verify deployment
 
-After deployment, verify:
+After the catalogue snapshot exists on `main` and the Worker is deployed, verify:
 
-- `GET https://api.mtahqq.dpdns.org/health`
-- `GET https://api.mtahqq.dpdns.org/api/v1/catalog-stats`
-- `GET https://api.mtahqq.dpdns.org/api/v1/apps?limit=5`
+- `GET /health` — should report `storage: github-json-shards`.
+- `GET /api/v1/catalog-stats` — should return source/platform counts and metadata completeness.
+- `GET /api/v1/apps?limit=5` — should return the first five records.
+- `GET /api/v1/apps?q=firefox&limit=10` — should use the generated token index.
 
-The MTA website frontend is not changed by this deployment guide. Once the API hostname is live, its public read endpoints can be connected to the website without exposing the admin token.
+The existing public API paths and response fields are preserved. Record `id` becomes the stable `source_key:external_id` string in GitHub mode; consumers should use `source` and `external_id` as the canonical identity pair.
 
-## Security
+## Limitations and safety
 
-- Never commit the PostgreSQL connection string, Hyperdrive credentials, or `ADMIN_API_TOKEN`.
-- Do not place `ADMIN_API_TOKEN` in website JavaScript.
-- Keep `CORS_ORIGINS` limited to the exact MTA Apps Center origins.
-- The catalogue stores metadata and official outbound listing URLs only; it does not download or host installers.
+- Git is versioned file storage, not SQL. There are no SQL queries or multi-record database transactions.
+- Updates are batched and committed as snapshots. GitHub Actions serializes the writer workflow to avoid overlapping commits.
+- Search uses generated token indexes; pagination and filtering are deterministic.
+- The Worker reads only public repository files. Do not put non-public data in this store.
+- The previous SQL mode remains in the code as a compatibility fallback during migration. Do not delete the old database or retire the old workflows until the Git-backed catalogue counts and API responses have been checked against a trusted export.

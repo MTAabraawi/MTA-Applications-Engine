@@ -32,7 +32,7 @@ Connectors fail independently. A temporary outage at one source should not stop 
 - `POST /api/v1/ingest/catalogs` — ingest all configured catalogues (admin token required).
 - `POST /api/v1/ingest/fdroid` — ingest F-Droid only (admin token required).
 
-The ingestion endpoints require the `X-Admin-Token` header. Keep the token server-side; never place it in browser JavaScript or a public website bundle.
+In the optional legacy SQL mode, the ingestion endpoints require the `X-Admin-Token` header. In GitHub mode, the API is read-only and POST ingestion requests return HTTP 405; use the GitHub Actions workflows to update the catalogue. Never place admin tokens in browser JavaScript or a public website bundle.
 
 Example browser-side catalogue request:
 
@@ -46,12 +46,14 @@ For public MTA Apps Center pages, call only the read-only GET endpoints from the
 
 ## Configuration
 
-Copy `.env.example` to `.env` and set strong unique secrets. Production should use PostgreSQL; SQLite is intended for local development and tests.
+GitHub-native storage is the selected catalogue backend. The public catalogue is stored as sharded JSON and indexes in this repository; no PostgreSQL service, Neon plan, or Hyperdrive connection is required for the Cloudflare Worker.
 
-Required production variables:
-- `DATABASE_URL` — PostgreSQL connection string using `postgresql+psycopg://...`.
-- `ADMIN_API_TOKEN` — long random secret used only by trusted server-side automation.
+For the Python API, set:
+- `MTA_STORAGE_BACKEND=github`
+- `GITHUB_CATALOGUE_DIR=catalogue_data`
 - `CORS_ORIGINS` — comma-separated exact origins allowed to read the API.
+
+The GitHub-backed API is read-only. Catalogue updates and enrichment run in GitHub Actions and are committed as snapshots. The previous SQL backend remains available as an optional compatibility mode, but it is not required for GitHub mode. Do not commit secrets or private/user data to the public catalogue repository.
 
 Optional catalogue controls:
 - `APPLE_COUNTRY`, `APPLE_SEARCH_TERMS`, `APPLE_LIMIT`
@@ -66,22 +68,18 @@ Optional catalogue controls:
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
-uvicorn app:app --reload
+MTA_STORAGE_BACKEND=github GITHUB_CATALOGUE_DIR=catalogue_data uvicorn app:app --reload
 ```
 
-For Docker Compose, set `POSTGRES_PASSWORD` and `ADMIN_API_TOKEN` in the environment, then run `docker compose up --build -d`.
+For Docker Compose, make sure the `catalogue_data/` snapshot is present beside the compose file, then run `docker compose up --build -d`. The default compose stack is read-only and does not start PostgreSQL.
 
 ## Cloudflare deployment
 
-An optional Cloudflare Workers adapter is included for running the FastAPI API close to the MTA website. It uses the `HYPERDRIVE` binding for PostgreSQL and does not require changing the existing static Pages site. See [Cloudflare deployment instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
-
-The Worker configuration contains a placeholder Hyperdrive ID until the database is connected. Do not deploy it before replacing that ID and adding the `ADMIN_API_TOKEN` Worker secret.
+The Cloudflare Worker serves the GitHub JSON catalogue directly through cached read requests to the repository's raw snapshot files. Its configuration uses `CATALOGUE_STORAGE=github` and `GITHUB_CATALOGUE_BRANCH=main`; no Hyperdrive binding or database credentials are needed. This does not change the existing static Pages site. See [Cloudflare deployment instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
 
 ## Automated ingestion
 
-`.github/workflows/catalogue-sync.yml` is configured for a daily UTC run and manual dispatch. Add a GitHub Actions repository secret named `DATABASE_URL` containing the production PostgreSQL connection string. The workflow skips safely when that secret is absent.
-
-The scheduled workflow becomes active only after it is merged into the repository's default branch. GitHub also requires a workflow containing `workflow_dispatch` to exist on the default branch before the manual Run workflow control is available; after that, the branch selector can target this feature branch.
+`.github/workflows/github-native-catalogue.yml` performs source ingestion, metadata enrichment, index generation, and one Git commit of the resulting snapshot. It does not require `DATABASE_URL`. The scheduled workflow becomes active on the default branch after this pull request is merged. The existing SQL workflows are retained during migration and must only be retired after the GitHub snapshot and Cloudflare read path have passed verification.
 
 ## Development checks
 

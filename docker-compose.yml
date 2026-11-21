@@ -1,28 +1,12 @@
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: mta_apps
-      POSTGRES_USER: mta
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace-this-password}
-    volumes:
-      - mta_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mta -d mta_apps"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
   api:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://mta:${POSTGRES_PASSWORD:-replace-this-password}@db:5432/mta_apps
-      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:?Set ADMIN_API_TOKEN in your environment}
+      MTA_STORAGE_BACKEND: github
+      GITHUB_CATALOGUE_DIR: /app/catalogue_data
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://www.mtahqq.dpdns.org,https://mtahqq.dpdns.org}
+    volumes:
+      - ./catalogue_data:/app/catalogue_data:ro
     ports:
       - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-volumes:
-  mta_postgres_data:
