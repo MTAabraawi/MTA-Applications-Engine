@@ -1,1 +1,1 @@
-{"schema_version":1,"storage":"git-json-shards","shard_count":256,"record_count":361882,"updated_at":"2026-11-21T14:01:10.364093+00:00","search_index_format":"prefix2-3-v1","indexes":["platform.json","source.json","category.json","search/*.json","browse.json","stats.json"]}
+{"schema_version":1,"storage":"git-json-shards","shard_count":256,"record_count":361882,"updated_at":"2026-11-21T15:35:49.740493+00:00","search_index_format":"prefix2-3-v2","indexes":["platform.json","source.json","category.json","search/*.json","browse.json","stats.json"]}
