@@ -100,7 +100,33 @@ async function githubListApps(env, url) {
   const q = (url.searchParams.get("q") || "").trim();
 
   if (manifest.browse_index_format === "paged-v1") {
-    if (!q) {
+    if (q) {
+      const prefixes = catalogueQueryPrefixes(q);
+      if (!prefixes.length) return {rows:[],total:0};
+      const postings = await Promise.all(prefixes.map(async prefix => {
+        const bucket = await catalogueTokenBucket(prefix, manifest.search_index_format);
+        const index = await githubJson(env, "indexes/search/" + bucket + ".json", true);
+        return new Set(index[prefix] || []);
+      }));
+      postings.sort((left, right) => left.size - right.size);
+      let candidates = postings[0] || new Set();
+      for (const current of postings.slice(1)) {
+        candidates = new Set([...candidates].filter(key => current.has(key)));
+        if (!candidates.size) break;
+      }
+      const records = await githubRecordsForKeys(env, [...candidates], manifest.shard_count);
+      const needle = catalogueSearchNormalize(q);
+      const filtered = records.filter(row =>
+        (!source || String(row.source_key || "").toLowerCase() === source) &&
+        (!platform || String(row.platform || "").toLowerCase() === platform) &&
+        ["name","developer","summary","description","category"].some(field => catalogueSearchNormalize(row[field]).includes(needle))
+      );
+      filtered.sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")) ||
+        String(a.platform||"").localeCompare(String(b.platform||"")) ||
+        String(a.source_key||"").localeCompare(String(b.source_key||"")) ||
+        String(a.external_id||"").localeCompare(String(b.external_id||"")));
+      return {rows:filtered.slice(offset, offset + limit).map(cataloguePublicRow),total:filtered.length};
+    }
       const [catalogue, stats] = await Promise.all([
         githubJson(env, "indexes/catalogue.json"),
         githubJson(env, "indexes/stats.json")
