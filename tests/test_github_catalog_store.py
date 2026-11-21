@@ -71,18 +71,18 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     stale_bucket = indexes / "search" / "obsolete.json"
     stale_bucket.write_text("{}", encoding="utf-8")
     store.rebuild_indexes()
-    bucket = hashlib.sha256(b"fir").hexdigest()[:2]
+    bucket = hashlib.sha256(b"fir").hexdigest()[:4]
     search = json.loads((indexes / "search" / f"{bucket}.json").read_text())
     browse = json.loads((indexes / "browse.json").read_text())
     stats = json.loads((indexes / "stats.json").read_text())
     assert "fir" in search
-    short_bucket = hashlib.sha256(b"fi").hexdigest()[:2]
+    short_bucket = hashlib.sha256(b"fi").hexdigest()[:4]
     short_search = json.loads((indexes / "search" / f"{short_bucket}.json").read_text())
     assert "fi" in short_search
     assert "firefox" not in search
     assert not stale_bucket.exists()
     manifest = json.loads((tmp_path / "catalogue_data" / "manifest.json").read_text())
-    assert manifest["search_index_format"] == "prefix2-3-v1"
+    assert manifest["search_index_format"] == "prefix2-3-v2"
     assert len(browse) == 2
     assert stats["total"] == 2
     assert stats["quality"]["fields"]["source_url"]["present"] == 2
