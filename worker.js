@@ -53,10 +53,21 @@ async function githubRecordsForKeys(env, keys, shardCount) {
     grouped.get(shard).push(key);
   }
   const records = [];
-  await Promise.all([...grouped.entries()].map(async ([shard, wanted]) => {
-    const payload = await githubJson(env, "shards/" + shard + ".json");
-    for (const key of wanted) if (payload[key]) records.push(payload[key]);
-  }));
+  // Keep upstream GitHub Raw requests bounded. Large search prefixes can touch
+  // many catalogue shards; firing every request at once can trigger upstream
+  // throttling and turn otherwise valid searches into HTTP 500 responses.
+  const entries = [...grouped.entries()];
+  const concurrency = 8;
+  for (let offset = 0; offset < entries.length; offset += concurrency) {
+    const batch = entries.slice(offset, offset + concurrency);
+    const payloads = await Promise.all(batch.map(async ([shard, wanted]) => {
+      const payload = await githubJson(env, "shards/" + shard + ".json");
+      return { payload, wanted };
+    }));
+    for (const { payload, wanted } of payloads) {
+      for (const key of wanted) if (payload[key]) records.push(payload[key]);
+    }
+  }
   return records;
 }
 async function githubListApps(env, url) {
