@@ -213,7 +213,7 @@ function cataloguePublicRow(row) {
     metadata_json: row.metadata_json || {}, first_seen_at: row.first_seen_at, updated_at: row.updated_at
   };
 }
-mport postgres from "postgres";
+import postgres from "postgres";
 
 const DEFAULT_ORIGINS = ["https://www.mtahqq.dpdns.org", "https://mtahqq.dpdns.org"];
 const CURATED_WEB = [
