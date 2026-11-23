@@ -322,11 +322,19 @@ def list_apps(
     q: Optional[str] = Query(default=None, min_length=1, max_length=120),
     platform: Optional[str] = None,
     source: Optional[str] = None,
+    external_id: Optional[str] = Query(default=None, max_length=255),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
     if GITHUB_STORAGE:
+        if external_id:
+            if not source:
+                return []
+            row = _github_store().get(source.casefold(), external_id)
+            if row is None or (platform and row.get("platform") != platform.casefold()):
+                return []
+            return [_github_api_record(row)]
         rows = _github_store().search(query=q, platform=platform, source=source, limit=limit, offset=offset)
         return [_github_api_record(row) for row in rows]
 
@@ -338,6 +346,8 @@ def list_apps(
         stmt = stmt.where(AppRecord.platform == platform.casefold())
     if source:
         stmt = stmt.where(AppRecord.source_key == source.casefold())
+    if external_id:
+        stmt = stmt.where(AppRecord.external_id == external_id)
     rows = db.execute(stmt).scalars().all()
     return [{
         "id": x.id, "source": x.source_key, "external_id": x.external_id,

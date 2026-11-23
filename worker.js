@@ -95,9 +95,18 @@ async function githubListApps(env, url) {
   if (!["prefix2-3-v1", "prefix2-3-v2"].includes(manifest.search_index_format)) throw new Error("Unsupported GitHub catalogue search index format");
   const platform = (url.searchParams.get("platform") || "").toLowerCase();
   const source = (url.searchParams.get("source") || "").toLowerCase();
+  const externalId = (url.searchParams.get("external_id") || "").trim();
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 50), 200));
   const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
   const q = (url.searchParams.get("q") || "").trim();
+
+  if (externalId) {
+    if (!source) return {rows:[],total:0};
+    const key = source + ":" + externalId;
+    const records = await githubRecordsForKeys(env, [key], manifest.shard_count);
+    const exact = records.filter(row => row.source_key === source && row.external_id === externalId);
+    return {rows:exact.slice(0, limit).map(cataloguePublicRow),total:exact.length};
+  }
 
   if (manifest.browse_index_format === "paged-v1") {
     if (q) {
@@ -515,10 +524,11 @@ async function handle(request,env) {
     }
     const limit=Math.max(1,Math.min(Number(url.searchParams.get("limit")||50),200)),offset=Math.max(0,Number(url.searchParams.get("offset")||0));
     const clauses=[],quote=value=>"'"+String(value).replace(/'/g,"''")+"'";
-    const q=url.searchParams.get("q"),platform=url.searchParams.get("platform"),source=url.searchParams.get("source");
+    const q=url.searchParams.get("q"),platform=url.searchParams.get("platform"),source=url.searchParams.get("source"),externalId=url.searchParams.get("external_id");
     if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+" OR description ILIKE "+term+" OR category ILIKE "+term+")");}
     if(platform)clauses.push("platform = "+quote(platform.toLowerCase()));
     if(source)clauses.push("source_key = "+quote(source.toLowerCase()));
+    if(externalId)clauses.push("external_id = "+quote(externalId));
     const where=clauses.length?"WHERE "+clauses.join(" AND ")+" ":"";
     const db=database(env);
     const totalRows=await queryWithRetry(env,"SELECT count(*)::int AS total FROM apps "+where);
