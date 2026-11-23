@@ -11,6 +11,8 @@ This audit covers the Git-backed public catalogue and the application/store page
 - Cross-store icon matching is accepted only for an exact platform + listing identifier match. The matched provider and identifier are retained in provenance metadata.
 - Google Play artwork is accepted only from an official Google Play listing and its Google-hosted Open Graph image.
 - Snap Store metadata is parsed from Snapcraft's official API.
+- Steam descriptions and publisher fields come from the official Steam Store appdetails endpoint; header/capsule art is not mislabeled as an application icon.
+- Chocolatey package metadata is parsed from the official community NuGet feed; package tags are not mislabeled as application categories.
 - Icon URLs must use HTTPS, and URL validation results are reported separately from metadata presence.
 - Unavailable, ambiguous, blocked, or non-applicable fields remain missing. A placeholder is never counted as substantive metadata.
 
@@ -27,6 +29,7 @@ The audit produces:
 - `catalogue-quality-comparison.json`: before/after deltas, both overall and per source.
 - `catalogue-icon-validation.json`: stable, source-stratified checks of a sample of HTTPS icon URLs.
 - `google-play-icon-enrichment.json`: outcomes and provenance for Google Play icon lookups.
+- Per-source coverage distinguishes missing values from malformed URLs and generic placeholder strings.
 
 The icon URL check is a stratified sample, not a claim that every URL was fetched. CDN blocks and timeouts are reported distinctly from invalid or missing metadata.
 
