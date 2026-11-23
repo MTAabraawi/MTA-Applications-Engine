@@ -2,12 +2,12 @@ name: GitHub-Native Catalogue Sync
 
 on:
   push:
-    branches: [main, feature/github-native-catalog-store]
+    branches: [main, feature/github-native-catalog-store, catalogue/open-vsx-expansion]
     paths:
       - "catalog_sources.py"
       - "expanded_catalog_sources.py"
       - "open_catalog_sources.py"
-      - "fedora_catalog_source.py"
+      - "fedora_catalog_source.py"\n      - "tests/test_expanded_catalog_sources.py"\n      - "tests/test_store_registry_and_connectors.py"
       - "sync_catalogs.py"
       - "github_catalog_store.py"
       - "scripts/enrich_github_catalog.py"
@@ -45,7 +45,7 @@ jobs:
       FLATHUB_MAX_APPS: "5000"
       BLUEJETTY_MAX_APPS: "200000"
       BLUEJETTY_PAGE_DELAY: "0.55"
-      OPENUSE_MAX_APPS: "50000"
+      OPENUSE_MAX_APPS: "50000"\n      OPENVSX_SEARCH_TERMS: "python,git,docker,prettier,eslint,rust,java,typescript,markdown,debugger,testing,remote,ai"\n      OPENVSX_PAGE_SIZE: "50"
       FIREFOX_ADDON_PAGES: "5"
       WORDPRESS_PLUGIN_PAGES: "5"
       APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
@@ -63,7 +63,7 @@ jobs:
       WINGET_LIMIT: "24"
       WINGET_PAGES: "3"
       CATALOG_CONCURRENCY: "4"
-      SYNC_SOURCES: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_sources || '' }}
+      SYNC_SOURCES: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_sources || (github.event_name == 'push' && contains(github.event.head_commit.message, '[open-vsx-only]') && 'open-vsx' || '') }}
     steps:
       - name: Check out selected branch
         uses: actions/checkout@v4
@@ -84,7 +84,7 @@ jobs:
       - name: Check Cloudflare Worker JavaScript syntax
         run: node --check worker.js
       - name: Run Git-backed store tests
-        run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py
+        run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py
       - name: Sync catalogue metadata into JSON shards
         run: python sync_catalogs.py
       - name: Commit synced catalogue snapshot

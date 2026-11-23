@@ -253,3 +253,33 @@ def test_expanded_catalogue_filter_rejects_unknown_sources():
 
     with pytest.raises(ValueError, match="Unknown expanded catalogue source"):
         asyncio.run(module.fetch_expanded_catalogs(source_filter={"not-a-source"}))
+
+
+
+def test_open_vsx_connector_maps_public_extension_metadata(monkeypatch):
+    import expanded_catalog_sources as module
+
+    monkeypatch.setenv("OPENVSX_SEARCH_TERMS", "python")
+    monkeypatch.setenv("OPENVSX_PAGE_SIZE", "20")
+    client = FakeClient(lambda url, kwargs: {"extensions": [{
+        "namespace": "ms-python", "name": "python", "displayName": "Python",
+        "version": "2026.4.0", "description": "Python language support and tooling.",
+        "publishedBy": "ms-python", "publishedByDisplayName": "Microsoft",
+        "downloadCount": 123456, "reviewCount": 16, "averageRating": 4.5,
+        "license": "MIT", "categories": ["Programming Languages"],
+        "files": {"icon": "https://cdn.example/python-icon.png"},
+        "repository": "https://github.com/microsoft/vscode-python",
+    }]})
+
+    records = asyncio.run(module.fetch_open_vsx(client))
+
+    assert len(records) == 1
+    assert records[0]["source_key"] == "open-vsx"
+    assert records[0]["external_id"] == "ms-python.python"
+    assert records[0]["platform"] == "ide-plugins"
+    assert records[0]["source_url"] == "https://open-vsx.org/extension/ms-python/python"
+    assert records[0]["developer"] == "Microsoft"
+    assert records[0]["icon_url"] == "https://cdn.example/python-icon.png"
+    assert records[0]["metadata_json"]["download_count"] == 123456
+    assert client.calls[0][0] == "https://open-vsx.org/api/-/search"
+    assert client.calls[0][1]["params"] == {"query": "python", "size": 20}
