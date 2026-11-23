@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/exact-source-id-lookup]
   pull_request:
     branches: [main]
 

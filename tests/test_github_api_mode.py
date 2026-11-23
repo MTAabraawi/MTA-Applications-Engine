@@ -1,4 +1,6 @@
 import app as api
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from github_catalog_store import GitHubCatalogueStore
 
 
@@ -31,3 +33,21 @@ def test_fastapi_reads_github_catalogue_without_database(tmp_path, monkeypatch):
     assert stats["platforms"] == {"android": 1}
     assert stats["sources"] == {"fdroid": 1}
 
+
+def test_fastapi_exact_lookup_works_with_sql_backend(tmp_path, monkeypatch):
+    monkeypatch.setattr(api, "GITHUB_STORAGE", False)
+    engine = create_engine("sqlite:///" + str(tmp_path / "exact-lookup.db"))
+    api.Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine)
+    with session_factory() as db:
+        api.upsert_records(db, [{
+            "source_key": "fdroid",
+            "external_id": "org.example.browser",
+            "platform": "android",
+            "name": "Example Browser",
+            "source_url": "https://example.org/browser",
+        }])
+        exact = api.list_apps(source="fdroid", external_id="org.example.browser", limit=1, offset=0, db=db)
+        assert len(exact) == 1
+        assert exact[0]["external_id"] == "org.example.browser"
+        assert api.list_apps(source="fdroid", external_id="missing", limit=1, offset=0, db=db) == []
