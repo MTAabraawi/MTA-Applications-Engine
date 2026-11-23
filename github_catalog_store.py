@@ -23,6 +23,7 @@ FIELDS = (
     "description", "category", "license", "source_url", "app_url", "icon_url",
     "metadata_json", "first_seen_at", "updated_at",
 )
+CLEARABLE_FIELDS = {"developer", "summary", "description", "category", "license", "app_url", "icon_url"}
 
 
 def _now() -> str:
@@ -186,7 +187,7 @@ class GitHubCatalogueStore:
             item["metadata_json"] = item.get("metadata_json") or {}
             item["first_seen_at"] = (old or {}).get("first_seen_at") or item.get("first_seen_at") or now
             item["updated_at"] = now
-            clear_fields = set(incoming.get("_clear_fields") or ()) & set(FIELDS)
+            clear_fields = set(incoming.get("_clear_fields") or ()) & CLEARABLE_FIELDS
 
             if old:
                 merged = dict(old)
