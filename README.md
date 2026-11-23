@@ -17,7 +17,8 @@ A metadata-only discovery and indexing API for MTA Apps Center. It indexes appli
 | Homebrew Cask | macOS | Official Homebrew Cask JSON feed |
 | Apple App Store | iOS | Apple public Search API, country configurable |
 | Mac App Store | macOS | Apple public Search API with `macSoftware` entity |
-| MTA curated web catalogue | Web | Maintained in `web_apps.json` |\n| Open VSX Registry | IDE plugins | Public Open VSX REST search API for VS Code-compatible extensions |
+| MTA curated web catalogue | Web | Maintained in `web_apps.json` |
+| Open VSX Registry | IDE plugins | Public Open VSX REST search API for VS Code-compatible extensions |
 
 The complete store directory and each store's integration state are maintained in `store_sources.json`. New live metadata connectors include Mozilla Firefox Add-ons, WordPress.org Plugins, Homebrew/core formulae, Scoop buckets, Alpine Linux APKINDEX, JetBrains Marketplace plugins, GNOME Shell extensions, Fedora's public package index, and Open VSX extensions for VS Code-compatible editors. Google Play has an optional AppBrain API connector; it supports bounded pagination (`APPBRAIN_MAX_PAGES`, up to 11 pages per category) and preserves the complete returned public metadata in the record metadata. The same connector supports Apple App Store results using `platform=IOS` and maps them to the Apple App Store listing, but this is opt-in via `APPBRAIN_ENABLE_IOS=true` to avoid unexpected API-credit usage. `APPBRAIN_IOS_MAX_PAGES` controls its page depth. AppBrain browse offsets are capped at 500 and the API has monthly credit limits; a full global inventory cannot be promised by a single browse sweep. JetBrains and GNOME search endpoints are public website endpoints rather than versioned public API contracts, so their collectors are isolated and failure-tolerant. Only entries marked `live_api` are included in ingestion; `external_only` entries remain direct links until a supported public API or approved partner feed is available. This prevents a store link from being misrepresented as an indexed catalogue.
 
@@ -57,7 +58,8 @@ The GitHub-backed API is read-only. Catalogue updates and enrichment run in GitH
 
 Optional catalogue controls:
 - `APPLE_COUNTRY`, `APPLE_SEARCH_TERMS`, `APPLE_LIMIT`
-- `FIREFOX_ADDON_TERMS`, `FIREFOX_ADDON_PAGES`, `WORDPRESS_PLUGIN_TERMS`, `WORDPRESS_PLUGIN_PAGES`\n- `OPENVSX_SEARCH_TERMS`, `OPENVSX_PAGE_SIZE`
+- `FIREFOX_ADDON_TERMS`, `FIREFOX_ADDON_PAGES`, `WORDPRESS_PLUGIN_TERMS`, `WORDPRESS_PLUGIN_PAGES`
+- `OPENVSX_SEARCH_TERMS`, `OPENVSX_PAGE_SIZE`
 - `APPBRAIN_API_KEY` (optional; enables the Google Play connector; API usage is metered by AppBrain)
 - `WINGET_SEARCH_TERMS`, `WINGET_LIMIT`
 - `FLATHUB_MAX_APPS`, `CATALOG_CONCURRENCY`
