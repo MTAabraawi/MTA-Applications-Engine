@@ -250,7 +250,7 @@ def test_steam_detail_parser_extracts_only_source_supplied_text_and_metadata():
     }}}
     result = parse_steam_detail(payload, {"external_id": "730"})
     assert result["summary"] == "Official short description."
-    assert result["description"] == "Official long description ."
+    assert result["description"] == "Official long description."
     assert result["developer"] == "Valve"
     assert result["category"] == "Action"
     assert result["app_url"] is None
