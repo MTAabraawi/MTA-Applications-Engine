@@ -46,6 +46,16 @@ def has_value(value):
     return value is not None and (not isinstance(value, str) or bool(value.strip()))
 
 
+def valid_https_icon(value):
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        parsed = urlsplit(value.strip())
+        return parsed.scheme == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password
+    except ValueError:
+        return False
+
+
 def trusted_url(value, hostname):
     if not isinstance(value, str):
         return False
@@ -182,7 +192,7 @@ def icon_provider_index(records):
     providers = {}
     official = {"google-play", "apple-itunes", "apple-appbrain", "fdroid", "izzyondroid"}
     for row in records:
-        if row.get("source_key") not in official or row.get("platform") not in {"android", "ios"} or not has_value(row.get("icon_url")):
+        if row.get("source_key") not in official or row.get("platform") not in {"android", "ios"} or not valid_https_icon(row.get("icon_url")):
             continue
         providers.setdefault((row["platform"], str(row.get("external_id"))), {
             "source_key": row["source_key"], "icon_url": row["icon_url"]
