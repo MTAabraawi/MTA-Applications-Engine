@@ -7,7 +7,7 @@ on:
       - "scripts/enrich_github_catalog.py"
       - "scripts/catalogue_quality_report.py"
       - "scripts/compare_catalogue_quality.py"
-      - "scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py"
+      - "scripts/validate_catalogue_icon_urls.py"
       - "scripts/enrich_google_play_icons.py"
       - "tests/test_github_catalog_enrichment.py"
       - ".github/workflows/catalogue-metadata-audit.yml"
@@ -56,7 +56,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Compile enrichment and audit modules
         run: |
-          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py
+          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py
       - name: Run complete Python regression suite
         run: pytest -q
       - name: Capture immutable main-branch quality baseline before enrichment
