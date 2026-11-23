@@ -231,3 +231,34 @@ def test_google_play_icon_enrichment_prioritizes_rating_count_and_never_selects_
     ]
     candidates = select_candidates(records, limit=1, now=datetime(2026, 11, 23, tzinfo=timezone.utc))
     assert [record["external_id"] for record, _ in candidates] == ["high"]
+
+
+def test_steam_detail_parser_extracts_only_source_supplied_text_and_metadata():
+    from scripts.enrich_github_catalog import parse_steam_detail
+
+    payload = {"730": {"success": True, "data": {
+        "type": "game",
+        "short_description": "Official short description.",
+        "detailed_description": "<p>Official <strong>long description</strong>.</p>",
+        "developers": ["Valve"],
+        "publishers": ["Valve"],
+        "genres": [{"id": "1", "description": "Action"}],
+        "categories": [{"id": 1, "description": "Multi-player"}],
+        "platforms": {"windows": True, "mac": False, "linux": True},
+        "release_date": {"date": "Aug 21, 2012", "coming_soon": False},
+        "website": "http://counter-strike.net/",
+    }}}
+    result = parse_steam_detail(payload, {"external_id": "730"})
+    assert result["summary"] == "Official short description."
+    assert result["description"] == "Official long description ."
+    assert result["developer"] == "Valve"
+    assert result["category"] == "Action"
+    assert result["app_url"] is None
+    assert result["metadata_json"]["steam_detail"]["publishers"] == ["Valve"]
+    assert result["metadata_json"]["steam_detail"]["platforms"]["linux"] is True
+
+
+def test_steam_detail_parser_does_not_invent_values_for_unavailable_records():
+    from scripts.enrich_github_catalog import parse_steam_detail
+
+    assert parse_steam_detail({"730": {"success": False}}, {"external_id": "730"}) == {}
