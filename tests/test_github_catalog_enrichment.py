@@ -404,3 +404,19 @@ def test_steam_capsule_art_is_not_misclassified_as_an_application_icon():
     assert updates[0]["metadata_json"]["steam_icon_cleanup"]["status"] == "removed_non_square_artwork_from_icon_field"
     assert updates[0]["metadata_json"]["steam_detail"]["capsule_or_header_art_url"].endswith("capsule_231x87.jpg")
     assert len(examples) == 1
+
+
+def test_quality_report_counts_rejected_non_icon_assets_separately():
+    from scripts.catalogue_quality_report import build_report
+
+    report = build_report([{
+        "source_key": "steam", "platform": "pc-games", "external_id": "123",
+        "name": "Example Game", "source_url": "https://store.steampowered.com/app/123/",
+        "icon_url": None,
+        "metadata_json": {"steam_icon_cleanup": {
+            "status": "removed_non_square_artwork_from_icon_field",
+            "original_url": "https://shared.akamai.steamstatic.com/steam/apps/123/capsule_231x87.jpg",
+        }},
+    }])
+    assert report["global"]["rejected_non_icon_assets"] == 1
+    assert report["by_source"]["steam"]["fields"]["icon_url"]["missing"] == 1
