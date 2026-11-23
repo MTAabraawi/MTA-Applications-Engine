@@ -79,6 +79,7 @@ def parse_steam_detail(payload, row):
             return None
         value = unescape(re.sub(r"<[^>]*>", " ", value))
         value = " ".join(value.split()).strip()
+        value = re.sub(r"\\s+([,.;:!?])", r"\\1", value)
         return value[:maximum] if value else None
 
     developer_values = data.get("developers") if isinstance(data.get("developers"), list) else []
