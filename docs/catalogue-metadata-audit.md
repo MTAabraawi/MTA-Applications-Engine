@@ -30,6 +30,7 @@ The audit produces:
 - `catalogue-quality-comparison.json`: before/after deltas, both overall and per source.
 - `catalogue-icon-validation.json`: stable, source-stratified checks of a sample of HTTPS icon URLs.
 - `google-play-icon-enrichment.json`: outcomes and provenance for Google Play icon lookups.
+- `steam-icon-normalization.json`: Steam capsule/header banners removed from the app-icon field, with original artwork URLs preserved in metadata.
 - Per-source coverage distinguishes missing values from malformed URLs and generic placeholder strings.
 
 The icon URL check is a stratified sample, not a claim that every URL was fetched. CDN blocks and timeouts are reported distinctly from invalid or missing metadata.
