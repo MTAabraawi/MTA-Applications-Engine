@@ -61,8 +61,6 @@ async def validate_one(client, record, semaphore):
             response = await client.head(url, headers=HEADERS, timeout=TIMEOUT)
             if response.status_code in {403, 405, 501}:
                 async with client.stream("GET", url, headers=HEADERS, timeout=TIMEOUT) as response:
-                    if response.status_code in {200, 206}:
-                        await response.aread() if response.headers.get("content-length", "0") in {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"} else asyncio.sleep(0)
                     result["http_status"] = response.status_code
                     result["content_type"] = response.headers.get("content-type", "").split(";")[0].lower() or None
                     result["final_url"] = str(response.url)
@@ -125,7 +123,7 @@ def main():
         per_source=max(1, min(int(os.getenv("ICON_VALIDATION_PER_SOURCE", "20")), 100)),
         concurrency=max(1, min(int(os.getenv("ICON_VALIDATION_CONCURRENCY", "6")), 12)),
     ))
-    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     totals = defaultdict(int)
     for source in report["by_source"].values():
         for status, count in source.items():
