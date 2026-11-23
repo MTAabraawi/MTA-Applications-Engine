@@ -20,6 +20,12 @@ def test_fastapi_reads_github_catalogue_without_database(tmp_path, monkeypatch):
     assert rows[0]["id"] == "fdroid:org.example.browser"
     assert rows[0]["source"] == "fdroid"
 
+    exact = api.list_apps(source="fdroid", external_id="org.example.browser", limit=1, offset=0, db=None)
+    assert len(exact) == 1
+    assert exact[0]["external_id"] == "org.example.browser"
+    assert exact[0]["name"] == "Example Browser"
+    assert api.list_apps(source="fdroid", external_id="missing", limit=1, offset=0, db=None) == []
+
     stats = api.catalog_stats(db=None)
     assert stats["total"] == 1
     assert stats["platforms"] == {"android": 1}

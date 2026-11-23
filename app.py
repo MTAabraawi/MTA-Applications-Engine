@@ -322,10 +322,34 @@ def list_apps(
     q: Optional[str] = Query(default=None, min_length=1, max_length=120),
     platform: Optional[str] = None,
     source: Optional[str] = None,
+    external_id: Optional[str] = Query(default=None, min_length=1, max_length=255),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
+    # Exact source identifiers avoid relying on a name search window that may
+    # omit popular or alphabetically distant records.
+    if external_id:
+        if not source:
+            raise HTTPException(status_code=422, detail="source is required with external_id")
+        if GITHUB_STORAGE:
+            row = _github_store().get(source.casefold(), external_id)
+            return [_github_api_record(row)] if row is not None else []
+        stmt = select(AppRecord).where(
+            AppRecord.source_key == source.casefold(),
+            AppRecord.external_id == external_id,
+        )
+        if platform:
+            stmt = stmt.where(AppRecord.platform == platform.casefold())
+        rows = db.execute(stmt.limit(1)).scalars().all()
+        return [{
+            "id": x.id, "source": x.source_key, "external_id": x.external_id,
+            "platform": x.platform, "name": x.name, "developer": x.developer,
+            "summary": x.summary, "description": x.description, "category": x.category,
+            "license": x.license, "source_url": x.source_url, "app_url": x.app_url,
+            "icon_url": x.icon_url, "metadata_json": x.metadata_json, "first_seen_at": x.first_seen_at, "updated_at": x.updated_at
+        } for x in rows]
+
     if GITHUB_STORAGE:
         rows = _github_store().search(query=q, platform=platform, source=source, limit=limit, offset=offset)
         return [_github_api_record(row) for row in rows]
@@ -346,7 +370,6 @@ def list_apps(
         "license": x.license, "source_url": x.source_url, "app_url": x.app_url,
         "icon_url": x.icon_url, "metadata_json": x.metadata_json, "first_seen_at": x.first_seen_at, "updated_at": x.updated_at
     } for x in rows]
-
 
 @app.get("/api/v1/catalog-stats")
 def catalog_stats(db: Session = Depends(get_db)):
