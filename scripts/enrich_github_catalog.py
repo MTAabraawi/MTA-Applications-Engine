@@ -15,7 +15,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from urllib.parse import parse_qs, urljoin, urlsplit
+from urllib.parse import parse_qs, quote, urljoin, urlsplit
 
 import httpx
 
@@ -66,6 +66,51 @@ def trusted_url(value, hostname):
         return parsed.scheme == "https" and parsed.hostname == hostname and not parsed.username and not parsed.password
     except ValueError:
         return False
+
+
+def parse_chocolatey_detail(payload, row):
+    import xml.etree.ElementTree as ET
+
+    try:
+        root = ET.fromstring(payload)
+    except (ET.ParseError, TypeError):
+        return {}
+    properties = next((element for element in root.iter()
+                       if element.tag.rsplit("}", 1)[-1] == "properties"), None)
+    if properties is None:
+        return {}
+    values = {element.tag.rsplit("}", 1)[-1]: (element.text or "").strip()
+              for element in list(properties)}
+
+    description = values.get("Description") or None
+    summary = values.get("Summary") or (description[:240] if description else None)
+    authors = values.get("Authors") or None
+    project_url = values.get("ProjectUrl") or None
+    icon_url = values.get("IconUrl") or None
+    if not valid_https_icon(project_url):
+        project_url = None
+    if not valid_https_icon(icon_url):
+        icon_url = None
+
+    detail = {
+        "package_id": values.get("Id") or row.get("external_id"),
+        "version": values.get("Version"),
+        "title": values.get("Title"),
+        "authors": authors,
+        "project_url": project_url,
+        "icon_url": icon_url,
+        "tags": values.get("Tags"),
+        "license_url": values.get("LicenseUrl"),
+        "require_license_acceptance": values.get("RequireLicenseAcceptance"),
+    }
+    return {
+        "developer": authors,
+        "summary": summary,
+        "description": description,
+        "app_url": project_url,
+        "icon_url": icon_url,
+        "metadata_json": {"chocolatey_detail": detail},
+    }
 
 
 def parse_snap_detail(payload, row):
@@ -238,6 +283,12 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
                 return row, None, ValueError("Invalid Snap package name")
             url = f"https://api.snapcraft.io/v2/snaps/info/{snap_name}"
             request_headers = SNAP_HEADERS
+        elif hostname == "community.chocolatey.org":
+            package_id = str(row.get("external_id") or "")
+            version = str(metadata.get("version") or "")
+            if not re.fullmatch(r"[A-Za-z0-9._-]+", package_id) or not re.fullmatch(r"[A-Za-z0-9._-]+", version):
+                return row, None, ValueError("Invalid Chocolatey package identity")
+            url = "https://community.chocolatey.org/api/v2/Packages(Id='" + quote(package_id, safe="") + "',Version='" + quote(version, safe="") + "')"
         else:
             url = row.get("source_url")
         if not trusted_url(url, hostname):
@@ -247,7 +298,7 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
             try:
                 response = await get_response(client, url, hostname, request_headers=request_headers)
                 payload = response.json() if hostname in {"bluejetty.ai", "store.steampowered.com", "api.snapcraft.io"} else response.text
-                parsed = parser(payload, row) if hostname in {"store.steampowered.com", "api.snapcraft.io"} else parser(payload)
+                parsed = parser(payload, row) if hostname in {"store.steampowered.com", "api.snapcraft.io", "community.chocolatey.org"} else parser(payload)
                 return row, parsed, None
             except (httpx.HTTPError, ValueError, TypeError) as exc:
                 return row, None, exc
@@ -374,6 +425,7 @@ async def main():
     blue_limit = max(1, min(int(os.getenv("BLUEJETTY_ENRICH_BATCH_SIZE", "200")), 500))
     steam_limit = max(1, min(int(os.getenv("STEAM_ENRICH_BATCH_SIZE", "100")), 100))
     snap_limit = max(1, min(int(os.getenv("SNAP_ENRICH_BATCH_SIZE", "100")), 100))
+    chocolatey_limit = max(1, min(int(os.getenv("CHOCOLATEY_ENRICH_BATCH_SIZE", "100")), 100))
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
     max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "1000")), 1000))
@@ -384,6 +436,7 @@ async def main():
         "fedora": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
         "steam": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
         "snap": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
+        "chocolatey": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
     }
     providers = icon_provider_index(records)
     cross_updates, cross_counts = crossmatch_icons(records, providers, datetime.now(timezone.utc).isoformat())
@@ -411,8 +464,10 @@ async def main():
                  ("developer", "summary", "description", "category", "app_url")),
                 ("snap", "snap", "api.snapcraft.io", parse_snap_detail, snap_limit, 7,
                  ("developer", "summary", "description", "category", "license", "app_url", "icon_url")),
+                ("chocolatey", "chocolatey", "community.chocolatey.org", parse_chocolatey_detail, chocolatey_limit, 7,
+                 ("developer", "summary", "description", "app_url", "icon_url")),
             ):
-                source_key = {"bluejetty": "bluejetty", "fedora": "fedora-packages", "steam": "steam", "snap": "snap-store"}[source]
+                source_key = {"bluejetty": "bluejetty", "fedora": "fedora-packages", "steam": "steam", "snap": "snap-store", "chocolatey": "chocolatey"}[source]
                 eligible = [row for row in records if row.get("source_key") == source_key
                             and due(row, prefix, days, fields)]
                 if source == "bluejetty":
