@@ -8,8 +8,8 @@ import catalog_sources
 def test_store_registry_includes_all_registered_sources():
     registry_path = Path(__file__).resolve().parents[1] / "store_sources.json"
     entries = json.loads(registry_path.read_text(encoding="utf-8"))
-    assert len(entries) == 44
-    assert len({entry["id"] for entry in entries}) == 44
+    assert len(entries) == 54
+    assert len({entry["id"] for entry in entries}) == 54
     assert {entry["integration_mode"] for entry in entries} == {"live_api", "external_only", "credential_required", "cli_search"}
     live = {entry["source_key"] for entry in entries if entry.get("source_key")}
     assert {
@@ -132,3 +132,33 @@ def test_steam_connector_uses_public_storefront_search(monkeypatch):
     assert records[0]["external_id"] == "1234"
     assert records[0]["platform"] == "pc-games"
     assert records[0]["icon_url"] == "https://cdn.example/steam.png"
+
+
+def test_new_store_directory_entries_remain_external_only_until_verified_connectors_exist():
+    registry_path = Path(__file__).resolve().parents[1] / "store_sources.json"
+    entries = {entry["id"]: entry for entry in json.loads(registry_path.read_text(encoding="utf-8"))}
+    expected = {
+        "honor-app-market", "360-mobile-assistant", "baidu-mobile-assistant",
+        "wandoujia", "rustore", "altstore", "skich-store", "npackd",
+        "ea-app", "itch-io",
+    }
+    assert expected <= entries.keys()
+    for store_id in expected:
+        assert entries[store_id]["integration_mode"] == "external_only"
+        assert "No supported public bulk catalogue API" in entries[store_id]["reason"]
+
+
+def test_curated_web_app_records_are_unique_and_use_https_urls():
+    apps_path = Path(__file__).resolve().parents[1] / "web_apps.json"
+    entries = json.loads(apps_path.read_text(encoding="utf-8"))
+    ids = [entry["id"] for entry in entries]
+    assert len(ids) == len(set(ids))
+    assert len(entries) == 17
+    for entry in entries:
+        assert entry.get("name")
+        assert entry.get("developer")
+        assert entry.get("summary")
+        assert entry.get("description")
+        assert entry.get("category")
+        assert entry.get("app_url", "").startswith("https://")
+        assert entry.get("homepage", "").startswith("https://")
