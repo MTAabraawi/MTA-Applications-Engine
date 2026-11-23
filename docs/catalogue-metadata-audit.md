@@ -25,6 +25,7 @@ The catalogue contains mobile apps, desktop applications, games, extensions, plu
 The audit produces:
 
 - `catalogue-quality-baseline.json`: the main-branch field coverage captured before enrichment.
+- `catalogue-enrichment-results.json`: selected, checked, failed, enriched, and per-field fill counts for each enriched source.
 - `catalogue-quality-report.json`: post-enrichment totals and source-level coverage.
 - `catalogue-quality-comparison.json`: before/after deltas, both overall and per source.
 - `catalogue-icon-validation.json`: stable, source-stratified checks of a sample of HTTPS icon URLs.
