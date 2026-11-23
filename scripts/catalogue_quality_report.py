@@ -140,6 +140,7 @@ def build_report(records, generated_at=None):
                 "fedora-packages": "Linux package records include libraries and non-GUI components; missing application icons are not automatically defects.",
                 "snap-store": "Icons are accepted only from Snap Store media entries explicitly typed as icon.",
                 "steam": "Descriptions and publisher data come from Steam appdetails; header and capsule artwork are not substituted as application icons.",
+                "chocolatey": "Descriptions, authors, project URLs and package icons come from the official Chocolatey NuGet package record; tags are not treated as categories.",
             },
         },
     }
