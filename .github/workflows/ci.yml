@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/marketplace-quality-website-integration]
   pull_request:
     branches: [main]
 
@@ -43,6 +43,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Check Worker syntax
         run: npm run check
+      - name: Run Worker regression tests
+        run: npm test
       - name: Prepare non-production Hyperdrive ID for dry-run
         run: |
           python - <<'PY'
