@@ -7,7 +7,8 @@ on:
       - "scripts/enrich_github_catalog.py"
       - "scripts/catalogue_quality_report.py"
       - "scripts/compare_catalogue_quality.py"
-      - "scripts/validate_catalogue_icon_urls.py"
+      - "scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py"
+      - "scripts/enrich_google_play_icons.py"
       - "tests/test_github_catalog_enrichment.py"
       - ".github/workflows/catalogue-metadata-audit.yml"
 
@@ -35,6 +36,9 @@ jobs:
       CATALOGUE_ICON_REPORT: "reports/catalogue-icon-validation.json"
       ICON_VALIDATION_PER_SOURCE: "15"
       ICON_VALIDATION_CONCURRENCY: "6"
+      GOOGLE_PLAY_ICON_REPORT: "reports/google-play-icon-enrichment.json"
+      GOOGLE_PLAY_ICON_ENRICH_LIMIT: "1000"
+      GOOGLE_PLAY_ICON_ENRICH_CONCURRENCY: "6"
     steps:
       - name: Check out the audit branch
         uses: actions/checkout@v4
@@ -62,6 +66,8 @@ jobs:
           git show origin/main:catalogue_data/indexes/stats.json > reports/catalogue-quality-baseline.json
       - name: Enrich missing Blue Jetty and Fedora metadata from official source detail pages
         run: python scripts/enrich_github_catalog.py
+      - name: Fill missing Android icons from official Google Play Open Graph metadata
+        run: python scripts/enrich_google_play_icons.py
       - name: Rebuild indexes and produce source-aware quality report
         run: |
           python - <<'PY'
@@ -77,13 +83,13 @@ jobs:
       - name: Commit audited catalogue snapshot and report to this branch only
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-baseline.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json)" ]; then
+          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-baseline.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json)" ]; then
             echo "No catalogue metadata changes were produced."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add catalogue_data/ reports/catalogue-quality-baseline.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json
+          git add catalogue_data/ reports/catalogue-quality-baseline.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json
           git commit -m "Apply source-verified catalogue metadata enrichment and report"
           git fetch origin audit/catalogue-metadata-enrichment-quality
           git rebase origin/audit/catalogue-metadata-enrichment-quality
