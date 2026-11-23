@@ -24,7 +24,19 @@ PLACEHOLDERS = {"", "unknown", "n/a", "na", "not available", "not provided", "no
 
 
 def present(value):
-    return value is not None and (not isinstance(value, str) or value.strip().casefold() not in PLACEHOLDERS)
+    if value is None:
+        return False
+    if not isinstance(value, str):
+        return True
+    normalized = value.strip().casefold()
+    if normalized in PLACEHOLDERS:
+        return False
+    return not normalized.startswith((
+        "no description provided",
+        "developer not specified",
+        "uncategorised by source",
+        "not specified by source",
+    ))
 
 
 def valid_https(value):
