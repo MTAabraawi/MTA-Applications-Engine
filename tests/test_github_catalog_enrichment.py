@@ -355,3 +355,25 @@ def test_chocolatey_detail_parser_rejects_http_project_and_icon_urls():
     result = parse_chocolatey_detail(xml, {"external_id": "sample"})
     assert result["app_url"] is None
     assert result["icon_url"] is None
+
+
+def test_google_play_icon_enrichment_retries_transient_failures_after_six_hours():
+    from scripts.enrich_google_play_icons import select_candidates
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime(2026, 11, 23, 12, 0, tzinfo=timezone.utc)
+    base = {
+        "source_key": "bluejetty", "platform": "android", "icon_url": None,
+        "app_url": "https://play.google.com/store/apps/details?id=retry",
+    }
+    recent_429 = {**base, "external_id": "recent-429", "metadata_json": {
+        "google_play_icon_enrichment": {"status": "http_429", "checked_at": (now - timedelta(hours=2)).isoformat()}
+    }}
+    old_429 = {**base, "external_id": "old-429", "metadata_json": {
+        "google_play_icon_enrichment": {"status": "http_429", "checked_at": (now - timedelta(hours=7)).isoformat()}
+    }}
+    recent_missing = {**base, "external_id": "recent-missing", "metadata_json": {
+        "google_play_icon_enrichment": {"status": "og_image_missing", "checked_at": (now - timedelta(days=1)).isoformat()}
+    }}
+    selected = select_candidates([recent_429, old_429, recent_missing], limit=10, now=now)
+    assert [record["external_id"] for record, _ in selected] == ["old-429"]
