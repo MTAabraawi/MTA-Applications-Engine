@@ -141,6 +141,7 @@ def build_report(records, generated_at=None):
 def main():
     root = Path(__sys_env("GITHUB_CATALOGUE_DIR", "catalogue_data"))
     output = Path(__sys_env("CATALOGUE_QUALITY_REPORT", "catalogue-quality-report.json"))
+    output.parent.mkdir(parents=True, exist_ok=True)
     store = GitHubCatalogueStore(root)
     report = build_report(store.iter_records())
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
