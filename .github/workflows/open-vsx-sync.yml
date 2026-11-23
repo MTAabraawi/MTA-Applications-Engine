@@ -45,5 +45,7 @@ jobs:
             echo "No Open VSX catalogue changes to commit."
           else
             git commit -m "Sync bounded Open VSX catalogue snapshot"
+            git fetch origin catalogue-quality-round2
+            git rebase origin/catalogue-quality-round2
             git push origin "HEAD:catalogue-quality-round2"
           fi
