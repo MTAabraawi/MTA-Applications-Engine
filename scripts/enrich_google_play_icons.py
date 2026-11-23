@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
@@ -118,6 +117,9 @@ async def fetch_one(client, record, listing_url, semaphore):
             response = await client.get(listing_url, timeout=httpx.Timeout(20.0, connect=7.0))
             if response.status_code != 200:
                 return record, listing_url, None, f"http_{response.status_code}"
+            final_url = urlsplit(str(response.url))
+            if final_url.scheme != "https" or final_url.hostname != "play.google.com":
+                return record, listing_url, None, "untrusted_redirect"
             icon = extract_official_og_icon(response.text)
             return record, listing_url, icon, "matched" if icon else "og_image_missing"
         except httpx.TimeoutException:
