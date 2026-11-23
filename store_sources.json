@@ -330,5 +330,75 @@
     "integration_mode": "live_api",
     "reason": "Free read-only public JSON API with pagination and official release references; no API key. Focuses on free and open-source software.",
     "source_key": "openuse"
+  },
+  {
+    "id": "honor-app-market",
+    "name": "HONOR App Market",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "360-mobile-assistant",
+    "name": "360 Mobile Assistant",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "baidu-mobile-assistant",
+    "name": "Baidu Mobile Assistant",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "wandoujia",
+    "name": "Wandoujia",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "rustore",
+    "name": "RuStore",
+    "platform": "android",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "altstore",
+    "name": "AltStore",
+    "platform": "ios",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "skich-store",
+    "name": "Skich Store",
+    "platform": "ios",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "npackd",
+    "name": "Npackd",
+    "platform": "windows",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "ea-app",
+    "name": "EA app",
+    "platform": "pc-games",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+  },
+  {
+    "id": "itch-io",
+    "name": "itch.io",
+    "platform": "pc-games",
+    "integration_mode": "external_only",
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
   }
 ]

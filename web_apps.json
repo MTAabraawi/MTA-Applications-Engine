@@ -75,5 +75,105 @@
     "app_url": "https://www.blender.org",
     "icon_url": "https://www.blender.org/media/files/blender_media/blender-logo.svg",
     "homepage": "https://www.blender.org"
+  },
+  {
+    "id": "excalidraw",
+    "name": "Excalidraw",
+    "developer": "Excalidraw",
+    "summary": "Virtual whiteboard for sketching diagrams and ideas collaboratively.",
+    "description": "Browser-based collaborative whiteboard with hand-drawn style diagrams, export options and real-time collaboration.",
+    "category": "productivity",
+    "app_url": "https://excalidraw.com",
+    "homepage": "https://github.com/excalidraw/excalidraw"
+  },
+  {
+    "id": "penpot",
+    "name": "Penpot",
+    "developer": "Penpot",
+    "summary": "Open-source design and prototyping platform for product teams.",
+    "description": "Browser-based design and prototyping workspace for interface design, collaboration and handoff.",
+    "category": "design",
+    "app_url": "https://design.penpot.app",
+    "homepage": "https://penpot.app"
+  },
+  {
+    "id": "jitsi-meet",
+    "name": "Jitsi Meet",
+    "developer": "8x8 / Jitsi",
+    "summary": "Open-source video meetings that can run in a browser.",
+    "description": "Web video-conferencing application supporting meetings, screen sharing and collaboration; deployment and privacy depend on the selected instance.",
+    "category": "communication",
+    "app_url": "https://meet.jit.si",
+    "homepage": "https://jitsi.org"
+  },
+  {
+    "id": "cryptpad",
+    "name": "CryptPad",
+    "developer": "XWiki / CryptPad",
+    "summary": "Privacy-focused collaborative documents and productivity tools.",
+    "description": "End-to-end encrypted collaboration suite for documents, spreadsheets, presentations, forms and shared workspaces.",
+    "category": "productivity",
+    "app_url": "https://cryptpad.fr",
+    "homepage": "https://cryptpad.org"
+  },
+  {
+    "id": "hedgedoc",
+    "name": "HedgeDoc",
+    "developer": "HedgeDoc contributors",
+    "summary": "Collaborative Markdown editor for notes and technical documents.",
+    "description": "Browser-based collaborative Markdown editor suited to meeting notes, documentation and shared technical writing.",
+    "category": "writing",
+    "app_url": "https://demo.hedgedoc.org",
+    "homepage": "https://hedgedoc.org"
+  },
+  {
+    "id": "vikunja",
+    "name": "Vikunja",
+    "developer": "Vikunja",
+    "summary": "Open-source task and project management workspace.",
+    "description": "Web-based task manager with lists, projects, labels and collaboration features; hosted availability depends on the chosen instance.",
+    "category": "productivity",
+    "app_url": "https://try.vikunja.io",
+    "homepage": "https://vikunja.io"
+  },
+  {
+    "id": "etherpad",
+    "name": "Etherpad",
+    "developer": "Etherpad Foundation",
+    "summary": "Real-time collaborative text editor.",
+    "description": "Lightweight browser-based editor that allows multiple participants to write and edit the same document simultaneously.",
+    "category": "writing",
+    "app_url": "https://etherpad.org",
+    "homepage": "https://github.com/ether/etherpad"
+  },
+  {
+    "id": "drawio",
+    "name": "diagrams.net",
+    "developer": "JGraph",
+    "summary": "Diagramming application for flowcharts, architecture and process maps.",
+    "description": "Browser-based diagram editor for flowcharts, network diagrams, UML, architecture and other visual documentation.",
+    "category": "design",
+    "app_url": "https://app.diagrams.net",
+    "homepage": "https://www.diagrams.net"
+  },
+  {
+    "id": "libretranslate",
+    "name": "LibreTranslate",
+    "developer": "LibreTranslate contributors",
+    "summary": "Open-source machine translation API and web interface.",
+    "description": "Machine translation service with a web interface and API; language coverage and service limits depend on the hosting instance.",
+    "category": "utilities",
+    "app_url": "https://libretranslate.com",
+    "homepage": "https://github.com/LibreTranslate/LibreTranslate"
+  },
+  {
+    "id": "openstreetmap",
+    "name": "OpenStreetMap",
+    "developer": "OpenStreetMap contributors",
+    "summary": "Collaborative open map of the world.",
+    "description": "Community-maintained geographic database and map interface for exploring places, roads and geographic features.",
+    "category": "maps",
+    "app_url": "https://www.openstreetmap.org",
+    "homepage": "https://www.openstreetmap.org"
   }
 ]
