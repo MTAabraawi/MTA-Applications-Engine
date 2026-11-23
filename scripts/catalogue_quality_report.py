@@ -95,7 +95,7 @@ def build_report(records, generated_at=None):
             for target in targets:
                 target["substantive"]["summary_20_chars"] += 1
 
-        if not present(record.get("name")) or not present(record.get("source_url")):
+        if not present(record.get("name")) or not valid_https(record.get("source_url")):
             global_counts["invalid_required_records"] += 1
 
     def finalize(items):
@@ -143,7 +143,7 @@ def main():
     output = Path(__sys_env("CATALOGUE_QUALITY_REPORT", "catalogue-quality-report.json"))
     store = GitHubCatalogueStore(root)
     report = build_report(store.iter_records())
-    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({
         "report": str(output),
         "total_records": report["total_records"],
