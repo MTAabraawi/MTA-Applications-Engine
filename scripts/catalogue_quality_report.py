@@ -20,10 +20,11 @@ from github_catalog_store import GitHubCatalogueStore
 
 
 FIELDS = ("icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url")
+PLACEHOLDERS = {"", "unknown", "n/a", "na", "not available", "not provided", "not specified", "none", "null", "tbd", "-"}
 
 
 def present(value):
-    return value is not None and (not isinstance(value, str) or bool(value.strip()))
+    return value is not None and (not isinstance(value, str) or value.strip().casefold() not in PLACEHOLDERS)
 
 
 def valid_https(value):
