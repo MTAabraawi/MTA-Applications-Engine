@@ -32,6 +32,7 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(
 log = logging.getLogger("mta.github_enrichment")
 HEADERS = {"User-Agent": "MTA-Applications-Engine/1.0 (+https://github.com/MTAabraawi/MTA-Applications-Engine)"}
 TIMEOUT = httpx.Timeout(35.0, connect=10.0)
+SNAP_HEADERS = {**HEADERS, "Snap-Device-Series": "16", "Snap-Device-Architecture": "amd64", "Snap-Accept-Format": "2"}
 PRIORITY = {
     "firefox", "chromium", "google-chrome", "libreoffice", "gimp", "blender",
     "vlc", "inkscape", "krita", "thunderbird", "audacity", "obs-studio",
@@ -65,6 +66,54 @@ def trusted_url(value, hostname):
         return parsed.scheme == "https" and parsed.hostname == hostname and not parsed.username and not parsed.password
     except ValueError:
         return False
+
+
+def parse_snap_detail(payload, row):
+    if not isinstance(payload, dict):
+        return {}
+    snap = payload.get("snap") if isinstance(payload.get("snap"), dict) else None
+    if not snap:
+        channel_map = payload.get("channel-map") if isinstance(payload.get("channel-map"), list) else []
+        snap = next((entry.get("snap") for entry in channel_map
+                     if isinstance(entry, dict) and isinstance(entry.get("snap"), dict)), {})
+    if not isinstance(snap, dict) or not snap:
+        return {}
+
+    publisher = snap.get("publisher") if isinstance(snap.get("publisher"), dict) else {}
+    media = snap.get("media") if isinstance(snap.get("media"), list) else []
+    icon = next((item.get("url") for item in media
+                 if isinstance(item, dict) and item.get("type") == "icon"
+                 and valid_https_icon(item.get("url"))), None)
+    categories = snap.get("categories") if isinstance(snap.get("categories"), list) else []
+    category_names = []
+    for item in categories:
+        if isinstance(item, str) and item.strip():
+            category_names.append(item.strip())
+        elif isinstance(item, dict):
+            name = item.get("name") or item.get("display-name")
+            if isinstance(name, str) and name.strip():
+                category_names.append(name.strip())
+    website = snap.get("website")
+    app_url = website.strip() if isinstance(website, str) and valid_https_icon(website) else None
+    detail = {
+        "snap_name": snap.get("name") or row.get("external_id"),
+        "publisher": publisher,
+        "license": snap.get("license"),
+        "categories": category_names,
+        "media": [{"type": item.get("type"), "url": item.get("url")} for item in media
+                  if isinstance(item, dict) and item.get("type") == "icon" and valid_https_icon(item.get("url"))],
+        "website": website,
+    }
+    return {
+        "developer": publisher.get("display-name") or publisher.get("username"),
+        "summary": snap.get("summary") if isinstance(snap.get("summary"), str) else None,
+        "description": snap.get("description") if isinstance(snap.get("description"), str) else None,
+        "category": ", ".join(dict.fromkeys(category_names)) or None,
+        "license": snap.get("license") if isinstance(snap.get("license"), str) else None,
+        "app_url": app_url,
+        "icon_url": icon,
+        "metadata_json": {"snap_store_detail": detail},
+    }
 
 
 def parse_steam_detail(payload, row):
@@ -126,13 +175,13 @@ def parse_steam_detail(payload, row):
     return result
 
 
-async def get_response(client, url, trusted_host):
+async def get_response(client, url, trusted_host, request_headers=None):
     last_error = None
     for attempt in range(3):
         current = url
         try:
             for _ in range(4):
-                response = await client.get(current, timeout=TIMEOUT, headers=HEADERS, follow_redirects=False)
+                response = await client.get(current, timeout=TIMEOUT, headers=request_headers or HEADERS, follow_redirects=False)
                 if response.status_code in {301, 302, 303, 307, 308}:
                     location = response.headers.get("Location")
                     if not location:
@@ -175,6 +224,7 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
 
     async def one(row):
         metadata = row.get("metadata_json") or {}
+        request_headers = None
         if hostname == "bluejetty.ai":
             url = metadata.get("record_json_url")
         elif hostname == "store.steampowered.com":
@@ -182,6 +232,12 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
             if not app_id.isdigit():
                 return row, None, ValueError("Invalid Steam app id")
             url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=us&l=en"
+        elif hostname == "api.snapcraft.io":
+            snap_name = str(row.get("external_id") or "")
+            if not re.fullmatch(r"[a-z0-9-]+", snap_name):
+                return row, None, ValueError("Invalid Snap package name")
+            url = f"https://api.snapcraft.io/v2/snaps/info/{snap_name}"
+            request_headers = SNAP_HEADERS
         else:
             url = row.get("source_url")
         if not trusted_url(url, hostname):
@@ -189,9 +245,9 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
         async with semaphore:
             await asyncio.sleep(0.35)
             try:
-                response = await get_response(client, url, hostname)
-                payload = response.json() if hostname in {"bluejetty.ai", "store.steampowered.com"} else response.text
-                parsed = parser(payload, row) if hostname == "store.steampowered.com" else parser(payload)
+                response = await get_response(client, url, hostname, request_headers=request_headers)
+                payload = response.json() if hostname in {"bluejetty.ai", "store.steampowered.com", "api.snapcraft.io"} else response.text
+                parsed = parser(payload, row) if hostname in {"store.steampowered.com", "api.snapcraft.io"} else parser(payload)
                 return row, parsed, None
             except (httpx.HTTPError, ValueError, TypeError) as exc:
                 return row, None, exc
@@ -317,6 +373,7 @@ async def main():
         raise SystemExit("GitHub catalogue is empty; run catalogue sync before enrichment.")
     blue_limit = max(1, min(int(os.getenv("BLUEJETTY_ENRICH_BATCH_SIZE", "200")), 500))
     steam_limit = max(1, min(int(os.getenv("STEAM_ENRICH_BATCH_SIZE", "100")), 100))
+    snap_limit = max(1, min(int(os.getenv("SNAP_ENRICH_BATCH_SIZE", "100")), 100))
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
     max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "1000")), 1000))
@@ -326,6 +383,7 @@ async def main():
         "bluejetty": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
         "fedora": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
         "steam": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
+        "snap": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
     }
     providers = icon_provider_index(records)
     cross_updates, cross_counts = crossmatch_icons(records, providers, datetime.now(timezone.utc).isoformat())
@@ -351,8 +409,10 @@ async def main():
                  ("summary", "description", "app_url", "icon_url")),
                 ("steam", "steam", "store.steampowered.com", parse_steam_detail, steam_limit, 7,
                  ("developer", "summary", "description", "category", "app_url")),
+                ("snap", "snap", "api.snapcraft.io", parse_snap_detail, snap_limit, 7,
+                 ("developer", "summary", "description", "category", "license", "app_url", "icon_url")),
             ):
-                source_key = {"bluejetty": "bluejetty", "fedora": "fedora-packages", "steam": "steam"}[source]
+                source_key = {"bluejetty": "bluejetty", "fedora": "fedora-packages", "steam": "steam", "snap": "snap-store"}[source]
                 eligible = [row for row in records if row.get("source_key") == source_key
                             and due(row, prefix, days, fields)]
                 if source == "bluejetty":
