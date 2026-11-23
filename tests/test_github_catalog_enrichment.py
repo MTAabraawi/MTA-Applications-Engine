@@ -106,3 +106,36 @@ def test_enrichment_only_fills_missing_fields_and_preserves_existing_values():
     assert result["metadata_json"]["source"]["id"] == "blue-1"
     assert result["metadata_json"]["bluejetty_detail"]["verified"] is True
     assert counts["fields_filled"] == {"summary": 1}
+
+
+def test_quality_report_distinguishes_missing_and_malformed_metadata():
+    from scripts.catalogue_quality_report import build_report
+
+    report = build_report([
+        {
+            "source_key": "fdroid",
+            "platform": "android",
+            "external_id": "good",
+            "name": "Good App",
+            "source_url": "https://f-droid.org/packages/good",
+            "icon_url": "https://f-droid.org/icons/good.png",
+            "description": "A sufficiently detailed and factual application description.",
+            "summary": "A useful summary for this app.",
+        },
+        {
+            "source_key": "fedora-packages",
+            "platform": "linux",
+            "external_id": "package",
+            "name": "Package",
+            "source_url": "https://packages.fedoraproject.org/pkgs/package",
+            "icon_url": "javascript:alert(1)",
+            "description": None,
+        },
+    ], generated_at="2026-11-23T00:00:00+00:00")
+
+    assert report["total_records"] == 2
+    assert report["by_source"]["fdroid"]["fields"]["icon_url"]["present"] == 1
+    assert report["by_source"]["fedora-packages"]["fields"]["icon_url"]["malformed"] == 1
+    assert report["by_source"]["fedora-packages"]["fields"]["description"]["missing"] == 1
+    assert report["global"]["malformed_icon_url"] == 1
+    assert report["policy"]["missing_icons_are_not_automatically_errors"] is True
