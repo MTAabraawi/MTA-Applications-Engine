@@ -528,6 +528,70 @@ async def fetch_gnome_extensions(client: httpx.AsyncClient) -> list[dict[str, An
     return _unique(records)
 
 
+async def fetch_open_vsx(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Collect VS Code-compatible extension metadata from the public Open VSX registry."""
+    terms = [x.strip() for x in os.getenv(
+        "OPEN_VSX_SEARCH_TERMS",
+        "python,typescript,javascript,java,git,docker,markdown,theme,debugger,testing,remote,notebook,security,ai",
+    ).split(",") if x.strip()]
+    page_size = max(1, min(int(os.getenv("OPEN_VSX_PAGE_SIZE", "50")), 100))
+    pages = max(1, min(int(os.getenv("OPEN_VSX_PAGES", "2")), 5))
+    records: list[dict[str, Any]] = []
+    for term in terms:
+        for page in range(pages):
+            try:
+                payload = await _json(
+                    client, "https://open-vsx.org/api/-/search",
+                    params={"query": term, "size": page_size, "offset": page * page_size},
+                )
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("Open VSX search failed for %r page %d: %s", term, page + 1, exc)
+                break
+            items = payload.get("extensions", []) if isinstance(payload, dict) else []
+            if not isinstance(items, list) or not items:
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                namespace = item.get("namespace")
+                extension_name = item.get("name")
+                if not namespace or not extension_name:
+                    continue
+                extension_id = str(namespace) + "." + str(extension_name)
+                display_name = item.get("displayName") or extension_name
+                files = item.get("files") or {}
+                icon = files.get("icon") if isinstance(files, dict) else None
+                listing = "https://open-vsx.org/extension/" + str(namespace) + "/" + str(extension_name)
+                record = _record(
+                    "open-vsx", extension_id, "ide-plugins", display_name, listing,
+                    developer=namespace,
+                    summary=item.get("description"),
+                    description=item.get("description"),
+                    category=", ".join(item.get("categories") or []) if isinstance(item.get("categories"), list) else None,
+                    license=item.get("license"),
+                    app_url=item.get("homepage") or item.get("repository"),
+                    icon_url=icon,
+                    metadata_json={
+                        "catalog_type": "vscode-compatible-extension",
+                        "namespace": namespace,
+                        "extension_name": extension_name,
+                        "version": item.get("version"),
+                        "download_count": item.get("downloadCount"),
+                        "average_rating": item.get("averageRating"),
+                        "review_count": item.get("reviewCount"),
+                        "timestamp": item.get("timestamp"),
+                        "published_by": item.get("publishedBy"),
+                        "categories": item.get("categories") if isinstance(item.get("categories"), list) else [],
+                    },
+                )
+                if record:
+                    records.append(record)
+            if len(items) < page_size:
+                break
+            await asyncio.sleep(0.08)
+    return _unique(records)
+
+
 
 async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None = None) -> dict[str, list[dict[str, Any]]]:
     """Fetch selected public catalogues independently; isolate source failures."""
@@ -557,6 +621,7 @@ async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None
             "fedora-packages": lambda: fetch_fedora_packages(client),
             "bluejetty": lambda: fetch_bluejetty(client),
             "openuse": lambda: fetch_openuse(client),
+            "open-vsx": lambda: fetch_open_vsx(client),
             "chocolatey": lambda: fetch_chocolatey(client),
         }
         selected = set(source_filter) if source_filter else set(available_jobs)

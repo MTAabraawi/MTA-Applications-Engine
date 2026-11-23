@@ -10,6 +10,7 @@ from expanded_catalog_sources import (
     fetch_apple_appbrain,
     fetch_jetbrains_plugins,
     fetch_gnome_extensions,
+    fetch_open_vsx,
 )
 from fedora_catalog_source import fetch_fedora_packages
 
@@ -253,3 +254,38 @@ def test_expanded_catalogue_filter_rejects_unknown_sources():
 
     with pytest.raises(ValueError, match="Unknown expanded catalogue source"):
         asyncio.run(module.fetch_expanded_catalogs(source_filter={"not-a-source"}))
+
+
+def test_open_vsx_search_indexes_extension_metadata_without_downloading_binaries(monkeypatch):
+    monkeypatch.setenv("OPEN_VSX_SEARCH_TERMS", "python")
+    monkeypatch.setenv("OPEN_VSX_PAGE_SIZE", "10")
+    monkeypatch.setenv("OPEN_VSX_PAGES", "1")
+    client = FakeClient(lambda url, kwargs: {
+        "extensions": [{
+            "namespace": "ms-python",
+            "name": "python",
+            "version": "2026.4.0",
+            "displayName": "Python",
+            "description": "Python language support",
+            "downloadCount": 123456,
+            "averageRating": 4.2,
+            "reviewCount": 25,
+            "categories": ["Programming Languages"],
+            "files": {"icon": "https://cdn.example/python.png"},
+            "homepage": "https://github.com/microsoft/vscode-python",
+            "license": "MIT",
+        }]
+    })
+
+    records = asyncio.run(fetch_open_vsx(client))
+
+    assert len(records) == 1
+    assert records[0]["source_key"] == "open-vsx"
+    assert records[0]["external_id"] == "ms-python.python"
+    assert records[0]["platform"] == "ide-plugins"
+    assert records[0]["source_url"] == "https://open-vsx.org/extension/ms-python/python"
+    assert records[0]["icon_url"] == "https://cdn.example/python.png"
+    assert records[0]["metadata_json"]["download_count"] == 123456
+    assert records[0]["metadata_json"]["version"] == "2026.4.0"
+    assert client.calls[0][0] == "https://open-vsx.org/api/-/search"
+    assert client.calls[0][1]["params"] == {"query": "python", "size": 10, "offset": 0}
