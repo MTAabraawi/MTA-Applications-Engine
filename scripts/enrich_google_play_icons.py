@@ -92,7 +92,9 @@ def select_candidates(records, limit=1000, now=None):
                 checked = datetime.fromisoformat(str(attempt["checked_at"]).replace("Z", "+00:00"))
                 if checked.tzinfo is None:
                     checked = checked.replace(tzinfo=timezone.utc)
-                if checked > cutoff:
+                status = str(attempt.get("status") or "")
+                retry_window = timedelta(hours=6) if status not in {"matched", "og_image_missing", "untrusted_redirect"} else timedelta(days=7)
+                if checked > now - retry_window:
                     continue
             except ValueError:
                 pass
