@@ -4,6 +4,7 @@ on:
   push:
     branches: [audit/catalogue-metadata-enrichment-quality]
     paths:
+      - "github_catalog_store.py"
       - "scripts/enrich_github_catalog.py"
       - "scripts/catalogue_quality_report.py"
       - "scripts/compare_catalogue_quality.py"
@@ -11,6 +12,7 @@ on:
       - "scripts/enrich_google_play_icons.py"
       - "scripts/normalize_steam_icon_assets.py"
       - "tests/test_github_catalog_enrichment.py"
+      - "tests/test_github_catalog_store.py"
       - ".github/workflows/catalogue-metadata-audit.yml"
 
 permissions:
