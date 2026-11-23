@@ -203,6 +203,8 @@ def test_google_play_icon_enrichment_accepts_only_official_listing_and_icon_host
     assert extract_official_og_icon(html) == "https://play-lh.googleusercontent.com/example-icon=s0"
     bad_html = '<meta property="og:image" content="https://evil.example/icon.png">'
     assert extract_official_og_icon(bad_html) is None
+    userinfo_html = '<meta property="og:image" content="https://attacker@play-lh.googleusercontent.com/icon.png">'
+    assert extract_official_og_icon(userinfo_html) is None
 
 
 def test_google_play_icon_enrichment_prioritizes_rating_count_and_never_selects_existing_icons():
