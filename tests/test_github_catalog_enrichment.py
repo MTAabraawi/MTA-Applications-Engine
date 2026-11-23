@@ -262,3 +262,42 @@ def test_steam_detail_parser_does_not_invent_values_for_unavailable_records():
     from scripts.enrich_github_catalog import parse_steam_detail
 
     assert parse_steam_detail({"730": {"success": False}}, {"external_id": "730"}) == {}
+
+
+def test_snapcraft_detail_parser_maps_official_publisher_description_license_and_icon():
+    from scripts.enrich_github_catalog import parse_snap_detail
+
+    payload = {"snap": {
+        "name": "0ad",
+        "publisher": {"display-name": "Wildfire Games", "username": "play0ad", "validation": "verified"},
+        "summary": "Real-time strategy game of ancient warfare",
+        "description": "A free, open-source historical strategy game.",
+        "license": "GPL-2.0+",
+        "categories": [{"name": "games"}],
+        "media": [
+            {"type": "icon", "url": "https://dashboard.snapcraft.io/site_media/appmedia/icon.png"},
+            {"type": "screenshot", "url": "https://dashboard.snapcraft.io/site_media/appmedia/screenshot.png"},
+        ],
+        "website": "https://play0ad.com",
+    }}
+    result = parse_snap_detail(payload, {"external_id": "0ad"})
+    assert result["developer"] == "Wildfire Games"
+    assert result["summary"] == "Real-time strategy game of ancient warfare"
+    assert result["description"] == "A free, open-source historical strategy game."
+    assert result["category"] == "games"
+    assert result["license"] == "GPL-2.0+"
+    assert result["app_url"] == "https://play0ad.com"
+    assert result["icon_url"] == "https://dashboard.snapcraft.io/site_media/appmedia/icon.png"
+    assert len(result["metadata_json"]["snap_store_detail"]["media"]) == 1
+
+
+def test_snapcraft_detail_parser_rejects_non_https_icons_and_missing_snap_data():
+    from scripts.enrich_github_catalog import parse_snap_detail
+
+    result = parse_snap_detail({"snap": {
+        "name": "sample",
+        "media": [{"type": "icon", "url": "http://example.org/icon.png"}],
+        "publisher": {},
+    }}, {"external_id": "sample"})
+    assert result["icon_url"] is None
+    assert parse_snap_detail({}, {"external_id": "missing"}) == {}
