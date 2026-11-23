@@ -11,6 +11,8 @@ def test_store_registry_includes_all_registered_sources():
     assert len(entries) == 54
     assert len({entry["id"] for entry in entries}) == 54
     assert {entry["integration_mode"] for entry in entries} == {"live_api", "external_only", "credential_required", "cli_search"}
+    modes = {mode: sum(entry["integration_mode"] == mode for entry in entries) for mode in ("live_api", "cli_search", "external_only", "credential_required")}
+    assert modes == {"live_api": 22, "cli_search": 1, "external_only": 30, "credential_required": 1}
     live = {entry["source_key"] for entry in entries if entry.get("source_key")}
     assert {
         "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",

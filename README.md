@@ -23,6 +23,17 @@ The complete store directory and each store's integration state are maintained i
 
 Connectors fail independently. A temporary outage at one source should not stop ingestion from the others. Results are deduplicated by source key and external identifier, and non-HTTPS source links are rejected.
 
+## Catalogue coverage and integration status
+
+The store directory is a registry of **54 named sources**, not a claim that all 54 are connected to live ingestion. Current registry status on this branch:
+
+- **22 live API connectors** and **1 CLI-based connector** are eligible for ingestion.
+- **30 external-only entries** are directory links; they are not indexed by this engine until a supported public feed or approved partner integration is verified.
+- **1 credential-required entry** (Google Play) has an optional AppBrain connector, which remains unavailable unless the required API credential and explicit sync configuration are provided.
+- The curated MTA web-app source contains **17 metadata records** on this branch.
+
+The engine stores metadata and source links only. It does not mirror installer files. Coverage is bounded by each upstream source's API, search terms, pagination, regional availability and usage terms. Counts must not be presented as a complete inventory of any third-party store.
+
 ## API
 
 - `GET /health` — service health.
