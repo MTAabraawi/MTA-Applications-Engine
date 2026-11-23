@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from html import unescape
 import os
 import re
 import time
@@ -66,6 +67,53 @@ def trusted_url(value, hostname):
         return False
 
 
+def parse_steam_detail(payload, row):
+    app_id = str(row.get("external_id") or "")
+    item = payload.get(app_id) if isinstance(payload, dict) else None
+    if not isinstance(item, dict) or item.get("success") is not True or not isinstance(item.get("data"), dict):
+        return {}
+    data = item["data"]
+
+    def clean(value, maximum):
+        if not isinstance(value, str):
+            return None
+        value = unescape(re.sub(r"<[^>]*>", " ", value))
+        value = " ".join(value.split()).strip()
+        return value[:maximum] if value else None
+
+    developers = [clean(value, 180) for value in data.get("developers", []) if isinstance(value, str)]
+    publishers = [clean(value, 180) for value in data.get("publishers", []) if isinstance(value, str)]
+    genres = [clean(value.get("description"), 100) for value in data.get("genres", [])
+              if isinstance(value, dict) and isinstance(value.get("description"), str)]
+    website = data.get("website")
+    app_url = website if isinstance(website, str) and trusted_url(website, urlsplit(website).hostname or "") else None
+    if app_url and urlsplit(app_url).hostname == "store.steampowered.com":
+        app_url = None
+
+    detail = {
+        "app_id": app_id,
+        "type": clean(data.get("type"), 60),
+        "developers": developers,
+        "publishers": publishers,
+        "genres": genres,
+        "categories": [clean(value.get("description"), 100) for value in data.get("categories", [])
+                       if isinstance(value, dict) and isinstance(value.get("description"), str)],
+        "platforms": data.get("platforms") if isinstance(data.get("platforms"), dict) else {},
+        "release_date": data.get("release_date") if isinstance(data.get("release_date"), dict) else {},
+        "website": website if isinstance(website, str) else None,
+        "required_age": data.get("required_age"),
+    }
+    result = {
+        "developer": " / ".join(value for value in developers if value) or None,
+        "summary": clean(data.get("short_description"), 500),
+        "description": clean(data.get("detailed_description") or data.get("about_the_game"), 5000),
+        "category": ", ".join(value for value in genres if value) or None,
+        "app_url": app_url,
+        "metadata_json": {"steam_detail": detail},
+    }
+    return result
+
+
 async def get_response(client, url, trusted_host):
     last_error = None
     for attempt in range(3):
@@ -115,15 +163,23 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
 
     async def one(row):
         metadata = row.get("metadata_json") or {}
-        url = metadata.get("record_json_url") if hostname == "bluejetty.ai" else row.get("source_url")
+        if hostname == "bluejetty.ai":
+            url = metadata.get("record_json_url")
+        elif hostname == "store.steampowered.com":
+            app_id = str(row.get("external_id") or "")
+            if not app_id.isdigit():
+                return row, None, ValueError("Invalid Steam app id")
+            url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=us&l=en"
+        else:
+            url = row.get("source_url")
         if not trusted_url(url, hostname):
             return row, None, ValueError("Untrusted or missing detail URL")
         async with semaphore:
             await asyncio.sleep(0.35)
             try:
                 response = await get_response(client, url, hostname)
-                payload = response.json() if hostname == "bluejetty.ai" else response.text
-                parsed = parser(payload)
+                payload = response.json() if hostname in {"bluejetty.ai", "store.steampowered.com"} else response.text
+                parsed = parser(payload, row) if hostname == "store.steampowered.com" else parser(payload)
                 return row, parsed, None
             except (httpx.HTTPError, ValueError, TypeError) as exc:
                 return row, None, exc
@@ -248,6 +304,7 @@ async def main():
     if not records:
         raise SystemExit("GitHub catalogue is empty; run catalogue sync before enrichment.")
     blue_limit = max(1, min(int(os.getenv("BLUEJETTY_ENRICH_BATCH_SIZE", "200")), 500))
+    steam_limit = max(1, min(int(os.getenv("STEAM_ENRICH_BATCH_SIZE", "100")), 100))
     fedora_limit = max(1, min(int(os.getenv("FEDORA_ENRICH_BATCH_SIZE", "25")), 100))
     concurrency = max(1, min(int(os.getenv("ENRICH_CONCURRENCY", "2")), 4))
     max_batches = max(1, min(int(os.getenv("ENRICHMENT_MAX_BATCHES", "1000")), 1000))
@@ -256,6 +313,7 @@ async def main():
     totals = {
         "bluejetty": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
         "fedora": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
+        "steam": {"batches": 0, "selected": 0, "checked": 0, "enriched": 0, "failed": 0, "fields_filled": {}},
     }
     providers = icon_provider_index(records)
     cross_updates, cross_counts = crossmatch_icons(records, providers, datetime.now(timezone.utc).isoformat())
@@ -279,8 +337,11 @@ async def main():
                  ("developer", "summary", "description", "category", "app_url", "icon_url")),
                 ("fedora", "fedora", "packages.fedoraproject.org", parse_fedora_detail, fedora_limit, 7,
                  ("summary", "description", "app_url", "icon_url")),
+                ("steam", "steam", "store.steampowered.com", parse_steam_detail, steam_limit, 7,
+                 ("developer", "summary", "description", "category", "app_url")),
             ):
-                eligible = [row for row in records if row.get("source_key") == ("bluejetty" if source == "bluejetty" else "fedora-packages")
+                source_key = {"bluejetty": "bluejetty", "fedora": "fedora-packages", "steam": "steam"}[source]
+                eligible = [row for row in records if row.get("source_key") == source_key
                             and due(row, prefix, days, fields)]
                 if source == "bluejetty":
                     eligible = [row for row in eligible if trusted_url((row.get("metadata_json") or {}).get("record_json_url"), hostname)]
