@@ -15,7 +15,7 @@ def test_fastapi_reads_github_catalogue_without_database(tmp_path, monkeypatch):
         "source_url": "https://example.org/browser",
     }])
 
-    rows = api.list_apps(q="browser", platform="android", source="fdroid", limit=10, offset=0, db=None)
+    rows = api.list_apps(q="browser", platform="android", source="fdroid", external_id=None, limit=10, offset=0, db=None)
     assert len(rows) == 1
     assert rows[0]["id"] == "fdroid:org.example.browser"
     assert rows[0]["source"] == "fdroid"
