@@ -336,69 +336,89 @@
     "name": "HONOR App Market",
     "platform": "android",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "متجر تطبيقات لأجهزة HONOR، يتيح اكتشاف التطبيقات والخدمات المتوافقة مع أجهزة الشركة. تختلف الإتاحة حسب المنطقة وطراز الجهاز؛ تحقق من صفحة التطبيق الرسمية ومتطلبات التوافق قبل التثبيت.",
+    "description_en": "An app marketplace for HONOR devices. Availability varies by region and device model; verify the official listing and compatibility before installation."
   },
   {
     "id": "360-mobile-assistant",
     "name": "360 Mobile Assistant",
     "platform": "android",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "منصة صينية لتوزيع واكتشاف تطبيقات Android. لا يعرض MTA حالياً فهرساً مباشراً موثقاً منها؛ استخدم صفحة الناشر الأصلية وتحقق من مصدر الحزمة وتوقيعها قبل التثبيت.",
+    "description_en": "A China-focused Android app discovery and distribution platform. MTA does not currently index a verified live feed from it; check the publisher and package signature at the original source."
   },
   {
     "id": "baidu-mobile-assistant",
     "name": "Baidu Mobile Assistant",
     "platform": "android",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "خدمة صينية لاكتشاف تطبيقات Android وتنزيلها. لم يُتحقق من واجهة فهرسة عامة مستقرة لـ MTA؛ راجع الناشر ومصدر التنزيل وتوافق التطبيق قبل الاستخدام.",
+    "description_en": "A China-focused Android app discovery and download service. No stable public catalogue feed has been verified for MTA; review the publisher, download source and compatibility."
   },
   {
     "id": "wandoujia",
     "name": "Wandoujia",
     "platform": "android",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "دليل صيني لاكتشاف تطبيقات وألعاب Android. بياناته غير متصلة حالياً بمحرك MTA؛ لا تعتبر ظهور اسم المتجر دليلاً على فهرسة تطبيقاته أو فحص ملفات التنزيل.",
+    "description_en": "A China-focused directory for Android apps and games. Its catalogue is not currently connected to MTA; the store's presence here does not imply its apps are indexed or downloads are scanned."
   },
   {
     "id": "rustore",
     "name": "RuStore",
     "platform": "android",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "متجر تطبيقات روسي يركز على تطبيقات Android والخدمات الرقمية. قد تختلف إمكانية الوصول والتوفر حسب البلد والجهاز؛ تحقق من متطلبات المنطقة وصفحة الناشر الرسمية.",
+    "description_en": "A Russian app marketplace focused on Android apps and digital services. Access and availability can vary by country and device; check regional requirements and the official publisher listing."
   },
   {
     "id": "altstore",
     "name": "AltStore",
     "platform": "ios",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "منصة بديلة لتثبيت تطبيقات iOS خارج مسار App Store التقليدي وفق طرق التثبيت والسياسات المتاحة. التوافق وخطوات التثبيت يختلفان حسب البلد وإصدار iOS ونوع الجهاز.",
+    "description_en": "An alternative iOS app distribution platform. Installation methods and compatibility depend on country, iOS version, device and applicable platform policies."
   },
   {
     "id": "skich-store",
     "name": "Skich Store",
     "platform": "ios",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "خدمة لاكتشاف تطبيقات وألعاب الهواتف وتوصية المستخدمين بمحتوى مناسب. هي طبقة اكتشاف وليست بالضرورة مستودع ملفات تثبيت مستقلاً؛ تحقق من وجهة التنزيل النهائية.",
+    "description_en": "A mobile app and game discovery service. It is primarily a discovery layer rather than necessarily an independent installer repository; verify the final download destination."
   },
   {
     "id": "npackd",
     "name": "Npackd",
     "platform": "windows",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "كتالوج ومدير حزم لبرامج Windows يساعد على اكتشاف البرامج وتثبيتها وتحديثها. راجع مصدر الحزمة وبيانات الإصدار قبل التثبيت.",
+    "description_en": "A Windows software catalogue and package manager for discovering, installing and updating applications. Review package sources and release details before installation."
   },
   {
     "id": "ea-app",
     "name": "EA app",
     "platform": "pc-games",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "منصة EA لتثبيت وإدارة ألعاب الشركة على الحاسوب والوصول إلى مكتبة المستخدم والتحديثات. راجع متطلبات اللعبة والمنطقة وشروط الحساب قبل الشراء أو التنزيل.",
+    "description_en": "EA's desktop platform for installing and managing EA games, libraries and updates. Check game requirements, regional availability and account terms before purchasing or downloading."
   },
   {
     "id": "itch-io",
     "name": "itch.io",
     "platform": "pc-games",
     "integration_mode": "external_only",
-    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available."
+    "reason": "Official store directory link only. No supported public bulk catalogue API or approved partner feed has been verified; do not present this source as indexed until a stable integration is available.",
+    "description_ar": "منصة مستقلة لنشر واكتشاف الألعاب الرقمية، خصوصاً ألعاب المطورين المستقلين، مع صفحات للمشاريع وطرق توزيع متعددة. تحقق من نظام التشغيل ومتطلبات كل لعبة وصفحة المطور.",
+    "description_en": "An independent platform for publishing and discovering digital games, especially indie titles, with project pages and varied distribution options. Check each game's OS requirements and developer page."
   }
 ]
