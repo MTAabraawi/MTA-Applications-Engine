@@ -71,7 +71,7 @@ def main():
     store = GitHubCatalogueStore(root)
     updates, examples = normalize(store.iter_records())
     result = store.upsert_many(updates, rebuild_indexes=False) if updates else {"updated": 0, "inserted": 0, "unchanged": 0, "skipped": 0}
-    manifest = store.rebuild_indexes() if updates else store.manifest()
+    manifest = store.rebuild_indexes()
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "steam",
