@@ -9,6 +9,7 @@ on:
       - "scripts/compare_catalogue_quality.py"
       - "scripts/validate_catalogue_icon_urls.py"
       - "scripts/enrich_google_play_icons.py"
+      - "scripts/normalize_steam_icon_assets.py"
       - "tests/test_github_catalog_enrichment.py"
       - ".github/workflows/catalogue-metadata-audit.yml"
 
@@ -56,7 +57,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Compile enrichment and audit modules
         run: |
-          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py
+          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py scripts/normalize_steam_icon_assets.py
       - name: Run complete Python regression suite
         run: pytest -q
       - name: Capture immutable main-branch quality baseline before enrichment
@@ -66,6 +67,8 @@ jobs:
           git show origin/main:catalogue_data/indexes/stats.json > reports/catalogue-quality-baseline.json
       - name: Enrich missing Blue Jetty and Fedora metadata from official source detail pages
         run: python scripts/enrich_github_catalog.py | tee reports/catalogue-enrichment-results.json
+      - name: Remove Steam capsule banners from the application icon field
+        run: python scripts/normalize_steam_icon_assets.py
       - name: Fill missing Android icons from official Google Play Open Graph metadata
         run: python scripts/enrich_google_play_icons.py
       - name: Rebuild indexes and produce source-aware quality report
@@ -83,13 +86,13 @@ jobs:
       - name: Commit audited catalogue snapshot and report to this branch only
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-baseline.json reports/catalogue-enrichment-results.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json)" ]; then
+          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-baseline.json reports/catalogue-enrichment-results.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json reports/steam-icon-normalization.json)" ]; then
             echo "No catalogue metadata changes were produced."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add catalogue_data/ reports/catalogue-quality-baseline.json reports/catalogue-enrichment-results.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json
+          git add catalogue_data/ reports/steam-icon-normalization.json reports/catalogue-quality-baseline.json reports/catalogue-enrichment-results.json reports/catalogue-quality-report.json reports/catalogue-quality-comparison.json reports/catalogue-icon-validation.json reports/google-play-icon-enrichment.json
           git commit -m "Apply source-verified catalogue metadata enrichment and report"
           git fetch origin audit/catalogue-metadata-enrichment-quality
           git rebase origin/audit/catalogue-metadata-enrichment-quality
