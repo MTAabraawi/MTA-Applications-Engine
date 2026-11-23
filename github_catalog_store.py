@@ -186,6 +186,7 @@ class GitHubCatalogueStore:
             item["metadata_json"] = item.get("metadata_json") or {}
             item["first_seen_at"] = (old or {}).get("first_seen_at") or item.get("first_seen_at") or now
             item["updated_at"] = now
+            clear_fields = set(incoming.get("_clear_fields") or ()) & set(FIELDS)
 
             if old:
                 merged = dict(old)
@@ -196,6 +197,8 @@ class GitHubCatalogueStore:
                         continue
                     elif _has_value(value):
                         merged[field] = value
+                for field in clear_fields:
+                    merged[field] = None
                 comparable_old = {k: v for k, v in old.items() if k != "updated_at"}
                 comparable_new = {k: v for k, v in merged.items() if k != "updated_at"}
                 if comparable_old == comparable_new:
@@ -205,6 +208,8 @@ class GitHubCatalogueStore:
                 shard[key] = merged
                 updated += 1
             else:
+                for field in clear_fields:
+                    item[field] = None
                 shard[key] = item
                 inserted += 1
 
