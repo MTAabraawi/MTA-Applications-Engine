@@ -6,6 +6,8 @@ on:
     paths:
       - "app.py"
       - "worker.js"
+      - "open_catalog_sources.py"
+      - "expanded_catalog_sources.py"
       - "tests/**"
       - ".github/workflows/catalogue-quality.yml"
 
@@ -39,3 +41,39 @@ jobs:
           node-version: "22"
       - name: Check Cloudflare Worker syntax
         run: node --check worker.js
+
+  sync-open-vsx:
+    needs: offline-tests
+    if: github.event_name == 'push' && (contains(github.event.head_commit.modified, 'open_catalog_sources.py') || contains(github.event.head_commit.modified, 'expanded_catalog_sources.py'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install engine dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Sync only the bounded Open VSX source
+        env:
+          MTA_STORAGE_BACKEND: github
+          SYNC_SOURCES: open-vsx
+          OPEN_VSX_PAGE_SIZE: "50"
+          OPEN_VSX_PAGES: "1"
+        run: python sync_catalogs.py
+      - name: Commit Open VSX data to this branch only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data
+          if git diff --cached --quiet; then
+            echo "No Open VSX data changes."
+          else
+            git commit -m "Sync bounded Open VSX catalogue snapshot"
+            git push origin "HEAD:catalogue-quality-round2"
+          fi

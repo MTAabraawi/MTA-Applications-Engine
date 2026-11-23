@@ -1,4 +1,4 @@
-"""Free public catalogue connectors for Blue Jetty, OpenUse and Chocolatey.
+"""Free public catalogue connectors for Blue Jetty, OpenUse, Open VSX and Chocolatey.
 
 Blue Jetty and OpenUse are read-only public APIs. Chocolatey is queried only
 through its supported Chocolatey CLI (never by unsupported direct OData calls).
