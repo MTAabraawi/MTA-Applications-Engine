@@ -6,7 +6,6 @@ on:
     paths:
       - "open_catalog_sources.py"
       - "expanded_catalog_sources.py"
-      - ".github/workflows/open-vsx-sync.yml"
   workflow_dispatch:
 
 permissions:
