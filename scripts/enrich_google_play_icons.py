@@ -63,7 +63,7 @@ def extract_official_og_icon(html):
         return None
     try:
         parsed = urlsplit(value)
-        if parsed.scheme == "https" and parsed.hostname == "play-lh.googleusercontent.com" and parsed.path:
+        if parsed.scheme == "https" and parsed.hostname == "play-lh.googleusercontent.com" and parsed.path and not parsed.username and not parsed.password:
             return value
     except ValueError:
         return None
