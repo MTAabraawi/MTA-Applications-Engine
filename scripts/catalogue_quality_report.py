@@ -135,6 +135,12 @@ def build_report(records, generated_at=None):
             "url_fields_require_absolute_https_urls": True,
             "substantive_description_minimum_characters": 40,
             "substantive_summary_minimum_characters": 20,
+            "source_interpretation": {
+                "bluejetty": "Application listings; direct source details and exact official store listing identifiers are used for enrichment.",
+                "fedora-packages": "Linux package records include libraries and non-GUI components; missing application icons are not automatically defects.",
+                "snap-store": "Icons are accepted only from Snap Store media entries explicitly typed as icon.",
+                "steam": "Descriptions and publisher data come from Steam appdetails; header and capsule artwork are not substituted as application icons.",
+            },
         },
     }
 
