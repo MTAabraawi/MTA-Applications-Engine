@@ -177,3 +177,14 @@ def test_quality_comparison_reports_field_and_source_deltas_without_fabrication(
     assert report["overall"]["icon_url"]["percentage_point_delta"] == 50.0
     assert report["by_source"]["bluejetty"]["fields"]["icon_url"]["present_delta"] == 1
     assert "not fabricated" in report["policy"]
+
+
+def test_icon_provider_index_rejects_non_https_or_malformed_icon_urls():
+    from scripts.enrich_github_catalog import icon_provider_index
+
+    providers = icon_provider_index([
+        {"source_key": "fdroid", "platform": "android", "external_id": "bad-http", "icon_url": "http://f-droid.org/icon.png"},
+        {"source_key": "fdroid", "platform": "android", "external_id": "bad-js", "icon_url": "javascript:alert(1)"},
+        {"source_key": "fdroid", "platform": "android", "external_id": "good", "icon_url": "https://f-droid.org/icon.png"},
+    ])
+    assert set(providers) == {("android", "good")}
