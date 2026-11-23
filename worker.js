@@ -523,6 +523,8 @@ async function handle(request,env) {
       return response(result.rows,200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":String(result.total)});
     }
     const limit=Math.max(1,Math.min(Number(url.searchParams.get("limit")||50),200)),offset=Math.max(0,Number(url.searchParams.get("offset")||0));
+    const externalId=url.searchParams.get("external_id"),source=url.searchParams.get("source");
+    if(externalId&&!source)return response([],200,origin,{"access-control-expose-headers":"X-Total-Count","x-total-count":"0"});
     const clauses=[],quote=value=>"'"+String(value).replace(/'/g,"''")+"'";
     const q=url.searchParams.get("q"),platform=url.searchParams.get("platform"),source=url.searchParams.get("source"),externalId=url.searchParams.get("external_id");
     if(q){const term=quote("%"+q.trim()+"%");clauses.push("(name ILIKE "+term+" OR developer ILIKE "+term+" OR summary ILIKE "+term+" OR description ILIKE "+term+" OR category ILIKE "+term+")");}
