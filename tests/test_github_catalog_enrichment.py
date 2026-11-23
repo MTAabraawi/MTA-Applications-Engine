@@ -157,3 +157,23 @@ def test_icon_url_validation_sampling_is_stable_and_source_stratified():
     assert set(first) == {"fdroid", "flathub"}
     assert len(first["fdroid"]) == 3
     assert len(first["flathub"]) == 1
+
+
+def test_quality_comparison_reports_field_and_source_deltas_without_fabrication():
+    from scripts.compare_catalogue_quality import compare_stats
+
+    before = {
+        "total": 2,
+        "quality": {"fields": {"icon_url": {"present": 1, "missing": 1, "percent": 50.0}},
+                    "sources": {"bluejetty": {"total": 2, "fields": {"icon_url": {"present": 1, "missing": 1, "percent": 50.0}}}}},
+    }
+    after = {
+        "total": 2,
+        "quality": {"fields": {"icon_url": {"present": 2, "missing": 0, "percent": 100.0}},
+                    "sources": {"bluejetty": {"total": 2, "fields": {"icon_url": {"present": 2, "missing": 0, "percent": 100.0}}}}},
+    }
+    report = compare_stats(before, after)
+    assert report["overall"]["icon_url"]["present_delta"] == 1
+    assert report["overall"]["icon_url"]["percentage_point_delta"] == 50.0
+    assert report["by_source"]["bluejetty"]["fields"]["icon_url"]["present_delta"] == 1
+    assert "not fabricated" in report["policy"]
