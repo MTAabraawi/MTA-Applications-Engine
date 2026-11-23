@@ -377,3 +377,30 @@ def test_google_play_icon_enrichment_retries_transient_failures_after_six_hours(
     }}
     selected = select_candidates([recent_429, old_429, recent_missing], limit=10, now=now)
     assert [record["external_id"] for record, _ in selected] == ["old-429"]
+
+
+def test_steam_capsule_art_is_not_misclassified_as_an_application_icon():
+    from scripts.normalize_steam_icon_assets import is_non_icon_steam_art, normalize
+
+    assert is_non_icon_steam_art("https://shared.akamai.steamstatic.com/steam/apps/123/capsule_231x87.jpg")
+    assert is_non_icon_steam_art("https://shared.akamai.steamstatic.com/steam/apps/123/header.jpg")
+    assert not is_non_icon_steam_art("https://cdn.example.org/apps/123/icon.png")
+    updates, examples = normalize([
+        {
+            "source_key": "steam", "external_id": "123", "platform": "pc-games",
+            "name": "Example Game", "source_url": "https://store.steampowered.com/app/123/",
+            "icon_url": "https://shared.akamai.steamstatic.com/steam/apps/123/capsule_231x87.jpg",
+            "metadata_json": {"steam_appid": 123},
+        },
+        {
+            "source_key": "fdroid", "external_id": "org.example.app", "platform": "android",
+            "name": "Example App", "source_url": "https://f-droid.org/packages/org.example.app/",
+            "icon_url": "https://f-droid.org/icon.png",
+        },
+    ], checked_at="2026-11-23T00:00:00+00:00")
+    assert len(updates) == 1
+    assert updates[0]["icon_url"] is None
+    assert updates[0]["_clear_fields"] == ["icon_url"]
+    assert updates[0]["metadata_json"]["steam_icon_cleanup"]["status"] == "removed_non_square_artwork_from_icon_field"
+    assert updates[0]["metadata_json"]["steam_detail"]["capsule_or_header_art_url"].endswith("capsule_231x87.jpg")
+    assert len(examples) == 1
