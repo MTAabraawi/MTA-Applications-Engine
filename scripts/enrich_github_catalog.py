@@ -217,11 +217,15 @@ def crossmatch_icons(records, provider_index, now):
             }
             counts["matched"] += 1
         elif len(unique_icons) > 1:
-            metadata["icon_crossmatch"] = {"status": "ambiguous", "method": "exact_official_store_listing_id", "checked_at": now}
+            # Keep ambiguous matches in the aggregate report. Do not write
+            # per-record "unmatched" markers across the entire 200k catalogue.
             counts["ambiguous"] += 1
+            counts["scanned"] += 1
+            continue
         else:
-            metadata["icon_crossmatch"] = {"status": "unmatched", "method": "exact_official_store_listing_id", "checked_at": now}
             counts["unmatched"] += 1
+            counts["scanned"] += 1
+            continue
         item["metadata_json"] = metadata
         updates.append(item)
         counts["scanned"] += 1
