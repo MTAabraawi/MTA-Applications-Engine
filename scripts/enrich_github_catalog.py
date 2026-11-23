@@ -81,12 +81,23 @@ def parse_steam_detail(payload, row):
         value = " ".join(value.split()).strip()
         return value[:maximum] if value else None
 
-    developers = [clean(value, 180) for value in data.get("developers", []) if isinstance(value, str)]
-    publishers = [clean(value, 180) for value in data.get("publishers", []) if isinstance(value, str)]
-    genres = [clean(value.get("description"), 100) for value in data.get("genres", [])
+    developer_values = data.get("developers") if isinstance(data.get("developers"), list) else []
+    publisher_values = data.get("publishers") if isinstance(data.get("publishers"), list) else []
+    genre_values = data.get("genres") if isinstance(data.get("genres"), list) else []
+    category_values = data.get("categories") if isinstance(data.get("categories"), list) else []
+    developers = [clean(value, 180) for value in developer_values if isinstance(value, str)]
+    publishers = [clean(value, 180) for value in publisher_values if isinstance(value, str)]
+    genres = [clean(value.get("description"), 100) for value in genre_values
               if isinstance(value, dict) and isinstance(value.get("description"), str)]
     website = data.get("website")
-    app_url = website if isinstance(website, str) and trusted_url(website, urlsplit(website).hostname or "") else None
+    app_url = None
+    if isinstance(website, str):
+        try:
+            parsed_website = urlsplit(website.strip())
+            if parsed_website.scheme == "https" and parsed_website.hostname and not parsed_website.username and not parsed_website.password:
+                app_url = website.strip()
+        except ValueError:
+            app_url = None
     if app_url and urlsplit(app_url).hostname == "store.steampowered.com":
         app_url = None
 
@@ -96,7 +107,7 @@ def parse_steam_detail(payload, row):
         "developers": developers,
         "publishers": publishers,
         "genres": genres,
-        "categories": [clean(value.get("description"), 100) for value in data.get("categories", [])
+        "categories": [clean(value.get("description"), 100) for value in category_values
                        if isinstance(value, dict) and isinstance(value.get("description"), str)],
         "platforms": data.get("platforms") if isinstance(data.get("platforms"), dict) else {},
         "release_date": data.get("release_date") if isinstance(data.get("release_date"), dict) else {},
