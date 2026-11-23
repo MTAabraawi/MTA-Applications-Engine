@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check worker.js"
+    "check": "node --check worker.js",
+    "test": "node --test tests/worker.test.js"
   },
   "dependencies": {
     "postgres": "3.4.7"
