@@ -139,3 +139,21 @@ def test_quality_report_distinguishes_missing_and_malformed_metadata():
     assert report["by_source"]["fedora-packages"]["fields"]["description"]["missing"] == 1
     assert report["global"]["malformed_icon_url"] == 1
     assert report["policy"]["missing_icons_are_not_automatically_errors"] is True
+
+
+def test_icon_url_validation_sampling_is_stable_and_source_stratified():
+    from scripts.validate_catalogue_icon_urls import sample_icons
+
+    records = [
+        {"source_key": "fdroid", "external_id": str(i), "icon_url": f"https://f-droid.org/{i}.png"}
+        for i in range(10)
+    ] + [
+        {"source_key": "flathub", "external_id": "one", "icon_url": "https://flathub.org/one.png"},
+        {"source_key": "flathub", "external_id": "missing", "icon_url": ""},
+    ]
+    first = sample_icons(records, per_source=3)
+    second = sample_icons(list(reversed(records)), per_source=3)
+    assert first == second
+    assert set(first) == {"fdroid", "flathub"}
+    assert len(first["fdroid"]) == 3
+    assert len(first["flathub"]) == 1
