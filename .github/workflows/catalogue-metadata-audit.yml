@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/enrich_github_catalog.py"
       - "scripts/catalogue_quality_report.py"
+      - "scripts/validate_catalogue_icon_urls.py"
       - "tests/test_github_catalog_enrichment.py"
       - ".github/workflows/catalogue-metadata-audit.yml"
 
@@ -28,6 +29,9 @@ jobs:
       ENRICHMENT_MAX_BATCHES: "1000"
       ENRICHMENT_MAX_RUNTIME_MINUTES: "330"
       CATALOGUE_QUALITY_REPORT: "reports/catalogue-quality-report.json"
+      CATALOGUE_ICON_REPORT: "reports/catalogue-icon-validation.json"
+      ICON_VALIDATION_PER_SOURCE: "15"
+      ICON_VALIDATION_CONCURRENCY: "6"
     steps:
       - name: Check out the audit branch
         uses: actions/checkout@v4
@@ -45,7 +49,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Compile enrichment and audit modules
         run: |
-          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py
+          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/validate_catalogue_icon_urls.py
       - name: Run complete Python regression suite
         run: pytest -q
       - name: Enrich missing Blue Jetty and Fedora metadata from official source detail pages
@@ -60,16 +64,17 @@ jobs:
           print(f"Rebuilt indexes for {manifest['record_count']} catalogue records")
           PY
           python scripts/catalogue_quality_report.py
+          python scripts/validate_catalogue_icon_urls.py
       - name: Commit audited catalogue snapshot and report to this branch only
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-report.json)" ]; then
+          if [ -z "$(git status --porcelain -- catalogue_data reports/catalogue-quality-report.json reports/catalogue-icon-validation.json)" ]; then
             echo "No catalogue metadata changes were produced."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add catalogue_data/ reports/catalogue-quality-report.json
+          git add catalogue_data/ reports/catalogue-quality-report.json reports/catalogue-icon-validation.json
           git commit -m "Apply source-verified catalogue metadata enrichment and report"
           git fetch origin audit/catalogue-metadata-enrichment-quality
           git rebase origin/audit/catalogue-metadata-enrichment-quality
