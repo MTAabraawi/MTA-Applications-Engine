@@ -309,6 +309,8 @@ def test_quality_report_does_not_count_placeholder_strings_as_metadata():
     assert not present("Unknown")
     assert not present("N/A")
     assert not present("Not provided")
+    assert not present("No description provided by source.")
+    assert not present("Developer not specified by source")
     assert present("Mozilla")
 
 
