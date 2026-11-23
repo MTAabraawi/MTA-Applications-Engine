@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Compile application and sync runner
-        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/enrich_catalog_details.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
+        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/enrich_catalog_details.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/compare_catalogue_quality.py scripts/validate_catalogue_icon_urls.py scripts/enrich_google_play_icons.py scripts/normalize_steam_icon_assets.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
 
       - name: Run Python test suite
         run: pytest -q
