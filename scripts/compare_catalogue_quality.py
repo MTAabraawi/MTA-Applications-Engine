@@ -54,7 +54,7 @@ def compare_stats(before, after):
         "total_delta": int(after.get("total", 0)) - int(before.get("total", 0)),
         "overall": overall,
         "by_source": sources,
-        "policy": "Coverage changes are measured from source-supplied values only; missing fields are not fabricated.",
+        "policy": "Coverage changes are measured from source-supplied values only; missing fields are not fabricated. Steam capsule/header banners are intentionally removed from icon_url and preserved as artwork metadata, so the Steam icon count may decrease as a semantic correction.",
     }
 
 
