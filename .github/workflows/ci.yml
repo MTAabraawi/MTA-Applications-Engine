@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [main, feat/marketplace-quality-website-integration]
+    branches: [main, feat/marketplace-quality-website-integration, work/source-quality-and-website-integration-fix-2026-11-23]
   pull_request:
     branches: [main]
 
