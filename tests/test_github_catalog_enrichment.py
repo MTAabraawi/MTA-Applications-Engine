@@ -301,3 +301,12 @@ def test_snapcraft_detail_parser_rejects_non_https_icons_and_missing_snap_data()
     }}, {"external_id": "sample"})
     assert result["icon_url"] is None
     assert parse_snap_detail({}, {"external_id": "missing"}) == {}
+
+
+def test_quality_report_does_not_count_placeholder_strings_as_metadata():
+    from scripts.catalogue_quality_report import present
+
+    assert not present("Unknown")
+    assert not present("N/A")
+    assert not present("Not provided")
+    assert present("Mozilla")
