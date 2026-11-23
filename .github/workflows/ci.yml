@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, audit/catalogue-metadata-enrichment-quality]
   pull_request:
     branches: [main]
 
@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Compile application and sync runner
-        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/enrich_catalog_details.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
+        run: python -m py_compile app.py catalog_sources.py expanded_catalog_sources.py open_catalog_sources.py sync_catalogs.py worker.py scripts/enrich_catalog_details.py scripts/enrich_github_catalog.py scripts/catalogue_quality_report.py scripts/smoke_catalog_sources.py scripts/smoke_chocolatey.py
 
       - name: Run Python test suite
         run: pytest -q
