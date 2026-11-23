@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      MTA_STORAGE_BACKEND: github
       GITHUB_CATALOGUE_DIR: catalogue_data
       BLUEJETTY_ENRICH_BATCH_SIZE: "500"
       FEDORA_ENRICH_BATCH_SIZE: "100"
