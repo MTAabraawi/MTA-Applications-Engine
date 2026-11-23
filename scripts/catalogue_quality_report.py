@@ -99,6 +99,17 @@ def build_report(records, generated_at=None):
                         "field": field,
                     })
 
+        metadata = record.get("metadata_json")
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except ValueError:
+                metadata = {}
+        if isinstance(metadata, dict):
+            cleanup = metadata.get("steam_icon_cleanup")
+            if isinstance(cleanup, dict) and cleanup.get("status") == "removed_non_square_artwork_from_icon_field":
+                global_counts["rejected_non_icon_assets"] += 1
+
         if substantive(record.get("description"), 40):
             global_counts["substantive_descriptions"] += 1
             for target in targets:
