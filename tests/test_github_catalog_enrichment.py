@@ -55,10 +55,11 @@ def test_bluejetty_icon_crossmatch_requires_exact_official_listing_id():
     }
     updates, counts = crossmatch_icons(records, providers, "2026-11-23T00:00:00+00:00")
     by_id = {row["external_id"]: row for row in updates}
+    assert set(by_id) == {"blue-1"}
     assert by_id["blue-1"]["icon_url"] == "https://f-droid.org/repo/icons/com.example.app.png"
     assert by_id["blue-1"]["metadata_json"]["icon_crossmatch"]["method"] == "exact_official_store_listing_id"
-    assert by_id["blue-2"].get("icon_url") is None
-    assert by_id["blue-2"]["metadata_json"]["icon_crossmatch"]["status"] == "unmatched"
+    # Unmatched records are counted but not rewritten; this avoids churning
+    # hundreds of thousands of catalogue rows without improving metadata.
     assert counts == {"scanned": 2, "matched": 1, "unmatched": 1, "ambiguous": 0}
 
 
