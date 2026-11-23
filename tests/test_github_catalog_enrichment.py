@@ -188,3 +188,44 @@ def test_icon_provider_index_rejects_non_https_or_malformed_icon_urls():
         {"source_key": "fdroid", "platform": "android", "external_id": "good", "icon_url": "https://f-droid.org/icon.png"},
     ])
     assert set(providers) == {("android", "good")}
+
+
+def test_google_play_icon_enrichment_accepts_only_official_listing_and_icon_hosts():
+    from scripts.enrich_google_play_icons import extract_official_og_icon, official_google_play_url
+
+    record = {
+        "app_url": "https://play.google.com/store/apps/details?id=com.example.app",
+        "metadata_json": {},
+    }
+    assert official_google_play_url(record) == "https://play.google.com/store/apps/details?id=com.example.app"
+    assert official_google_play_url({"app_url": "https://play.google.com.evil.test/store/apps/details?id=x"}) is None
+    html = '<html><head><meta property="og:image" content="https://play-lh.googleusercontent.com/example-icon=s0"></head></html>'
+    assert extract_official_og_icon(html) == "https://play-lh.googleusercontent.com/example-icon=s0"
+    bad_html = '<meta property="og:image" content="https://evil.example/icon.png">'
+    assert extract_official_og_icon(bad_html) is None
+
+
+def test_google_play_icon_enrichment_prioritizes_rating_count_and_never_selects_existing_icons():
+    from scripts.enrich_google_play_icons import select_candidates
+    from datetime import datetime, timezone
+
+    records = [
+        {
+            "source_key": "bluejetty", "platform": "android", "external_id": "low",
+            "icon_url": None, "app_url": "https://play.google.com/store/apps/details?id=low",
+            "metadata_json": {"bluejetty_detail": {"ratings": {"count": 2}}},
+        },
+        {
+            "source_key": "bluejetty", "platform": "android", "external_id": "high",
+            "icon_url": None, "app_url": "https://play.google.com/store/apps/details?id=high",
+            "metadata_json": {"bluejetty_detail": {"ratings": {"count": 200}}},
+        },
+        {
+            "source_key": "bluejetty", "platform": "android", "external_id": "already",
+            "icon_url": "https://cdn.example.org/icon.png",
+            "app_url": "https://play.google.com/store/apps/details?id=already",
+            "metadata_json": {},
+        },
+    ]
+    candidates = select_candidates(records, limit=1, now=datetime(2026, 11, 23, tzinfo=timezone.utc))
+    assert [record["external_id"] for record, _ in candidates] == ["high"]
