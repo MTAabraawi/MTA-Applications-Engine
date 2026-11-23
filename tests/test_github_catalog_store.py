@@ -137,8 +137,9 @@ def test_browse_indexes_split_into_pages_of_one_thousand(tmp_path):
 def test_upsert_supports_explicit_field_clearing_for_invalid_semantic_assets(tmp_path):
     store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
     store.upsert_many([record(icon_url="https://steam.example/capsule_231x87.jpg")])
-    result = store.upsert_many([record(icon_url=None, _clear_fields=["icon_url"])])
+    result = store.upsert_many([record(icon_url=None, _clear_fields=["icon_url", "source_url"])])
     saved = store.get("fdroid", "org.example.app")
     assert result["updated"] == 1
     assert saved["icon_url"] is None
+    assert saved["source_url"] == "https://example.org/app"
     assert "_clear_fields" not in saved
