@@ -80,7 +80,7 @@ async function githubRecordsForKeys(env, keys, shardCount) {
   for (let offset = 0; offset < entries.length; offset += concurrency) {
     const batch = entries.slice(offset, offset + concurrency);
     const payloads = await Promise.all(batch.map(async ([shard, wanted]) => {
-      const payload = await githubJson(env, "shards/" + shard + ".json");
+      const payload = await githubJson(env, "shards/" + shard + ".json", true);
       return { payload, wanted };
     }));
     for (const { payload, wanted } of payloads) {
