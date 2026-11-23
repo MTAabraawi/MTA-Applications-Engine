@@ -310,3 +310,46 @@ def test_quality_report_does_not_count_placeholder_strings_as_metadata():
     assert not present("N/A")
     assert not present("Not provided")
     assert present("Mozilla")
+
+
+def test_chocolatey_detail_parser_uses_official_package_metadata_and_https_assets():
+    from scripts.enrich_github_catalog import parse_chocolatey_detail
+
+    xml = """<entry xmlns="http://www.w3.org/2005/Atom"
+        xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+        xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices">
+      <content type="application/xml"><m:properties>
+        <d:Id>010editor</d:Id>
+        <d:Version>17.0.0</d:Version>
+        <d:Title>010 Editor</d:Title>
+        <d:Authors>SweetScape Software Inc.</d:Authors>
+        <d:Summary></d:Summary>
+        <d:Description>010 Editor is a hex and process editor for binary templates.</d:Description>
+        <d:ProjectUrl>https://www.sweetscape.com/010editor/</d:ProjectUrl>
+        <d:IconUrl>https://cdn.jsdelivr.net/gh/example/icons/010editor.png</d:IconUrl>
+        <d:Tags>editor hex binary</d:Tags>
+        <d:LicenseUrl>https://www.sweetscape.com/010editor/manual/License.htm</d:LicenseUrl>
+      </m:properties></content>
+    </entry>"""
+    result = parse_chocolatey_detail(xml, {"external_id": "010editor"})
+    assert result["developer"] == "SweetScape Software Inc."
+    assert result["summary"] == result["description"][:240]
+    assert result["app_url"] == "https://www.sweetscape.com/010editor/"
+    assert result["icon_url"] == "https://cdn.jsdelivr.net/gh/example/icons/010editor.png"
+    assert result["metadata_json"]["chocolatey_detail"]["license_url"].endswith("/License.htm")
+
+
+def test_chocolatey_detail_parser_rejects_http_project_and_icon_urls():
+    from scripts.enrich_github_catalog import parse_chocolatey_detail
+
+    xml = """<entry xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+        xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices">
+      <content><m:properties>
+        <d:Description>Official package description.</d:Description>
+        <d:ProjectUrl>http://example.org/project</d:ProjectUrl>
+        <d:IconUrl>http://example.org/icon.png</d:IconUrl>
+      </m:properties></content>
+    </entry>"""
+    result = parse_chocolatey_detail(xml, {"external_id": "sample"})
+    assert result["app_url"] is None
+    assert result["icon_url"] is None
