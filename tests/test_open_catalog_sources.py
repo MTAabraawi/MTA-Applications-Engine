@@ -134,3 +134,51 @@ def test_chocolatey_uses_supported_cli_and_maps_package_pages(monkeypatch):
 def test_chocolatey_skips_when_cli_is_not_installed(monkeypatch):
     monkeypatch.setattr(module.shutil, "which", lambda name: None)
     assert asyncio.run(module.fetch_chocolatey()) == []
+
+
+def test_open_vsx_imports_public_extension_metadata_and_deduplicates(monkeypatch):
+    monkeypatch.setenv("OPEN_VSX_TERMS", "python,git")
+    monkeypatch.setenv("OPEN_VSX_PAGE_SIZE", "10")
+
+    def handler(url, kwargs):
+        return {
+            "offset": 0,
+            "totalSize": 2,
+            "extensions": [
+                {
+                    "namespace": "ms-python",
+                    "name": "python",
+                    "displayName": "Python",
+                    "version": "2026.10.0",
+                    "description": "Rich Python language support for VS Code-compatible editors.",
+                    "categories": ["Programming Languages", "Debuggers"],
+                    "downloadCount": 1200000,
+                    "averageRating": 4.8,
+                    "reviewCount": 900,
+                    "files": {"icon": "https://open-vsx.org/api/ms-python/python/asset/icon", "download": "https://open-vsx.org/api/ms-python/python/2026.10.0/file/ms-python.python-2026.10.0.vsix"},
+                },
+                {
+                    "namespace": "esbenp",
+                    "name": "prettier-vscode",
+                    "displayName": "Prettier",
+                    "version": "11.0.0",
+                    "description": "Code formatter extension for VS Code-compatible editors.",
+                    "categories": ["Formatters"],
+                    "downloadCount": 400000,
+                    "files": {"icon": "https://open-vsx.org/api/esbenp/prettier-vscode/asset/icon"},
+                },
+            ],
+        }
+
+    client = FakeClient(handler)
+    records = asyncio.run(module.fetch_open_vsx(client))
+
+    assert len(client.calls) == 2
+    assert len(records) == 2
+    assert records[0]["source_key"] == "open-vsx"
+    assert records[0]["external_id"] == "ms-python.python"
+    assert records[0]["platform"] == "ide-plugins"
+    assert records[0]["source_url"] == "https://open-vsx.org/extension/ms-python/python"
+    assert records[0]["metadata_json"]["download_count"] == 1200000
+    assert records[0]["metadata_json"]["vsix_download_url"].endswith(".vsix")
+    assert records[1]["external_id"] == "esbenp.prettier-vscode"

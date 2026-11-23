@@ -330,5 +330,13 @@
     "integration_mode": "live_api",
     "reason": "Free read-only public JSON API with pagination and official release references; no API key. Focuses on free and open-source software.",
     "source_key": "openuse"
+  },
+  {
+    "id": "open-vsx",
+    "name": "Open VSX Registry",
+    "platform": "ide-plugins",
+    "integration_mode": "live_api",
+    "reason": "Public Open VSX Registry search API; metadata-only discovery of VS Code-compatible extensions.",
+    "source_key": "open-vsx"
   }
 ]

@@ -19,7 +19,7 @@ import httpx
 
 from catalog_sources import _record, _unique
 from fedora_catalog_source import fetch_fedora_packages
-from open_catalog_sources import fetch_bluejetty, fetch_openuse, fetch_chocolatey
+from open_catalog_sources import fetch_bluejetty, fetch_openuse, fetch_chocolatey, fetch_open_vsx
 
 log = logging.getLogger("mta.catalogs.expanded")
 TIMEOUT = httpx.Timeout(60.0, connect=15.0)
@@ -557,6 +557,7 @@ async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None
             "fedora-packages": lambda: fetch_fedora_packages(client),
             "bluejetty": lambda: fetch_bluejetty(client),
             "openuse": lambda: fetch_openuse(client),
+            "open-vsx": lambda: fetch_open_vsx(client),
             "chocolatey": lambda: fetch_chocolatey(client),
         }
         selected = set(source_filter) if source_filter else set(available_jobs)

@@ -341,6 +341,83 @@ async def fetch_bluejetty(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     return _unique(records)
 
 
+async def fetch_open_vsx(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Collect public VS Code-compatible extensions from the Open VSX Registry API."""
+    terms = [value.strip() for value in os.getenv(
+        "OPEN_VSX_TERMS", "python,git,docker,prettier,eslint,rust,java,typescript"
+    ).split(",") if value.strip()]
+    page_size = max(1, min(int(os.getenv("OPEN_VSX_PAGE_SIZE", "50")), 100))
+    pages = max(1, min(int(os.getenv("OPEN_VSX_PAGES", "1")), 3))
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for term in terms:
+        offset = 0
+        for _ in range(pages):
+            try:
+                response = await _get_with_retry(
+                    client, "https://open-vsx.org/api/-/search",
+                    params={"query": term, "size": page_size, "offset": offset},
+                    timeout=TIMEOUT, headers=HEADERS,
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("Open VSX search failed for %r at offset %d: %s", term, offset, exc)
+                break
+            items = payload.get("extensions", []) if isinstance(payload, dict) else []
+            if not isinstance(items, list) or not items:
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                namespace = _text(item.get("namespace"))
+                extension_name = _text(item.get("name"))
+                if not namespace or not extension_name:
+                    continue
+                external_id = namespace + "." + extension_name
+                if external_id.casefold() in seen:
+                    continue
+                seen.add(external_id.casefold())
+                listing = f"https://open-vsx.org/extension/{namespace}/{extension_name}"
+                files = item.get("files") if isinstance(item.get("files"), dict) else {}
+                categories = item.get("categories") or []
+                description = _text(item.get("description"))
+                record = _record(
+                    "open-vsx", external_id, "ide-plugins",
+                    _text(item.get("displayName")) or extension_name,
+                    listing,
+                    developer=namespace,
+                    summary=description,
+                    description=description,
+                    category=", ".join(str(value) for value in categories) if isinstance(categories, list) else None,
+                    license=_text(item.get("license")),
+                    app_url=listing,
+                    icon_url=_https(files.get("icon")),
+                    metadata_json={
+                        "catalog_type": "vscode-compatible-extension",
+                        "namespace": namespace,
+                        "extension_name": extension_name,
+                        "version": _text(item.get("version")),
+                        "download_count": item.get("downloadCount"),
+                        "average_rating": item.get("averageRating"),
+                        "review_count": item.get("reviewCount"),
+                        "timestamp": item.get("timestamp"),
+                        "engine_compatibility": item.get("engines"),
+                        "vsix_download_url": _https(files.get("download")),
+                        "registry": "Open VSX",
+                    },
+                )
+                if record:
+                    records.append(record)
+            total = payload.get("totalSize") if isinstance(payload, dict) else None
+            offset += len(items)
+            if len(items) < page_size or (isinstance(total, int) and offset >= total):
+                break
+            await asyncio.sleep(0.15)
+    log.info("Open VSX Registry: %d unique extension records from %d search terms", len(records), len(terms))
+    return _unique(records)
+
+
 async def fetch_openuse(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Import OpenUse's complete paginated public app catalogue (no API key)."""
     max_apps = max(100, min(int(os.getenv("OPENUSE_MAX_APPS", "50000")), 200000))
