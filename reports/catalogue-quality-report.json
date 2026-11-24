@@ -1,0 +1,1961 @@
+{
+  "generated_at": "2026-11-24T00:06:20.593711+00:00",
+  "total_records": 362354,
+  "global": {
+    "substantive_descriptions": 147058,
+    "substantive_summaries": 163705,
+    "invalid_required_records": 0,
+    "malformed_url_or_metadata_fields": 0
+  },
+  "by_source": {
+    "alpine-linux": {
+      "total": 28537,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 28537,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 28537,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 28537,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 26423,
+          "missing": 2114,
+          "malformed": 0,
+          "present_percent": 92.59
+        },
+        "category": {
+          "present": 0,
+          "missing": 28537,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 28537,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 27489,
+          "missing": 1048,
+          "malformed": 0,
+          "present_percent": 96.33
+        },
+        "source_url": {
+          "present": 28537,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 18189,
+        "summary_20_chars": 27842
+      }
+    },
+    "apple-itunes": {
+      "total": 3296,
+      "fields": {
+        "icon_url": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 3296,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 3296,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 3296,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 3295,
+        "summary_20_chars": 0
+      }
+    },
+    "apple-macos": {
+      "total": 2737,
+      "fields": {
+        "icon_url": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 2737,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 2737,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 2737,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 2734,
+        "summary_20_chars": 0
+      }
+    },
+    "arch-linux": {
+      "total": 1430,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 1430,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 1430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 1430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 1430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 251,
+          "missing": 1179,
+          "malformed": 0,
+          "present_percent": 17.55
+        },
+        "license": {
+          "present": 1430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 1430,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 1430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 1088,
+        "summary_20_chars": 1413
+      }
+    },
+    "bluejetty": {
+      "total": 200049,
+      "fields": {
+        "icon_url": {
+          "present": 2691,
+          "missing": 197358,
+          "malformed": 0,
+          "present_percent": 1.35
+        },
+        "description": {
+          "present": 77885,
+          "missing": 122164,
+          "malformed": 0,
+          "present_percent": 38.93
+        },
+        "summary": {
+          "present": 77885,
+          "missing": 122164,
+          "malformed": 0,
+          "present_percent": 38.93
+        },
+        "developer": {
+          "present": 74872,
+          "missing": 125177,
+          "malformed": 0,
+          "present_percent": 37.43
+        },
+        "category": {
+          "present": 78001,
+          "missing": 122048,
+          "malformed": 0,
+          "present_percent": 38.99
+        },
+        "license": {
+          "present": 0,
+          "missing": 200049,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 200049,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 200049,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 72774,
+        "summary_20_chars": 77314
+      }
+    },
+    "chocolatey": {
+      "total": 98,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 98,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 98,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 98,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 0,
+        "summary_20_chars": 0
+      }
+    },
+    "debian-packages": {
+      "total": 25,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 25,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 25,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 25,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 25,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 25,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 25,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 25,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 25,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 25,
+        "summary_20_chars": 25
+      }
+    },
+    "fdroid": {
+      "total": 5001,
+      "fields": {
+        "icon_url": {
+          "present": 4628,
+          "missing": 373,
+          "malformed": 0,
+          "present_percent": 92.54
+        },
+        "description": {
+          "present": 4979,
+          "missing": 22,
+          "malformed": 0,
+          "present_percent": 99.56
+        },
+        "summary": {
+          "present": 4985,
+          "missing": 16,
+          "malformed": 0,
+          "present_percent": 99.68
+        },
+        "developer": {
+          "present": 4078,
+          "missing": 923,
+          "malformed": 0,
+          "present_percent": 81.54
+        },
+        "category": {
+          "present": 5001,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 5001,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 4911,
+          "missing": 90,
+          "malformed": 0,
+          "present_percent": 98.2
+        },
+        "source_url": {
+          "present": 5001,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 4964,
+        "summary_20_chars": 4792
+      }
+    },
+    "fedora-packages": {
+      "total": 83426,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 83426,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 20550,
+          "missing": 62876,
+          "malformed": 0,
+          "present_percent": 24.63
+        },
+        "summary": {
+          "present": 20550,
+          "missing": 62876,
+          "malformed": 0,
+          "present_percent": 24.63
+        },
+        "developer": {
+          "present": 0,
+          "missing": 83426,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 83426,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 83426,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 15607,
+          "missing": 67819,
+          "malformed": 0,
+          "present_percent": 18.71
+        },
+        "source_url": {
+          "present": 83426,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 18722,
+        "summary_20_chars": 19650
+      }
+    },
+    "firefox-addons": {
+      "total": 3190,
+      "fields": {
+        "icon_url": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 2956,
+          "missing": 234,
+          "malformed": 0,
+          "present_percent": 92.66
+        },
+        "summary": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 3186,
+          "missing": 4,
+          "malformed": 0,
+          "present_percent": 99.87
+        },
+        "license": {
+          "present": 0,
+          "missing": 3190,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 3190,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 2933,
+        "summary_20_chars": 3173
+      }
+    },
+    "flathub": {
+      "total": 3430,
+      "fields": {
+        "icon_url": {
+          "present": 3400,
+          "missing": 30,
+          "malformed": 0,
+          "present_percent": 99.13
+        },
+        "description": {
+          "present": 3430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 3430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 3425,
+          "missing": 5,
+          "malformed": 0,
+          "present_percent": 99.85
+        },
+        "category": {
+          "present": 3411,
+          "missing": 19,
+          "malformed": 0,
+          "present_percent": 99.45
+        },
+        "license": {
+          "present": 0,
+          "missing": 3430,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 3430,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 3430,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 3414,
+        "summary_20_chars": 3077
+      }
+    },
+    "gnome-extensions": {
+      "total": 153,
+      "fields": {
+        "icon_url": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 153,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 153,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 125,
+          "missing": 28,
+          "malformed": 0,
+          "present_percent": 81.7
+        },
+        "source_url": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 136,
+        "summary_20_chars": 148
+      }
+    },
+    "homebrew-cask": {
+      "total": 7848,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 7848,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 5214,
+          "missing": 2634,
+          "malformed": 0,
+          "present_percent": 66.44
+        },
+        "summary": {
+          "present": 5214,
+          "missing": 2634,
+          "malformed": 0,
+          "present_percent": 66.44
+        },
+        "developer": {
+          "present": 0,
+          "missing": 7848,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 7848,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 7848,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 7825,
+          "missing": 23,
+          "malformed": 0,
+          "present_percent": 99.71
+        },
+        "source_url": {
+          "present": 7848,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 2233,
+        "summary_20_chars": 4512
+      }
+    },
+    "homebrew-formulae": {
+      "total": 8739,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 8739,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 8739,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 8739,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 8739,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 8739,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 8739,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 8600,
+          "missing": 139,
+          "malformed": 0,
+          "present_percent": 98.41
+        },
+        "source_url": {
+          "present": 8739,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 5285,
+        "summary_20_chars": 8394
+      }
+    },
+    "izzyondroid": {
+      "total": 1400,
+      "fields": {
+        "icon_url": {
+          "present": 1338,
+          "missing": 62,
+          "malformed": 0,
+          "present_percent": 95.57
+        },
+        "description": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 1395,
+          "missing": 5,
+          "malformed": 0,
+          "present_percent": 99.64
+        },
+        "source_url": {
+          "present": 1400,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 1400,
+        "summary_20_chars": 1372
+      }
+    },
+    "jetbrains-marketplace": {
+      "total": 285,
+      "fields": {
+        "icon_url": {
+          "present": 209,
+          "missing": 76,
+          "malformed": 0,
+          "present_percent": 73.33
+        },
+        "description": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 281,
+          "missing": 4,
+          "malformed": 0,
+          "present_percent": 98.6
+        },
+        "category": {
+          "present": 279,
+          "missing": 6,
+          "malformed": 0,
+          "present_percent": 97.89
+        },
+        "license": {
+          "present": 0,
+          "missing": 285,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 285,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 283,
+        "summary_20_chars": 285
+      }
+    },
+    "mta-curated-web": {
+      "total": 7,
+      "fields": {
+        "icon_url": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 7,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 7,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 6,
+        "summary_20_chars": 5
+      }
+    },
+    "openuse": {
+      "total": 976,
+      "fields": {
+        "icon_url": {
+          "present": 741,
+          "missing": 235,
+          "malformed": 0,
+          "present_percent": 75.92
+        },
+        "description": {
+          "present": 0,
+          "missing": 976,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "summary": {
+          "present": 976,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 976,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 976,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 976,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 970,
+          "missing": 6,
+          "malformed": 0,
+          "present_percent": 99.39
+        },
+        "source_url": {
+          "present": 976,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 0,
+        "summary_20_chars": 976
+      }
+    },
+    "scoop": {
+      "total": 5269,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 5269,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 5268,
+          "missing": 1,
+          "malformed": 0,
+          "present_percent": 99.98
+        },
+        "summary": {
+          "present": 5268,
+          "missing": 1,
+          "malformed": 0,
+          "present_percent": 99.98
+        },
+        "developer": {
+          "present": 0,
+          "missing": 5269,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 5269,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 4408,
+          "missing": 861,
+          "malformed": 0,
+          "present_percent": 83.66
+        },
+        "app_url": {
+          "present": 5096,
+          "missing": 173,
+          "malformed": 0,
+          "present_percent": 96.72
+        },
+        "source_url": {
+          "present": 5269,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 4169,
+        "summary_20_chars": 5175
+      }
+    },
+    "snap-store": {
+      "total": 722,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 722,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 722,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 0,
+        "summary_20_chars": 0
+      }
+    },
+    "steam": {
+      "total": 172,
+      "fields": {
+        "icon_url": {
+          "present": 172,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 172,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 0,
+        "summary_20_chars": 0
+      }
+    },
+    "winget-run-community": {
+      "total": 974,
+      "fields": {
+        "icon_url": {
+          "present": 0,
+          "missing": 974,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "description": {
+          "present": 974,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 974,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 974,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 974,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 974,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "app_url": {
+          "present": 788,
+          "missing": 186,
+          "malformed": 0,
+          "present_percent": 80.9
+        },
+        "source_url": {
+          "present": 974,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 880,
+        "summary_20_chars": 965
+      }
+    },
+    "wordpress-plugins": {
+      "total": 4590,
+      "fields": {
+        "icon_url": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 4590,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 3538,
+          "missing": 1052,
+          "malformed": 0,
+          "present_percent": 77.08
+        },
+        "source_url": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 4528,
+        "summary_20_chars": 4587
+      }
+    }
+  },
+  "by_platform": {
+    "android": {
+      "total": 106381,
+      "fields": {
+        "icon_url": {
+          "present": 6228,
+          "missing": 100153,
+          "malformed": 0,
+          "present_percent": 5.85
+        },
+        "description": {
+          "present": 45271,
+          "missing": 61110,
+          "malformed": 0,
+          "present_percent": 42.56
+        },
+        "summary": {
+          "present": 45334,
+          "missing": 61047,
+          "malformed": 0,
+          "present_percent": 42.61
+        },
+        "developer": {
+          "present": 42830,
+          "missing": 63551,
+          "malformed": 0,
+          "present_percent": 40.26
+        },
+        "category": {
+          "present": 45364,
+          "missing": 61017,
+          "malformed": 0,
+          "present_percent": 42.64
+        },
+        "license": {
+          "present": 6458,
+          "missing": 99923,
+          "malformed": 0,
+          "present_percent": 6.07
+        },
+        "app_url": {
+          "present": 106285,
+          "missing": 96,
+          "malformed": 0,
+          "present_percent": 99.91
+        },
+        "source_url": {
+          "present": 106381,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 40185,
+        "summary_20_chars": 44553
+      }
+    },
+    "browser-extensions": {
+      "total": 3190,
+      "fields": {
+        "icon_url": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 2956,
+          "missing": 234,
+          "malformed": 0,
+          "present_percent": 92.66
+        },
+        "summary": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 3186,
+          "missing": 4,
+          "malformed": 0,
+          "present_percent": 99.87
+        },
+        "license": {
+          "present": 0,
+          "missing": 3190,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 3190,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 3190,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 2933,
+        "summary_20_chars": 3173
+      }
+    },
+    "desktop-extensions": {
+      "total": 153,
+      "fields": {
+        "icon_url": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 153,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 153,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 125,
+          "missing": 28,
+          "malformed": 0,
+          "present_percent": 81.7
+        },
+        "source_url": {
+          "present": 153,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 136,
+        "summary_20_chars": 148
+      }
+    },
+    "ide-plugins": {
+      "total": 285,
+      "fields": {
+        "icon_url": {
+          "present": 209,
+          "missing": 76,
+          "malformed": 0,
+          "present_percent": 73.33
+        },
+        "description": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 281,
+          "missing": 4,
+          "malformed": 0,
+          "present_percent": 98.6
+        },
+        "category": {
+          "present": 279,
+          "missing": 6,
+          "malformed": 0,
+          "present_percent": 97.89
+        },
+        "license": {
+          "present": 0,
+          "missing": 285,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 285,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 285,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 283,
+        "summary_20_chars": 285
+      }
+    },
+    "ios": {
+      "total": 103454,
+      "fields": {
+        "icon_url": {
+          "present": 5803,
+          "missing": 97651,
+          "malformed": 0,
+          "present_percent": 5.61
+        },
+        "description": {
+          "present": 42289,
+          "missing": 61165,
+          "malformed": 0,
+          "present_percent": 40.88
+        },
+        "summary": {
+          "present": 39025,
+          "missing": 64429,
+          "malformed": 0,
+          "present_percent": 37.72
+        },
+        "developer": {
+          "present": 40816,
+          "missing": 62638,
+          "malformed": 0,
+          "present_percent": 39.45
+        },
+        "category": {
+          "present": 42423,
+          "missing": 61031,
+          "malformed": 0,
+          "present_percent": 41.01
+        },
+        "license": {
+          "present": 32,
+          "missing": 103422,
+          "malformed": 0,
+          "present_percent": 0.03
+        },
+        "app_url": {
+          "present": 103454,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "source_url": {
+          "present": 103454,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 42248,
+        "summary_20_chars": 39014
+      }
+    },
+    "linux": {
+      "total": 117785,
+      "fields": {
+        "icon_url": {
+          "present": 3595,
+          "missing": 114190,
+          "malformed": 0,
+          "present_percent": 3.05
+        },
+        "description": {
+          "present": 53972,
+          "missing": 63813,
+          "malformed": 0,
+          "present_percent": 45.82
+        },
+        "summary": {
+          "present": 54187,
+          "missing": 63598,
+          "malformed": 0,
+          "present_percent": 46.01
+        },
+        "developer": {
+          "present": 31278,
+          "missing": 86507,
+          "malformed": 0,
+          "present_percent": 26.56
+        },
+        "category": {
+          "present": 87303,
+          "missing": 30482,
+          "malformed": 0,
+          "present_percent": 74.12
+        },
+        "license": {
+          "present": 30182,
+          "missing": 87603,
+          "malformed": 0,
+          "present_percent": 25.62
+        },
+        "app_url": {
+          "present": 43335,
+          "missing": 74450,
+          "malformed": 0,
+          "present_percent": 36.79
+        },
+        "source_url": {
+          "present": 117785,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 41438,
+        "summary_20_chars": 52222
+      }
+    },
+    "macos": {
+      "total": 19562,
+      "fields": {
+        "icon_url": {
+          "present": 2951,
+          "missing": 16611,
+          "malformed": 0,
+          "present_percent": 15.09
+        },
+        "description": {
+          "present": 16690,
+          "missing": 2872,
+          "malformed": 0,
+          "present_percent": 85.32
+        },
+        "summary": {
+          "present": 14191,
+          "missing": 5371,
+          "malformed": 0,
+          "present_percent": 72.54
+        },
+        "developer": {
+          "present": 11476,
+          "missing": 8086,
+          "malformed": 0,
+          "present_percent": 58.66
+        },
+        "category": {
+          "present": 2975,
+          "missing": 16587,
+          "malformed": 0,
+          "present_percent": 15.21
+        },
+        "license": {
+          "present": 8977,
+          "missing": 10585,
+          "malformed": 0,
+          "present_percent": 45.89
+        },
+        "app_url": {
+          "present": 19399,
+          "missing": 163,
+          "malformed": 0,
+          "present_percent": 99.17
+        },
+        "source_url": {
+          "present": 19562,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 10252,
+        "summary_20_chars": 13144
+      }
+    },
+    "pc-games": {
+      "total": 172,
+      "fields": {
+        "icon_url": {
+          "present": 172,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 172,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "source_url": {
+          "present": 172,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 0,
+        "summary_20_chars": 0
+      }
+    },
+    "web": {
+      "total": 199,
+      "fields": {
+        "icon_url": {
+          "present": 48,
+          "missing": 151,
+          "malformed": 0,
+          "present_percent": 24.12
+        },
+        "description": {
+          "present": 7,
+          "missing": 192,
+          "malformed": 0,
+          "present_percent": 3.52
+        },
+        "summary": {
+          "present": 199,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 7,
+          "missing": 192,
+          "malformed": 0,
+          "present_percent": 3.52
+        },
+        "category": {
+          "present": 199,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 192,
+          "missing": 7,
+          "malformed": 0,
+          "present_percent": 96.48
+        },
+        "app_url": {
+          "present": 197,
+          "missing": 2,
+          "malformed": 0,
+          "present_percent": 98.99
+        },
+        "source_url": {
+          "present": 199,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 6,
+        "summary_20_chars": 197
+      }
+    },
+    "web-plugins": {
+      "total": 4590,
+      "fields": {
+        "icon_url": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "description": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "summary": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "developer": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "category": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 4590,
+          "malformed": 0,
+          "present_percent": 0.0
+        },
+        "app_url": {
+          "present": 3538,
+          "missing": 1052,
+          "malformed": 0,
+          "present_percent": 77.08
+        },
+        "source_url": {
+          "present": 4590,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 4528,
+        "summary_20_chars": 4587
+      }
+    },
+    "windows": {
+      "total": 6583,
+      "fields": {
+        "icon_url": {
+          "present": 213,
+          "missing": 6370,
+          "malformed": 0,
+          "present_percent": 3.24
+        },
+        "description": {
+          "present": 6242,
+          "missing": 341,
+          "malformed": 0,
+          "present_percent": 94.82
+        },
+        "summary": {
+          "present": 6484,
+          "missing": 99,
+          "malformed": 0,
+          "present_percent": 98.5
+        },
+        "developer": {
+          "present": 974,
+          "missing": 5609,
+          "malformed": 0,
+          "present_percent": 14.8
+        },
+        "category": {
+          "present": 5511,
+          "missing": 1072,
+          "malformed": 0,
+          "present_percent": 83.72
+        },
+        "license": {
+          "present": 5624,
+          "missing": 959,
+          "malformed": 0,
+          "present_percent": 85.43
+        },
+        "app_url": {
+          "present": 6223,
+          "missing": 360,
+          "malformed": 0,
+          "present_percent": 94.53
+        },
+        "source_url": {
+          "present": 6583,
+          "missing": 0,
+          "malformed": 0,
+          "present_percent": 100.0
+        }
+      },
+      "substantive": {
+        "description_40_chars": 5049,
+        "summary_20_chars": 6382
+      }
+    }
+  },
+  "malformed_samples": [],
+  "policy": {
+    "no_metadata_is_fabricated": true,
+    "missing_icons_are_not_automatically_errors": true,
+    "non_gui_packages_and_extensions_are_not_forced_to_have_app_icons": true,
+    "url_fields_require_absolute_https_urls": true,
+    "substantive_description_minimum_characters": 40,
+    "substantive_summary_minimum_characters": 20
+  }
+}

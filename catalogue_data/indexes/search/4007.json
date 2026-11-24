@@ -1,1 +1,1 @@
-{"g.j":["alpine-linux:community/check_postgres","alpine-linux:community/check_postgres-doc","alpine-linux:community/postgresql-pg_cron"]}
+{"g.j":["alpine-linux:community/check_postgres","alpine-linux:community/check_postgres-doc","alpine-linux:community/postgresql-pg_cron","fedora-packages:gfs-goschen-fonts/gfs-goschen-fonts"]}
