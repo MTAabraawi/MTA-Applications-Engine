@@ -307,6 +307,35 @@ def test_github_ai_application_connector_uses_token_and_preserves_global_metadat
     assert client.calls[0][1]["headers"]["Authorization"] == "Bearer test-token"
 
 
+def test_github_ai_application_connector_paginates_results(monkeypatch):
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_TERMS", '"AI assistant" in:name,description,readme')
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_MAX_TERMS", "1")
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_PER_PAGE", "10")
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_PAGES", "2")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    def handler(url, kwargs):
+        page = kwargs["params"]["page"]
+        if page == 1:
+            return {"items": [{
+                "full_name": f"example/ai-app-{index}", "name": f"AI App {index}",
+                "html_url": f"https://github.com/example/ai-app-{index}",
+                "description": "A desktop AI application",
+                "owner": {"login": "example"}, "topics": ["ai", "app", "desktop"],
+            } for index in range(10)]}
+        return {"items": [{
+            "full_name": "example/ai-app-last", "name": "AI App Last",
+            "html_url": "https://github.com/example/ai-app-last",
+            "description": "A desktop AI application",
+            "owner": {"login": "example"}, "topics": ["ai", "app", "desktop"],
+        }]}
+
+    client = FakeClient(handler)
+    records = asyncio.run(fetch_github_ai_applications(client))
+    assert len(records) == 11
+    assert [call[1]["params"]["page"] for call in client.calls] == [1, 2]
+
+
 def test_github_ai_application_connector_skips_non_application_repositories(monkeypatch):
     monkeypatch.setenv("AI_GLOBAL_GITHUB_TERMS", '"AI assistant" in:name,description,readme')
     monkeypatch.setenv("AI_GLOBAL_GITHUB_MAX_TERMS", "1")
