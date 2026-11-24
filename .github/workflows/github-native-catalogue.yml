@@ -33,7 +33,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: mta-github-native-catalogue
+  group: mta-github-native-catalogue-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
