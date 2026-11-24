@@ -8,15 +8,16 @@ import catalog_sources
 def test_store_registry_includes_all_registered_sources():
     registry_path = Path(__file__).resolve().parents[1] / "store_sources.json"
     entries = json.loads(registry_path.read_text(encoding="utf-8"))
-    assert len(entries) == 44
-    assert len({entry["id"] for entry in entries}) == 44
+    assert len(entries) == 52
+    assert len({entry["id"] for entry in entries}) == 52
     assert {entry["integration_mode"] for entry in entries} == {"live_api", "external_only", "credential_required", "cli_search"}
     live = {entry["source_key"] for entry in entries if entry.get("source_key")}
     assert {
         "fdroid", "izzyondroid", "snap-store", "flathub", "homebrew-cask",
         "apple-itunes", "apple-macos", "winget-run-community", "arch-linux", "debian-packages", "steam", "mta-curated-web",
         "firefox-addons", "wordpress-plugins", "homebrew-formulae", "scoop", "alpine-linux", "google-play",
-        "jetbrains-marketplace", "gnome-extensions", "fedora-packages", "bluejetty", "openuse", "chocolatey",
+        "jetbrains-marketplace", "gnome-extensions", "fedora-packages", "bluejetty", "openuse",
+        "huggingface-ai-spaces", "github-ai-applications", "chocolatey",
     } <= live
 
 
