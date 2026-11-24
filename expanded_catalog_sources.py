@@ -111,12 +111,13 @@ async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[st
                 "video-generation", "chatbot", "computer-vision", "audio"
             }), "AI application")
             record = _record(
-                "huggingface-ai-spaces", space_id, "web-ai", title,
+                "huggingface-ai-spaces", space_id, "web", title,
                 f"https://huggingface.co/spaces/{space_id}",
                 developer=author, summary=description, description=description,
                 category=str(category), app_url=app_url,
                 metadata_json={
                     "catalog_type": "hosted-ai-web-application",
+                    "platform_type": "web",
                     "discovery_query": term,
                     "discovery_language": "multilingual",
                     "origin_country": None,
@@ -189,7 +190,7 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
             license_info = item.get("license") if isinstance(item.get("license"), dict) else {}
             homepage = item.get("homepage") or ""
             record = _record(
-                "github-ai-applications", full_name, "open-source-ai",
+                "github-ai-applications", full_name, "source-code",
                 name, html_url, developer=(item.get("owner") or {}).get("login"),
                 summary=description, description=description,
                 category=", ".join(topics[:12]) or "Open-source AI software",
@@ -197,6 +198,7 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
                 app_url=homepage if str(homepage).startswith("https://") else html_url,
                 metadata_json={
                     "catalog_type": "open-source-ai-application-project",
+                    "platform_type": "source-code",
                     "discovery_query": term,
                     "discovery_language": "multilingual",
                     "origin_country": None,
