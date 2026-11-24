@@ -113,7 +113,7 @@ jobs:
       FEDORA_ENRICH_BATCH_SIZE: "15"
       ENRICH_CONCURRENCY: "4"
       ENRICHMENT_MAX_BATCHES: "1000"
-      ENRICHMENT_MAX_RUNTIME_MINUTES: "30"
+      ENRICHMENT_MAX_RUNTIME_MINUTES: "300"
     steps:
       - name: Check out synced catalogue
         uses: actions/checkout@v4
