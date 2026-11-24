@@ -330,5 +330,71 @@
     "integration_mode": "live_api",
     "reason": "Free read-only public JSON API with pagination and official release references; no API key. Focuses on free and open-source software.",
     "source_key": "openuse"
+  },
+  {
+    "id": "huggingface-ai-spaces",
+    "name": "Hugging Face Spaces",
+    "platform": "web",
+    "integration_mode": "live_api",
+    "reason": "Public semantic search API for hosted AI web applications; origin country is not inferred.",
+    "source_key": "huggingface-ai-spaces",
+    "region": "global"
+  },
+  {
+    "id": "github-ai-applications",
+    "name": "GitHub AI Applications",
+    "platform": "cross-platform",
+    "integration_mode": "live_api",
+    "reason": "Authenticated public repository search for open-source AI applications; repositories are distinguished from verified runnable releases.",
+    "source_key": "github-ai-applications",
+    "region": "global"
+  },
+  {
+    "id": "modelscope",
+    "name": "ModelScope",
+    "platform": "web",
+    "integration_mode": "external_only",
+    "reason": "China-focused model and application ecosystem; no stable public application catalogue API has been verified for automated ingestion.",
+    "region": "China"
+  },
+  {
+    "id": "openxlab",
+    "name": "OpenXLab",
+    "platform": "web",
+    "integration_mode": "external_only",
+    "reason": "China-based AI model and application ecosystem; integration remains external until a supported public application API is verified.",
+    "region": "China"
+  },
+  {
+    "id": "baidu-ai-apps",
+    "name": "Baidu AI Applications",
+    "platform": "web",
+    "integration_mode": "external_only",
+    "reason": "Chinese AI products and application listings; no supported comprehensive public catalogue API verified.",
+    "region": "China"
+  },
+  {
+    "id": "tencent-ai-apps",
+    "name": "Tencent AI Applications",
+    "platform": "cross-platform",
+    "integration_mode": "external_only",
+    "reason": "Chinese AI applications and services; no supported comprehensive public catalogue API verified.",
+    "region": "China"
+  },
+  {
+    "id": "yandex-ai-apps",
+    "name": "Yandex AI Applications",
+    "platform": "cross-platform",
+    "integration_mode": "external_only",
+    "reason": "Russian AI products and services; no supported comprehensive public catalogue API verified.",
+    "region": "Russia"
+  },
+  {
+    "id": "sber-ai-apps",
+    "name": "Sber AI Applications",
+    "platform": "cross-platform",
+    "integration_mode": "external_only",
+    "reason": "Russian AI applications and services; no supported comprehensive public catalogue API verified.",
+    "region": "Russia"
   }
 ]
