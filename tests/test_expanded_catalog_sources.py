@@ -10,6 +10,8 @@ from expanded_catalog_sources import (
     fetch_apple_appbrain,
     fetch_jetbrains_plugins,
     fetch_gnome_extensions,
+    fetch_huggingface_ai_spaces,
+    fetch_github_ai_applications,
 )
 from fedora_catalog_source import fetch_fedora_packages
 
@@ -253,3 +255,82 @@ def test_expanded_catalogue_filter_rejects_unknown_sources():
 
     with pytest.raises(ValueError, match="Unknown expanded catalogue source"):
         asyncio.run(module.fetch_expanded_catalogs(source_filter={"not-a-source"}))
+
+
+
+def test_huggingface_spaces_connector_discovers_multilingual_web_apps(monkeypatch):
+    monkeypatch.setenv("AI_GLOBAL_HF_TERMS", "AI assistant,人工智能 应用")
+    monkeypatch.setenv("AI_GLOBAL_HF_PER_TERM", "20")
+    client = FakeClient(lambda url, kwargs: {"results": [{
+        "id": "example/ai-assistant", "title": "AI Assistant",
+        "author": "Example Lab", "sdk": "gradio",
+        "ai_short_description": "A multilingual AI assistant",
+        "ai_category": "Chatbot", "tags": ["chatbot", "llm"],
+        "likes": 42, "runtime": {"stage": "RUNNING", "domains": [{"domain": "example-ai.hf.space"}]},
+    }]})
+    records = asyncio.run(fetch_huggingface_ai_spaces(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "huggingface-ai-spaces"
+    assert records[0]["external_id"] == "example/ai-assistant"
+    assert records[0]["platform"] == "web-ai"
+    assert records[0]["source_url"] == "https://huggingface.co/spaces/example/ai-assistant"
+    assert records[0]["app_url"] == "https://example-ai.hf.space"
+    assert records[0]["metadata_json"]["runtime_stage"] == "RUNNING"
+    assert records[0]["metadata_json"]["origin_country"] is None
+    assert len(client.calls) == 2
+
+
+def test_github_ai_application_connector_uses_token_and_preserves_global_metadata(monkeypatch):
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_TERMS", '"AI assistant" in:name,description,readme')
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_MAX_TERMS", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    client = FakeClient(lambda url, kwargs: {"items": [{
+        "full_name": "example/ai-assistant", "name": "AI Assistant",
+        "html_url": "https://github.com/example/ai-assistant",
+        "description": "A desktop AI assistant application",
+        "homepage": "https://assistant.example.org",
+        "owner": {"login": "example"}, "topics": ["ai", "assistant", "desktop"],
+        "language": "Python", "stargazers_count": 100, "forks_count": 10,
+        "open_issues_count": 2, "updated_at": "2026-11-20T00:00:00Z",
+        "license": {"spdx_id": "MIT"}, "default_branch": "main",
+    }]})
+    records = asyncio.run(fetch_github_ai_applications(client))
+    assert len(records) == 1
+    assert records[0]["source_key"] == "github-ai-applications"
+    assert records[0]["external_id"] == "example/ai-assistant"
+    assert records[0]["platform"] == "open-source-ai"
+    assert records[0]["app_url"] == "https://assistant.example.org"
+    assert records[0]["metadata_json"]["stars"] == 100
+    assert records[0]["metadata_json"]["origin_country"] is None
+    assert client.calls[0][1]["headers"]["Authorization"] == "Bearer test-token"
+
+
+def test_github_ai_application_connector_skips_non_application_repositories(monkeypatch):
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_TERMS", '"AI assistant" in:name,description,readme')
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_MAX_TERMS", "1")
+    client = FakeClient(lambda url, kwargs: {"items": [{
+        "full_name": "example/research-model", "name": "Research Model",
+        "html_url": "https://github.com/example/research-model",
+        "description": "A research benchmark dataset",
+        "owner": {"login": "example"}, "topics": ["machine-learning", "dataset"],
+    }]})
+    assert asyncio.run(fetch_github_ai_applications(client)) == []
+
+
+def test_expanded_catalogue_registry_includes_global_ai_discovery_sources(monkeypatch):
+    import expanded_catalog_sources as module
+
+    async def fake_hf(client):
+        return [{"source_key": "huggingface-ai-spaces", "external_id": "space"}]
+
+    async def fake_github(client):
+        return [{"source_key": "github-ai-applications", "external_id": "repo"}]
+
+    monkeypatch.setattr(module, "fetch_huggingface_ai_spaces", fake_hf)
+    monkeypatch.setattr(module, "fetch_github_ai_applications", fake_github)
+    result = asyncio.run(module.fetch_expanded_catalogs(
+        source_filter={"huggingface-ai-spaces", "github-ai-applications"}
+    ))
+    assert set(result) == {"huggingface-ai-spaces", "github-ai-applications"}
+    assert result["huggingface-ai-spaces"][0]["external_id"] == "space"
+    assert result["github-ai-applications"][0]["external_id"] == "repo"
