@@ -66,6 +66,33 @@ GITHUB_AI_DISCOVERY_TERMS = [
 ]
 
 
+def _ai_discovery_locale(term: str) -> str:
+    """Label the language used for discovery; never treat it as publisher origin."""
+    value = str(term or "")
+    if re.search(r"[\\u4e00-\\u9fff]", value):
+        return "zh-CN"
+    if re.search(r"[\\u0400-\\u04ff]", value):
+        return "ru"
+    if re.search(r"[\\u3040-\\u30ff]", value):
+        return "ja"
+    if re.search(r"[\\uac00-\\ud7af]", value):
+        return "ko"
+    if re.search(r"[\\u0900-\\u097f]", value):
+        return "hi"
+    folded = value.casefold()
+    if any(word in folded for word in ("inteligencia artificial", "aplicación")):
+        return "es"
+    if any(word in folded for word in ("intelligence artificielle", "application")) and "ai" not in folded:
+        return "fr"
+    if any(word in folded for word in ("künstliche", "anwendung")):
+        return "de"
+    if "aplicativo" in folded or "inteligência artificial" in folded:
+        return "pt"
+    if "ứng dụng" in folded:
+        return "vi"
+    return "en"
+
+
 async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Discover runnable AI applications published as public Hugging Face Spaces.
 
@@ -119,7 +146,7 @@ async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[st
                     "catalog_type": "hosted-ai-web-application",
                     "platform_type": "web",
                     "discovery_query": term,
-                    "discovery_language": "multilingual",
+                    "discovery_language": _ai_discovery_locale(term),
                     "origin_country": None,
                     "sdk": item.get("sdk"),
                     "tags": tags[:80],
