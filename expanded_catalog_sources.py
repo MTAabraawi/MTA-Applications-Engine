@@ -33,6 +33,193 @@ async def _json(client: httpx.AsyncClient, url: str, **kwargs: Any) -> Any:
     return response.json()
 
 
+
+AI_DISCOVERY_TERMS = [
+    "AI assistant", "AI chatbot", "LLM application", "AI image generator",
+    "AI video generator", "AI voice tools", "AI coding assistant", "local AI desktop",
+    "人工智能 应用", "AI 助手", "大模型 应用", "文生图 工具",
+    "нейросеть приложение", "ИИ помощник", "генерация изображений ИИ",
+    "AIアプリ", "AIアシスタント", "인공지능 앱", "AI ứng dụng",
+    "aplicación inteligencia artificial", "application intelligence artificielle",
+    "KI Anwendung", "aplicativo inteligência artificial", "AI app India",
+]
+
+GITHUB_AI_DISCOVERY_TERMS = [
+    '"AI app" in:name,description,readme',
+    '"AI assistant" in:name,description,readme',
+    '"LLM app" in:name,description,readme',
+    '"AI chatbot" in:name,description,readme',
+    '"AI desktop" in:name,description,readme',
+    '"local LLM" in:name,description,readme',
+    '"AI coding assistant" in:name,description,readme',
+    '"image generation" AI in:name,description,readme',
+    '"人工智能" 应用 in:name,description,readme',
+    '"AI 助手" in:name,description,readme',
+    '"大模型" 应用 in:name,description,readme',
+    '"нейросеть" приложение in:name,description,readme',
+    '"ИИ помощник" in:name,description,readme',
+    '"AIアプリ" in:name,description,readme',
+    '"인공지능" 앱 in:name,description,readme',
+    '"IA generativa" app in:name,description,readme',
+    '"IA assistant" application in:name,description,readme',
+    '"AI application" India in:name,description,readme',
+]
+
+
+async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Discover runnable AI applications published as public Hugging Face Spaces.
+
+    Spaces are web applications, not model-only records. Search is multilingual;
+    origin country is deliberately not inferred from query language.
+    """
+    terms = [x.strip() for x in os.getenv(
+        "AI_GLOBAL_HF_TERMS", ",".join(AI_DISCOVERY_TERMS)
+    ).split(",") if x.strip()]
+    terms = terms[:max(1, min(int(os.getenv("AI_GLOBAL_HF_MAX_TERMS", "24")), 40))]
+    limit = max(10, min(int(os.getenv("AI_GLOBAL_HF_PER_TERM", "100")), 100))
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for term in terms:
+        try:
+            payload = await _json(
+                client, "https://huggingface.co/api/spaces/semantic-search",
+                params={"q": term, "limit": limit, "includeNonRunning": "true"},
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("Hugging Face Spaces search failed for %r: %s", term, exc)
+            continue
+        items = payload if isinstance(payload, list) else (
+            payload.get("results", []) if isinstance(payload, dict) else []
+        )
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            space_id = str(item.get("id") or "").strip()
+            if not space_id or space_id in seen or "/" not in space_id:
+                continue
+            seen.add(space_id)
+            title = item.get("title") or space_id.rsplit("/", 1)[-1]
+            author = item.get("author") or space_id.split("/", 1)[0]
+            tags = item.get("tags") if isinstance(item.get("tags"), list) else []
+            runtime = item.get("runtime") if isinstance(item.get("runtime"), dict) else {}
+            domains = runtime.get("domains") if isinstance(runtime.get("domains"), list) else []
+            live_domain = next((x.get("domain") for x in domains if isinstance(x, dict) and x.get("domain")), None)
+            app_url = ("https://" + str(live_domain).lstrip("https://")) if live_domain else f"https://huggingface.co/spaces/{space_id}"
+            description = item.get("ai_short_description") or item.get("description") or ""
+            category = item.get("ai_category") or next((tag for tag in tags if tag in {
+                "text-generation", "image-generation", "text-to-speech", "automatic-speech-recognition",
+                "video-generation", "chatbot", "computer-vision", "audio"
+            }), "AI application")
+            record = _record(
+                "huggingface-ai-spaces", space_id, "web-ai", title,
+                f"https://huggingface.co/spaces/{space_id}",
+                developer=author, summary=description, description=description,
+                category=str(category), app_url=app_url,
+                metadata_json={
+                    "catalog_type": "hosted-ai-web-application",
+                    "discovery_query": term,
+                    "discovery_language": "multilingual",
+                    "origin_country": None,
+                    "sdk": item.get("sdk"),
+                    "tags": tags[:80],
+                    "likes": item.get("likes"),
+                    "runtime_stage": runtime.get("stage"),
+                    "semantic_relevancy_score": item.get("semantic_relevancy_score"),
+                    "trending_score": item.get("trending_score"),
+                    "publisher_id": space_id,
+                },
+            )
+            if record:
+                records.append(record)
+        await asyncio.sleep(0.15)
+    log.info("Hugging Face AI Spaces discovered: %d", len(records))
+    return _unique(records)
+
+
+async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[str, Any]]:
+    """Discover open-source AI applications from GitHub's public repository search.
+
+    Repository metadata and homepage links are retained as publisher references;
+    country of origin is not guessed from language, owner name, or search term.
+    """
+    terms = [x.strip() for x in os.getenv(
+        "AI_GLOBAL_GITHUB_TERMS", "\\n".join(GITHUB_AI_DISCOVERY_TERMS)
+    ).splitlines() if x.strip()]
+    max_terms = max(1, min(int(os.getenv("AI_GLOBAL_GITHUB_MAX_TERMS", "18")), 25))
+    per_page = max(10, min(int(os.getenv("AI_GLOBAL_GITHUB_PER_PAGE", "100")), 100))
+    terms = terms[:max_terms]
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for term in terms:
+        try:
+            payload = await _json(
+                client, "https://api.github.com/search/repositories",
+                params={"q": term + " fork:false archived:false", "sort": "updated",
+                        "order": "desc", "per_page": per_page, "page": 1},
+                headers=headers,
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("GitHub AI repository search failed for %r: %s", term, exc)
+            await asyncio.sleep(2.0)
+            continue
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            full_name = str(item.get("full_name") or "").strip()
+            html_url = item.get("html_url")
+            if not full_name or full_name.casefold() in seen:
+                continue
+            topics = item.get("topics") if isinstance(item.get("topics"), list) else []
+            name = item.get("name") or full_name.rsplit("/", 1)[-1]
+            description = item.get("description") or ""
+            haystack = (str(name) + " " + str(description) + " " + " ".join(topics)).casefold()
+            app_terms = ("app", "assistant", "chat", "webui", "desktop", "client", "studio",
+                         "interface", "frontend", "tool", "platform", "generator", "copilot")
+            if not any(word in haystack for word in app_terms):
+                continue
+            seen.add(full_name.casefold())
+            license_info = item.get("license") if isinstance(item.get("license"), dict) else {}
+            homepage = item.get("homepage") or ""
+            record = _record(
+                "github-ai-applications", full_name, "open-source-ai",
+                name, html_url, developer=(item.get("owner") or {}).get("login"),
+                summary=description, description=description,
+                category=", ".join(topics[:12]) or "Open-source AI software",
+                license=license_info.get("spdx_id"),
+                app_url=homepage if str(homepage).startswith("https://") else html_url,
+                metadata_json={
+                    "catalog_type": "open-source-ai-application-project",
+                    "discovery_query": term,
+                    "discovery_language": "multilingual",
+                    "origin_country": None,
+                    "topics": topics[:100],
+                    "language": item.get("language"),
+                    "stars": item.get("stargazers_count"),
+                    "forks": item.get("forks_count"),
+                    "open_issues": item.get("open_issues_count"),
+                    "updated_at": item.get("updated_at"),
+                    "pushed_at": item.get("pushed_at"),
+                    "homepage": homepage,
+                    "default_branch": item.get("default_branch"),
+                    "license": license_info.get("spdx_id"),
+                    "publisher_id": full_name,
+                },
+            )
+            if record:
+                records.append(record)
+        await asyncio.sleep(1.1 if not token else 0.25)
+    log.info("GitHub AI application projects discovered: %d", len(records))
+    return _unique(records)
+
+
 async def fetch_firefox_addons(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     """Collect public Firefox extensions from Mozilla's documented AMO API."""
     terms = [x.strip() for x in os.getenv(
@@ -545,6 +732,8 @@ async def fetch_expanded_catalogs(on_source=None, source_filter: set[str] | None
 
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         available_jobs = {
+            "huggingface-ai-spaces": lambda: fetch_huggingface_ai_spaces(client),
+            "github-ai-applications": lambda: fetch_github_ai_applications(client),
             "firefox-addons": lambda: fetch_firefox_addons(client),
             "wordpress-plugins": lambda: fetch_wordpress_plugins(client),
             "homebrew-formulae": lambda: fetch_homebrew_formulae(client),
