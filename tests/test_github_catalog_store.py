@@ -101,6 +101,26 @@ def test_rebuild_indexes_creates_browse_search_and_quality_stats(tmp_path):
     assert json.loads((indexes / "stats.json").read_text())["source_platforms"]["fdroid"]["android"] == 2
 
 
+
+def test_rebuild_indexes_reports_global_ai_discovery_coverage(tmp_path):
+    store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
+    store.upsert_many([
+        record(source="huggingface-ai-spaces", external="cn-space", platform="web",
+               metadata_json={"discovery_language": "zh-CN", "origin_country": None,
+                              "catalog_type": "hosted-ai-web-application"}),
+        record(source="github-ai-applications", external="ru-app", platform="source-code",
+               metadata_json={"discovery_language": "ru", "origin_country": None,
+                              "catalog_type": "open-source-ai-application-project"}),
+        record(source="verified-publisher", external="country-app",
+               metadata_json={"discovery_language": "en", "origin_country": "CN",
+                              "origin_country_verified": True, "catalog_type": "verified-app"}),
+    ])
+    store.rebuild_indexes()
+    stats = json.loads((tmp_path / "catalogue_data" / "indexes" / "stats.json").read_text())
+    assert stats["ai_discovery"]["discovery_languages"] == {"zh-CN": 1, "ru": 1, "en": 1}
+    assert stats["ai_discovery"]["verified_origin_countries"] == {"CN": 1}
+    assert stats["ai_discovery"]["catalog_types"]["hosted-ai-web-application"] == 1
+
 def test_search_normalization_handles_underscores_unicode_and_arabic(tmp_path):
     store = GitHubCatalogueStore(tmp_path / "catalogue_data", shard_count=8)
     store.upsert_many([
