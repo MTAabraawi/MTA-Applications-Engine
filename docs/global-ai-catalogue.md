@@ -15,8 +15,8 @@ Search queries include English, Simplified Chinese, Russian, Japanese, Korean, V
 
 The source registry also tracks regional ecosystems that still require a supported public catalogue integration:
 
-- China: ModelScope, OpenXLab, Baidu AI, Tencent AI, Huawei AppGallery, Xiaomi GetApps.
-- Russia: Yandex AI and Sber AI.
+- China: ModelScope, OpenXLab, Baidu AI, Tencent AI, Huawei AppGallery, Xiaomi GetApps. Huawei AppGallery Connect is account-scoped to a developer's own projects/apps, not a public global search API.
+- Russia: Yandex AI, Sber AI and RuStore. RuStore's documented Public API requires a developer token and lists apps belonging to that account, not the entire public store.
 - Other regions: global and country-specific Android, desktop, Linux, browser, and web directories already present in `store_sources.json`.
 
 Sources marked `external_only` are discovery targets, not live ingestion connectors. They must not be represented as fully indexed until a documented, permitted API or publisher-provided feed is implemented and tested.
