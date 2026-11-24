@@ -54,8 +54,9 @@
     "id": "huawei-appgallery",
     "name": "Huawei AppGallery",
     "platform": "android",
-    "integration_mode": "external_only",
-    "reason": "No public third-party catalogue feed verified."
+    "integration_mode": "credential_required",
+    "reason": "AppGallery Connect APIs require developer credentials and expose the authenticated developer's projects/apps; they are not a public global store-search API.",
+    "region": "China"
   },
   {
     "id": "samsung-galaxy-store",
