@@ -133,6 +133,8 @@ async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[st
             live_domain = next((x.get("domain") for x in domains if isinstance(x, dict) and x.get("domain")), None)
             app_url = ("https://" + str(live_domain).lstrip("https://")) if live_domain else f"https://huggingface.co/spaces/{space_id}"
             description = item.get("ai_short_description") or item.get("description") or ""
+            card_data = item.get("cardData") if isinstance(item.get("cardData"), dict) else {}
+            icon_url = item.get("avatarUrl") or item.get("avatar_url") or card_data.get("thumbnail")
             category = item.get("ai_category") or next((tag for tag in tags if tag in {
                 "text-generation", "image-generation", "text-to-speech", "automatic-speech-recognition",
                 "video-generation", "chatbot", "computer-vision", "audio"
@@ -141,7 +143,7 @@ async def fetch_huggingface_ai_spaces(client: httpx.AsyncClient) -> list[dict[st
                 "huggingface-ai-spaces", space_id, "web", title,
                 f"https://huggingface.co/spaces/{space_id}",
                 developer=author, summary=description, description=description,
-                category=str(category), app_url=app_url,
+                category=str(category), app_url=app_url, icon_url=icon_url,
                 metadata_json={
                     "catalog_type": "hosted-ai-web-application",
                     "platform_type": "web",
