@@ -239,6 +239,7 @@ class GitHubCatalogueStore:
         field_counts: dict[str, int] = {name: 0 for name in (
             "icon_url", "description", "summary", "developer", "category", "license", "app_url", "source_url"
         )}
+        ai_discovery = {"discovery_languages": {}, "verified_origin_countries": {}, "catalog_types": {}}
         total = 0
         for record in self.iter_records():
             total += 1
@@ -264,6 +265,25 @@ class GitHubCatalogueStore:
                 value = record.get(field)
                 if _has_value(value) and (not field.endswith("_url") or str(value).lower().startswith("https://")):
                     field_counts[field] += 1
+            metadata = record.get("metadata_json")
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except (TypeError, ValueError):
+                    metadata = {}
+            if isinstance(metadata, dict):
+                discovery_language = metadata.get("discovery_language")
+                if _has_value(discovery_language):
+                    key_language = str(discovery_language).strip()
+                    ai_discovery["discovery_languages"][key_language] = ai_discovery["discovery_languages"].get(key_language, 0) + 1
+                catalog_type = metadata.get("catalog_type")
+                if _has_value(catalog_type):
+                    key_type = str(catalog_type).strip()
+                    ai_discovery["catalog_types"][key_type] = ai_discovery["catalog_types"].get(key_type, 0) + 1
+                origin_country = metadata.get("origin_country")
+                if metadata.get("origin_country_verified") is True and _has_value(origin_country):
+                    key_country = str(origin_country).strip().upper()
+                    ai_discovery["verified_origin_countries"][key_country] = ai_discovery["verified_origin_countries"].get(key_country, 0) + 1
             searchable = _search_normalize(" ".join(str(record.get(field) or "") for field in (
                 "name", "developer", "summary", "description", "category"
             )))
@@ -332,6 +352,7 @@ class GitHubCatalogueStore:
                 source: {platform: len(keys) for (item_source, platform), keys in browse_pairs.items() if item_source == source}
                 for source in sources
             },
+            "ai_discovery": ai_discovery,
             "quality": {
                 "fields": _quality_fields(total, field_counts),
                 "sources": _quality_snapshot(self.iter_records()),
@@ -362,6 +383,7 @@ class GitHubCatalogueStore:
             "total": int(manifest.get("record_count", 0)),
             "platforms": dict(snapshot.get("platforms") or {}),
             "sources": dict(snapshot.get("sources") or {}),
+            "ai_discovery": dict(snapshot.get("ai_discovery") or {}),
             "metadata_only": True,
             "storage": "git-json-shards",
         }
