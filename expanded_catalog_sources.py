@@ -175,6 +175,7 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
     ).splitlines() if x.strip()]
     max_terms = max(1, min(int(os.getenv("AI_GLOBAL_GITHUB_MAX_TERMS", "18")), 25))
     per_page = max(10, min(int(os.getenv("AI_GLOBAL_GITHUB_PER_PAGE", "100")), 100))
+    pages = max(1, min(int(os.getenv("AI_GLOBAL_GITHUB_PAGES", "3")), 10))
     terms = terms[:max_terms]
     token = os.getenv("GITHUB_TOKEN", "").strip()
     headers = {
@@ -183,68 +184,74 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    request_delay = 2.1 if token else 6.2
     records: list[dict[str, Any]] = []
     seen: set[str] = set()
     for term in terms:
-        try:
-            payload = await _json(
-                client, "https://api.github.com/search/repositories",
-                params={"q": term + " fork:false archived:false", "sort": "updated",
-                        "order": "desc", "per_page": per_page, "page": 1},
-                headers=headers,
-            )
-        except (httpx.HTTPError, ValueError) as exc:
-            log.warning("GitHub AI repository search failed for %r: %s", term, exc)
-            await asyncio.sleep(2.0)
-            continue
-        items = payload.get("items", []) if isinstance(payload, dict) else []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            full_name = str(item.get("full_name") or "").strip()
-            html_url = item.get("html_url")
-            if not full_name or full_name.casefold() in seen:
-                continue
-            topics = item.get("topics") if isinstance(item.get("topics"), list) else []
-            name = item.get("name") or full_name.rsplit("/", 1)[-1]
-            description = item.get("description") or ""
-            haystack = (str(name) + " " + str(description) + " " + " ".join(topics)).casefold()
-            app_terms = ("app", "assistant", "chat", "webui", "desktop", "client", "studio",
-                         "interface", "frontend", "tool", "platform", "generator", "copilot")
-            if not any(word in haystack for word in app_terms):
-                continue
-            seen.add(full_name.casefold())
-            license_info = item.get("license") if isinstance(item.get("license"), dict) else {}
-            homepage = item.get("homepage") or ""
-            record = _record(
-                "github-ai-applications", full_name, "source-code",
-                name, html_url, developer=(item.get("owner") or {}).get("login"),
-                summary=description, description=description,
-                category=", ".join(topics[:12]) or "Open-source AI software",
-                license=license_info.get("spdx_id"),
-                app_url=homepage if str(homepage).startswith("https://") else html_url,
-                metadata_json={
-                    "catalog_type": "open-source-ai-application-project",
-                    "platform_type": "source-code",
-                    "discovery_query": term,
-                    "discovery_language": _ai_discovery_locale(term),
-                    "origin_country": None,
-                    "topics": topics[:100],
-                    "language": item.get("language"),
-                    "stars": item.get("stargazers_count"),
-                    "forks": item.get("forks_count"),
-                    "open_issues": item.get("open_issues_count"),
-                    "updated_at": item.get("updated_at"),
-                    "pushed_at": item.get("pushed_at"),
-                    "homepage": homepage,
-                    "default_branch": item.get("default_branch"),
-                    "license": license_info.get("spdx_id"),
-                    "publisher_id": full_name,
-                },
-            )
-            if record:
-                records.append(record)
-        await asyncio.sleep(1.1 if not token else 0.25)
+        for page in range(1, pages + 1):
+            try:
+                payload = await _json(
+                    client, "https://api.github.com/search/repositories",
+                    params={"q": term + " fork:false archived:false", "sort": "updated",
+                            "order": "desc", "per_page": per_page, "page": page},
+                    headers=headers,
+                )
+            except (httpx.HTTPError, ValueError) as exc:
+                log.warning("GitHub AI repository search failed for %r page %d: %s", term, page, exc)
+                await asyncio.sleep(request_delay)
+                break
+            items = payload.get("items", []) if isinstance(payload, dict) else []
+            if not isinstance(items, list) or not items:
+                break
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                full_name = str(item.get("full_name") or "").strip()
+                html_url = item.get("html_url")
+                if not full_name or full_name.casefold() in seen:
+                    continue
+                topics = item.get("topics") if isinstance(item.get("topics"), list) else []
+                name = item.get("name") or full_name.rsplit("/", 1)[-1]
+                description = item.get("description") or ""
+                haystack = (str(name) + " " + str(description) + " " + " ".join(topics)).casefold()
+                app_terms = ("app", "assistant", "chat", "webui", "desktop", "client", "studio",
+                             "interface", "frontend", "tool", "platform", "generator", "copilot")
+                if not any(word in haystack for word in app_terms):
+                    continue
+                seen.add(full_name.casefold())
+                license_info = item.get("license") if isinstance(item.get("license"), dict) else {}
+                homepage = item.get("homepage") or ""
+                record = _record(
+                    "github-ai-applications", full_name, "source-code",
+                    name, html_url, developer=(item.get("owner") or {}).get("login"),
+                    summary=description, description=description,
+                    category=", ".join(topics[:12]) or "Open-source AI software",
+                    license=license_info.get("spdx_id"),
+                    app_url=homepage if str(homepage).startswith("https://") else html_url,
+                    metadata_json={
+                        "catalog_type": "open-source-ai-application-project",
+                        "platform_type": "source-code",
+                        "discovery_query": term,
+                        "discovery_language": _ai_discovery_locale(term),
+                        "origin_country": None,
+                        "topics": topics[:100],
+                        "language": item.get("language"),
+                        "stars": item.get("stargazers_count"),
+                        "forks": item.get("forks_count"),
+                        "open_issues": item.get("open_issues_count"),
+                        "updated_at": item.get("updated_at"),
+                        "pushed_at": item.get("pushed_at"),
+                        "homepage": homepage,
+                        "default_branch": item.get("default_branch"),
+                        "license": license_info.get("spdx_id"),
+                        "publisher_id": full_name,
+                    },
+                )
+                if record:
+                    records.append(record)
+            if len(items) < per_page:
+                break
+            await asyncio.sleep(request_delay)
     log.info("GitHub AI application projects discovered: %d", len(records))
     return _unique(records)
 
