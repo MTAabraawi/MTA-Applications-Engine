@@ -2,7 +2,7 @@ name: Global AI Applications Catalogue
 
 on:
   push:
-    branches: [feature/global-ai-app-discovery]
+    branches: [main, feature/global-ai-app-discovery]
     paths:
       - "expanded_catalog_sources.py"
       - "store_sources.json"
