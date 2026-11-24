@@ -272,7 +272,7 @@ def test_huggingface_spaces_connector_discovers_multilingual_web_apps(monkeypatc
     assert len(records) == 1
     assert records[0]["source_key"] == "huggingface-ai-spaces"
     assert records[0]["external_id"] == "example/ai-assistant"
-    assert records[0]["platform"] == "web-ai"
+    assert records[0]["platform"] == "web"
     assert records[0]["source_url"] == "https://huggingface.co/spaces/example/ai-assistant"
     assert records[0]["app_url"] == "https://example-ai.hf.space"
     assert records[0]["metadata_json"]["runtime_stage"] == "RUNNING"
@@ -298,7 +298,7 @@ def test_github_ai_application_connector_uses_token_and_preserves_global_metadat
     assert len(records) == 1
     assert records[0]["source_key"] == "github-ai-applications"
     assert records[0]["external_id"] == "example/ai-assistant"
-    assert records[0]["platform"] == "open-source-ai"
+    assert records[0]["platform"] == "source-code"
     assert records[0]["app_url"] == "https://assistant.example.org"
     assert records[0]["metadata_json"]["stars"] == 100
     assert records[0]["metadata_json"]["origin_country"] is None
