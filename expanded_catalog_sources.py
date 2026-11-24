@@ -69,15 +69,15 @@ GITHUB_AI_DISCOVERY_TERMS = [
 def _ai_discovery_locale(term: str) -> str:
     """Label the language used for discovery; never treat it as publisher origin."""
     value = str(term or "")
-    if re.search(r"[\\u4e00-\\u9fff]", value):
+    if re.search(r"[\u4e00-\u9fff]", value):
         return "zh-CN"
-    if re.search(r"[\\u0400-\\u04ff]", value):
+    if re.search(r"[\u0400-\u04ff]", value):
         return "ru"
-    if re.search(r"[\\u3040-\\u30ff]", value):
+    if re.search(r"[\u3040-\u30ff]", value):
         return "ja"
-    if re.search(r"[\\uac00-\\ud7af]", value):
+    if re.search(r"[\uac00-\ud7af]", value):
         return "ko"
-    if re.search(r"[\\u0900-\\u097f]", value):
+    if re.search(r"[\u0900-\u097f]", value):
         return "hi"
     folded = value.casefold()
     if any(word in folded for word in ("inteligencia artificial", "aplicación")):
@@ -227,7 +227,7 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
                     "catalog_type": "open-source-ai-application-project",
                     "platform_type": "source-code",
                     "discovery_query": term,
-                    "discovery_language": "multilingual",
+                    "discovery_language": _ai_discovery_locale(term),
                     "origin_country": None,
                     "topics": topics[:100],
                     "language": item.get("language"),
