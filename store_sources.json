@@ -397,5 +397,13 @@
     "integration_mode": "external_only",
     "reason": "Russian AI applications and services; no supported comprehensive public catalogue API verified.",
     "region": "Russia"
+  },
+  {
+    "id": "rustore",
+    "name": "RuStore",
+    "platform": "android",
+    "integration_mode": "credential_required",
+    "reason": "RuStore Public API requires a developer Public-Token and lists apps available to that account owner, not the public global catalogue.",
+    "region": "Russia"
   }
 ]
