@@ -277,6 +277,7 @@ def test_huggingface_spaces_connector_discovers_multilingual_web_apps(monkeypatc
     assert records[0]["app_url"] == "https://example-ai.hf.space"
     assert records[0]["metadata_json"]["runtime_stage"] == "RUNNING"
     assert records[0]["metadata_json"]["origin_country"] is None
+    assert records[0]["metadata_json"]["discovery_language"] == "en"
     assert len(client.calls) == 2
 
 
@@ -302,6 +303,7 @@ def test_github_ai_application_connector_uses_token_and_preserves_global_metadat
     assert records[0]["app_url"] == "https://assistant.example.org"
     assert records[0]["metadata_json"]["stars"] == 100
     assert records[0]["metadata_json"]["origin_country"] is None
+    assert records[0]["metadata_json"]["discovery_language"] == "en"
     assert client.calls[0][1]["headers"]["Authorization"] == "Bearer test-token"
 
 
@@ -334,3 +336,12 @@ def test_expanded_catalogue_registry_includes_global_ai_discovery_sources(monkey
     assert set(result) == {"huggingface-ai-spaces", "github-ai-applications"}
     assert result["huggingface-ai-spaces"][0]["external_id"] == "space"
     assert result["github-ai-applications"][0]["external_id"] == "repo"
+
+
+def test_ai_discovery_locale_does_not_infer_publisher_country():
+    from expanded_catalog_sources import _ai_discovery_locale
+    assert _ai_discovery_locale("人工智能 应用") == "zh-CN"
+    assert _ai_discovery_locale("нейросеть приложение") == "ru"
+    assert _ai_discovery_locale("AIアプリ") == "ja"
+    assert _ai_discovery_locale("인공지능 앱") == "ko"
+    assert _ai_discovery_locale("AI assistant") == "en"
