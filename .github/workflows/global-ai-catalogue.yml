@@ -1,16 +1,6 @@
 name: Global AI Applications Catalogue
 
 on:
-  push:
-    branches: [main, feature/global-ai-app-discovery]
-    paths:
-      - "expanded_catalog_sources.py"
-      - "store_sources.json"
-      - "github_catalog_store.py"
-      - "sync_catalogs.py"
-      - "tests/test_expanded_catalog_sources.py"
-      - "tests/test_store_registry_and_connectors.py"
-      - ".github/workflows/global-ai-catalogue.yml"
   workflow_dispatch:
   schedule:
     - cron: "23 4 * * *"
