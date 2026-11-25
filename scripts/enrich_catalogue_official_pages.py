@@ -10,11 +10,17 @@ import json
 import os
 import re
 import time
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
 import httpx
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from github_catalog_store import GitHubCatalogueStore, _merge_metadata
 
@@ -194,7 +200,7 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
     timeout = httpx.Timeout(25, connect=10)
 
     async with httpx.AsyncClient(
-        follow_redirects=True, timeout=timeout,
+        follow_redirects=False, timeout=timeout,
         headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
     ) as client:
         # Round-robin source ordering avoids starving smaller stores.
@@ -206,14 +212,22 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
         async def one(row):
             async with semaphore:
                 try:
-                    response = await client.get(row["source_url"])
-                    response.raise_for_status()
+                    current_url = row["source_url"]
+                    original_host = urlsplit(current_url).hostname
+                    for _ in range(4):
+                        response = await client.get(current_url)
+                        if response.status_code in {301, 302, 303, 307, 308}:
+                            target = urljoin(current_url, response.headers.get("Location", ""))
+                            if not valid_https(target) or urlsplit(target).hostname != original_host:
+                                return row, {}, "redirect_host_changed"
+                            current_url = target
+                            continue
+                        response.raise_for_status()
+                        break
+                    else:
+                        return row, {}, "too_many_redirects"
                     if "html" not in response.headers.get("content-type", "").lower():
                         return row, {}, "non_html"
-                    original_host = urlsplit(row["source_url"]).hostname
-                    final_host = urlsplit(str(response.url)).hostname
-                    if final_host != original_host:
-                        return row, {}, "redirect_host_changed"
                     return row, parse_official_metadata(response.text, str(response.url)), None
                 except (httpx.HTTPError, ValueError) as exc:
                     return row, {}, type(exc).__name__
