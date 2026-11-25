@@ -63,3 +63,41 @@ def test_metadata_values_rejects_unverified_guesses():
     from scripts.run_unified_catalogue import _metadata_values
 
     assert _metadata_values({"name": "Example App", "stars": 5, "reviews": ["great"]}) == {}
+
+
+
+def test_official_page_parser_uses_explicit_meta_and_schema_org_only():
+    from scripts.enrich_catalogue_official_pages import parse_official_metadata
+
+    html = """
+    <html><head>
+      <meta name="description" content="Official application description">
+      <meta name="author" content="Publisher Ltd">
+      <meta property="og:image" content="https://cdn.example/app.png">
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication",
+       "name":"Example","applicationCategory":"Utilities","license":"MIT",
+       "url":"https://publisher.example/product",
+       "aggregateRating":{"ratingValue":"4.7","ratingCount":"125"}}
+      </script>
+    </head></html>
+    """
+    result = parse_official_metadata(html, "https://store.example/apps/example")
+    assert result["description"] == "Official application description"
+    assert result["developer"] == "Publisher Ltd"
+    assert result["icon_url"] == "https://cdn.example/app.png"
+    assert result["app_url"] == "https://publisher.example/product"
+    assert result["category"] == "Utilities"
+    assert result["_rating"] == {"value": "4.7", "count": "125"}
+
+
+def test_official_page_parser_does_not_accept_http_images_or_guess_reviews():
+    from scripts.enrich_catalogue_official_pages import parse_official_metadata
+
+    result = parse_official_metadata(
+        '<meta property="og:image" content="http://bad.example/icon.png">',
+        "https://store.example/app",
+    )
+    assert "icon_url" not in result
+    assert "_rating" not in result
+    assert "_reviews" not in result
