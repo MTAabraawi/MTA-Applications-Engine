@@ -1,1 +1,1 @@
-{"mät":["bluejetty:00033367:ios"],"ocf":["fedora-packages:ceph/ceph-resource-agents","fedora-packages:ocfs2-tools/ocfs2-tools","fedora-packages:ocfs2-tools/ocfs2-tools-devel"]}
+{"mät":["bluejetty:00033367:ios"],"ocf":["fedora-packages:ceph/ceph-resource-agents","fedora-packages:glusterfs/glusterfs-resource-agents","fedora-packages:ocfs2-tools/ocfs2-tools","fedora-packages:ocfs2-tools/ocfs2-tools-devel"],"안심을":["bluejetty:00143744:ios"]}
