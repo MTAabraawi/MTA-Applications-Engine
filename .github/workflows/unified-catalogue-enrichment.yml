@@ -63,7 +63,10 @@ jobs:
       FEDORA_ENRICH_BATCH_SIZE: "15"
       ENRICH_CONCURRENCY: "4"
       ENRICHMENT_MAX_BATCHES: "1000"
-      ENRICHMENT_MAX_RUNTIME_MINUTES: "300"
+      ENRICHMENT_MAX_RUNTIME_MINUTES: "140"
+      GENERIC_DETAIL_BATCH_PER_SOURCE: "100"
+      GENERIC_DETAIL_CONCURRENCY: "4"
+      GENERIC_DETAIL_RUNTIME_MINUTES: "60"
     steps:
       - name: Checkout isolated development branch
         uses: actions/checkout@v4
@@ -80,7 +83,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Compile unified pipeline
-        run: python -m py_compile sync_catalogs.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/run_unified_catalogue.py
+        run: python -m py_compile sync_catalogs.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/enrich_catalogue_official_pages.py scripts/run_unified_catalogue.py
       - name: Run catalogue and connector tests
         run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py tests/test_unified_catalogue_pipeline.py
       - name: Discover, synchronize, enrich and rebuild all indexes
