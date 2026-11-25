@@ -194,13 +194,15 @@ def crossmatch_icons(records, provider_index, now):
     counts = {"scanned": 0, "matched": 0, "unmatched": 0, "ambiguous": 0}
     updates = []
     for row in records:
-        if row.get("source_key") != "bluejetty" or has_value(row.get("icon_url")):
+        # Reconcile missing mobile icons across every catalogue source, not
+        # only Blue Jetty. A match is accepted only from an exact official
+        # Google Play package ID or Apple App Store numeric listing ID.
+        if has_value(row.get("icon_url")) or row.get("platform") not in {"android", "ios"}:
+            continue
+        if row.get("source_key") in {"google-play", "apple-itunes", "apple-appbrain", "fdroid", "izzyondroid"}:
             continue
         metadata = dict(row.get("metadata_json") or {})
         candidates = []
-        # Blue Jetty's compact index stores official Play/App Store listing
-        # URLs on the record itself (source_url), not necessarily inside the
-        # detail metadata. Include both record URLs and nested detail evidence.
         link_evidence = {
             "source_url": row.get("source_url"),
             "app_url": row.get("app_url"),
