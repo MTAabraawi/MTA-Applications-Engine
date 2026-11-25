@@ -60,7 +60,7 @@ def main() -> None:
     if args.output:
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(rendered + "\\n", encoding="utf-8")
+        output.write_text(rendered + "\n", encoding="utf-8")
     print(rendered)
 
 
