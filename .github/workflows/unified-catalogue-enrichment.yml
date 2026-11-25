@@ -18,6 +18,7 @@ on:
       - "expanded_catalog_sources.py"
       - "github_catalog_store.py"
       - "store_sources.json"
+      - "tests/test_unified_catalogue_pipeline.py"
       - ".github/workflows/unified-catalogue-enrichment.yml"
 
 permissions:
