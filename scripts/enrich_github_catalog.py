@@ -198,7 +198,15 @@ def crossmatch_icons(records, provider_index, now):
             continue
         metadata = dict(row.get("metadata_json") or {})
         candidates = []
-        for platform, external_id in store_ids(metadata):
+        # Blue Jetty's compact index stores official Play/App Store listing
+        # URLs on the record itself (source_url), not necessarily inside the
+        # detail metadata. Include both record URLs and nested detail evidence.
+        link_evidence = {
+            "source_url": row.get("source_url"),
+            "app_url": row.get("app_url"),
+            "metadata_json": metadata,
+        }
+        for platform, external_id in store_ids(link_evidence):
             if row.get("platform") in {"android", "ios"} and platform != row.get("platform"):
                 continue
             provider = provider_index.get((platform, external_id))
