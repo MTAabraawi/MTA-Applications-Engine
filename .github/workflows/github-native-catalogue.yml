@@ -2,7 +2,7 @@ name: GitHub-Native Catalogue Sync
 
 on:
   push:
-    branches: [main, feature/github-native-catalog-store, feature/global-ai-app-discovery]
+    branches: [main, feature/github-native-catalog-store, feature/global-ai-app-discovery, feature/catalogue-full-source-sync]
     paths:
       - "catalog_sources.py"
       - "expanded_catalog_sources.py"
