@@ -20,7 +20,7 @@ on:
       - "store_sources.json"
       - ".github/workflows/github-native-catalogue.yml"
   schedule:
-    - cron: "47 3 * * *"
+    - cron: "0 */4 * * *"
   workflow_dispatch:
     inputs:
       sync_sources:
