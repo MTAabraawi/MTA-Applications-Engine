@@ -86,6 +86,17 @@ def _metadata_values(metadata: dict) -> dict:
     for field, keys in aliases.items():
         for container in containers:
             candidate = next((container.get(key) for key in keys if has_value(container.get(key))), None)
+            # Publisher objects commonly expose the verified organization name
+            # as {"publisher": {"name": "..."}}. Read that name only from
+            # the publisher object, never from an app's top-level name.
+            if (
+                field == "developer"
+                and candidate is None
+                and container is metadata.get("publisher")
+                and isinstance(container, dict)
+                and has_value(container.get("name"))
+            ):
+                candidate = container.get("name")
             if isinstance(candidate, list):
                 candidate = ", ".join(str(item).strip() for item in candidate if has_value(item))
             if isinstance(candidate, dict):
