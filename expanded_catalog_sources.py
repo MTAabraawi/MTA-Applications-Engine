@@ -173,7 +173,7 @@ async def fetch_github_ai_applications(client: httpx.AsyncClient) -> list[dict[s
     country of origin is not guessed from language, owner name, or search term.
     """
     terms = [x.strip() for x in os.getenv(
-        "AI_GLOBAL_GITHUB_TERMS", "\\n".join(GITHUB_AI_DISCOVERY_TERMS)
+        "AI_GLOBAL_GITHUB_TERMS", "\n".join(GITHUB_AI_DISCOVERY_TERMS)
     ).splitlines() if x.strip()]
     max_terms = max(1, min(int(os.getenv("AI_GLOBAL_GITHUB_MAX_TERMS", "18")), 25))
     per_page = max(10, min(int(os.getenv("AI_GLOBAL_GITHUB_PER_PAGE", "100")), 100))
