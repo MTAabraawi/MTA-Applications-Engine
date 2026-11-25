@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 import sync_catalogs
 import scripts.enrich_github_catalog as detail_enrichment
+from scripts.enrich_catalogue_official_pages import enrich as enrich_official_pages
 from github_catalog_store import GitHubCatalogueStore
 
 QUALITY_FIELDS = (
@@ -191,6 +192,7 @@ async def main() -> None:
     # official mobile-store icon cross-match while the remaining source-specific
     # detail adapters are implemented and verified.
     await detail_enrichment.main()
+    official_page_enrichment = await enrich_official_pages(store)
 
     records = list(store.iter_records())
     quality = build_source_quality(records)
@@ -202,8 +204,9 @@ async def main() -> None:
         "registered_stores": state["registered_store_count"],
         "sources_with_records": state["sources_with_records"],
         "source_metadata_backfill": metadata_backfill,
+        "official_page_enrichment": official_page_enrichment,
         "source_quality": quality,
-        "detail_adapters_verified": ["bluejetty", "fedora-packages"],
+        "detail_adapters_verified": ["bluejetty", "fedora-packages", "generic_official_html_schema_org"],
         "detail_adapters_pending": sorted(
             source for source in quality if source not in {"bluejetty", "fedora-packages"}
         ),
