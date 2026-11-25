@@ -1,1 +1,1 @@
-{"omp":["alpine-linux:main/rsyslog-pgsql","alpine-linux:main/rsyslog-prog","bluejetty:00041885:ios","fedora-packages:crest/crest","fedora-packages:omping/omping","fedora-packages:ompl/ompl","fedora-packages:ompl/ompl-devel","homebrew-formulae:ompl"]}
+{"omp":["alpine-linux:main/rsyslog-pgsql","alpine-linux:main/rsyslog-prog","bluejetty:00041885:ios","fedora-packages:crest/crest","fedora-packages:omping/omping","fedora-packages:ompl/ompl","fedora-packages:ompl/ompl-devel","github-ai-applications:Error2148/omp-desktop-plugin","homebrew-formulae:ompl"]}
