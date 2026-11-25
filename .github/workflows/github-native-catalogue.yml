@@ -71,7 +71,7 @@ jobs:
       WINGET_LIMIT: "24"
       WINGET_PAGES: "3"
       CATALOG_CONCURRENCY: "4"
-      SYNC_SOURCES: ${{ github.ref_name == 'feature/global-ai-app-discovery' && 'huggingface-ai-spaces,github-ai-applications' || (github.event_name == 'workflow_dispatch' && inputs.sync_sources || '') }}
+      SYNC_SOURCES: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_sources || '' }}
     steps:
       - name: Check out selected branch
         uses: actions/checkout@v4
