@@ -1,1 +1,1 @@
-{"xgb":["homebrew-formulae:xgboost"]}
+{"xgb":["fedora-packages:golang-github-burntsushi-xgb/golang-github-burntsushi-xgb","fedora-packages:golang-github-burntsushi-xgb/golang-github-burntsushi-xgb-devel","homebrew-formulae:xgboost"]}

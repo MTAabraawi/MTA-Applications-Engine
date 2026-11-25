@@ -1,1 +1,1 @@
-{"k3s":["alpine-linux:community/k3s","alpine-linux:community/k3s-doc","alpine-linux:community/k3s-openrc","alpine-linux:community/k3s-systemd","homebrew-formulae:k3d","homebrew-formulae:k3sup","scoop:k3d","scoop:k3sup","scoop:kim"]}
+{"k3s":["alpine-linux:community/k3s","alpine-linux:community/k3s-doc","alpine-linux:community/k3s-openrc","alpine-linux:community/k3s-systemd","homebrew-formulae:k3d","homebrew-formulae:k3sup","scoop:k3d","scoop:k3sup","scoop:kim"],"迁移应":["bluejetty:00070435:ios"],"最后用":["bluejetty:00015675:ios"]}
