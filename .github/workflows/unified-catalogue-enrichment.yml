@@ -81,7 +81,7 @@ jobs:
       - name: Compile unified pipeline
         run: python -m py_compile sync_catalogs.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/run_unified_catalogue.py
       - name: Run catalogue and connector tests
-        run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py
+        run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py tests/test_unified_catalogue_pipeline.py
       - name: Discover, synchronize, enrich and rebuild all indexes
         run: python scripts/run_unified_catalogue.py
       - name: Commit resumable GitHub-native catalogue snapshot
