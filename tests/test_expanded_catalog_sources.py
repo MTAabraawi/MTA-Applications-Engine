@@ -374,3 +374,21 @@ def test_ai_discovery_locale_does_not_infer_publisher_country():
     assert _ai_discovery_locale("AIアプリ") == "ja"
     assert _ai_discovery_locale("인공지능 앱") == "ko"
     assert _ai_discovery_locale("AI assistant") == "en"
+
+
+def test_github_ai_application_default_terms_are_split_into_individual_queries(monkeypatch):
+    monkeypatch.delenv("AI_GLOBAL_GITHUB_TERMS", raising=False)
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_MAX_TERMS", "3")
+    monkeypatch.setenv("AI_GLOBAL_GITHUB_PAGES", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    client = FakeClient(lambda url, kwargs: {"items": []})
+
+    records = asyncio.run(fetch_github_ai_applications(client))
+
+    assert records == []
+    assert len(client.calls) == 3
+    queries = [call[1]["params"]["q"] for call in client.calls]
+    assert queries[0].startswith('"AI app"')
+    assert queries[1].startswith('"AI assistant"')
+    assert queries[2].startswith('"LLM app"')
+    assert all("\\n" not in query for query in queries)
