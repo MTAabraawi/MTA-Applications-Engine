@@ -1,1 +1,1 @@
-{"폰트":["bluejetty:00128693:ios"],"h83":["fedora-packages:cross-binutils/binutils-h8300-linux-gnu"]}
+{"폰트":["bluejetty:00128693:ios"],"h83":["fedora-packages:cross-binutils/binutils-h8300-linux-gnu","fedora-packages:cross-gcc/gcc-c++-h8300-linux-gnu","fedora-packages:cross-gcc/gcc-h8300-linux-gnu"]}
