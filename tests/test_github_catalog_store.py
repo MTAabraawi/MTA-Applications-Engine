@@ -152,3 +152,29 @@ def test_browse_indexes_split_into_pages_of_one_thousand(tmp_path):
     assert len(second_page) == 1
     assert first_page[0].endswith(":0")
     assert second_page[0].endswith(":1000")
+
+
+def test_bluejetty_icon_crossmatch_reads_official_store_urls_from_record():
+    from scripts.enrich_github_catalog import crossmatch_icons
+
+    records = [{
+        "source_key": "bluejetty",
+        "external_id": "bluejetty-ios-app",
+        "platform": "ios",
+        "source_url": "https://apps.apple.com/us/app/example/id123456789",
+        "app_url": "https://example.org",
+        "icon_url": None,
+        "metadata_json": {},
+    }]
+    providers = {
+        ("ios", "123456789"): {
+            "source_key": "apple-itunes",
+            "icon_url": "https://cdn.example.org/app-icon.png",
+        }
+    }
+
+    updates, counts = crossmatch_icons(records, providers, "2026-11-25T00:00:00+00:00")
+
+    assert counts == {"scanned": 1, "matched": 1, "unmatched": 0, "ambiguous": 0}
+    assert updates[0]["icon_url"] == "https://cdn.example.org/app-icon.png"
+    assert updates[0]["metadata_json"]["icon_crossmatch"]["method"] == "exact_official_store_listing_id"
