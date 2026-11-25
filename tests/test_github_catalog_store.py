@@ -178,3 +178,30 @@ def test_bluejetty_icon_crossmatch_reads_official_store_urls_from_record():
     assert counts == {"scanned": 1, "matched": 1, "unmatched": 0, "ambiguous": 0}
     assert updates[0]["icon_url"] == "https://cdn.example.org/app-icon.png"
     assert updates[0]["metadata_json"]["icon_crossmatch"]["method"] == "exact_official_store_listing_id"
+
+
+def test_icon_crossmatch_covers_mobile_sources_beyond_bluejetty():
+    from scripts.enrich_github_catalog import crossmatch_icons
+
+    records = [{
+        "source_key": "openuse",
+        "external_id": "openuse-android-123",
+        "platform": "android",
+        "source_url": "https://example.org/catalogue/openuse-android-123",
+        "app_url": "https://play.google.com/store/apps/details?id=org.example.mobile",
+        "icon_url": None,
+        "metadata_json": {},
+    }]
+    providers = {
+        ("android", "org.example.mobile"): {
+            "source_key": "fdroid",
+            "icon_url": "https://cdn.example.org/org-example-mobile.png",
+        }
+    }
+
+    updates, counts = crossmatch_icons(records, providers, "2026-11-25T00:00:00+00:00")
+
+    assert counts == {"scanned": 1, "matched": 1, "unmatched": 0, "ambiguous": 0}
+    assert updates[0]["source_key"] == "openuse"
+    assert updates[0]["icon_url"] == "https://cdn.example.org/org-example-mobile.png"
+    assert updates[0]["metadata_json"]["icon_crossmatch"]["provider_source"] == "fdroid"
