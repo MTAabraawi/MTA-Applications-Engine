@@ -36,12 +36,12 @@ concurrency:
 jobs:
   unified-catalogue:
     if: github.ref == 'refs/heads/feature/unified-catalogue-enrichment'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 350
     env:
       MTA_STORAGE_BACKEND: github
-      MTA_PIPELINE_STAGE: ${{ inputs.stage || 'detail' }}
-      SYNC_SOURCES: ${{ inputs.sync_sources || '' }}
+      MTA_PIPELINE_STAGE: ${{ inputs.stage || (github.event_name == 'push' && 'retry_sync' || 'detail') }}
+      SYNC_SOURCES: ${{ inputs.sync_sources || 'fdroid,flathub,izzyondroid,fedora-packages,chocolatey' }}
       MTA_GIT_CHECKPOINT: "true"
       SYNC_RESUME_HOURS: "24"
       GITHUB_CATALOGUE_DIR: catalogue_data
