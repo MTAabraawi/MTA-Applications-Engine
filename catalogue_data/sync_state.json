@@ -75,6 +75,11 @@
       "status": "empty",
       "completed_at": "2026-11-26T09:38:07.323349+00:00",
       "fetched": 0
+    },
+    "scoop": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:43:31.392046+00:00",
+      "fetched": 5275
     }
   }
 }
