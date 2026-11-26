@@ -30,6 +30,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:26:34.171965+00:00",
       "fetched": 708
+    },
+    "winget-run-community": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:28:03.926469+00:00",
+      "fetched": 974
     }
   }
 }
