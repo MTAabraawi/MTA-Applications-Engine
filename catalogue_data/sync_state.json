@@ -120,6 +120,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:31:06.264755+00:00",
       "fetched": 4183
+    },
+    "firefox-addons": {
+      "status": "success",
+      "completed_at": "2026-11-26T10:35:31.686943+00:00",
+      "fetched": 3149
     }
   }
 }
