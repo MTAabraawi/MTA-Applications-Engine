@@ -105,6 +105,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:22:35.555715+00:00",
       "fetched": 249
+    },
+    "openuse": {
+      "status": "success",
+      "completed_at": "2026-11-26T10:24:32.023840+00:00",
+      "fetched": 988
     }
   }
 }
