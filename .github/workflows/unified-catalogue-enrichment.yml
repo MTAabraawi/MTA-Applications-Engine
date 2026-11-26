@@ -2,25 +2,6 @@ name: Unified Catalogue Discovery and Enrichment
 
 on:
   workflow_dispatch:
-    inputs:
-      stage:
-        description: "Select one resumable pipeline stage"
-        required: true
-        type: choice
-        options:
-          - detail
-          - generic
-          - backfill
-          - retry_sync
-          - sync
-          - report
-          - all
-        default: detail
-      sync_sources:
-        description: "Comma-separated sources for retry_sync only"
-        required: false
-        type: string
-        default: "fdroid,flathub,izzyondroid,fedora-packages,chocolatey"
   push:
     branches: [feature/unified-catalogue-enrichment]
     paths:
@@ -33,49 +14,51 @@ concurrency:
   group: mta-unified-catalogue-enrichment
   cancel-in-progress: true
 
+env:
+  MTA_STORAGE_BACKEND: github
+  MTA_GIT_CHECKPOINT: "true"
+  GITHUB_CATALOGUE_DIR: catalogue_data
+  SYNC_RESUME_HOURS: "24"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
+  FLATHUB_MAX_APPS: "5000"
+  BLUEJETTY_MAX_APPS: "200000"
+  BLUEJETTY_PAGE_DELAY: "0.55"
+  OPENUSE_MAX_APPS: "50000"
+  FIREFOX_ADDON_PAGES: "5"
+  WORDPRESS_PLUGIN_PAGES: "5"
+  APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
+  APPBRAIN_ENABLE_SYNC: "false"
+  APPBRAIN_MAX_PAGES: "1"
+  APPBRAIN_IOS_MAX_PAGES: "1"
+  APPBRAIN_ENABLE_IOS: "false"
+  APPLE_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather,games,music,social,travel,shopping,news,books,fitness,calendar,notes,scanner,keyboard,cloud,streaming,art,food"
+  WINGET_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+  ARCH_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+  DEBIAN_SEARCH_TERMS: "browser,office,graphics,video,audio,education,security,games,communication,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+  SNAP_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
+  STEAM_SEARCH_TERMS: "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer,racing,sports,casual,platformer,puzzle,shooter,role playing"
+  APPLE_LIMIT: "100"
+  WINGET_LIMIT: "24"
+  WINGET_PAGES: "3"
+  CATALOG_CONCURRENCY: "4"
+  BLUEJETTY_ENRICH_BATCH_SIZE: "100"
+  FEDORA_ENRICH_BATCH_SIZE: "15"
+  ENRICH_CONCURRENCY: "4"
+  ENRICHMENT_MAX_BATCHES: "1000"
+  ENRICHMENT_MAX_RUNTIME_MINUTES: "140"
+  GENERIC_DETAIL_BATCH_PER_SOURCE: "100"
+  GENERIC_DETAIL_CONCURRENCY: "4"
+  GENERIC_DETAIL_RUNTIME_MINUTES: "60"
+
 jobs:
-  unified-catalogue:
-    if: github.ref == 'refs/heads/feature/unified-catalogue-enrichment'
+  retry-failed-sources:
+    name: Retry failed public catalogue connectors
     runs-on: windows-latest
     timeout-minutes: 350
     env:
-      MTA_STORAGE_BACKEND: github
-      MTA_PIPELINE_STAGE: ${{ inputs.stage || (github.event_name == 'push' && 'retry_sync' || 'detail') }}
-      SYNC_SOURCES: ${{ inputs.sync_sources || 'fdroid,flathub,izzyondroid,fedora-packages,chocolatey' }}
-      MTA_GIT_CHECKPOINT: "true"
-      SYNC_RESUME_HOURS: "24"
-      GITHUB_CATALOGUE_DIR: catalogue_data
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
-      FLATHUB_MAX_APPS: "5000"
-      BLUEJETTY_MAX_APPS: "200000"
-      BLUEJETTY_PAGE_DELAY: "0.55"
-      OPENUSE_MAX_APPS: "50000"
-      FIREFOX_ADDON_PAGES: "5"
-      WORDPRESS_PLUGIN_PAGES: "5"
-      APPBRAIN_API_KEY: ${{ secrets.APPBRAIN_API_KEY }}
-      APPBRAIN_ENABLE_SYNC: "false"
-      APPBRAIN_MAX_PAGES: "1"
-      APPBRAIN_IOS_MAX_PAGES: "1"
-      APPBRAIN_ENABLE_IOS: "false"
-      APPLE_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,messaging,maps,health,weather,games,music,social,travel,shopping,news,books,fitness,calendar,notes,scanner,keyboard,cloud,streaming,art,food"
-      WINGET_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
-      ARCH_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
-      DEBIAN_SEARCH_TERMS: "browser,office,graphics,video,audio,education,security,games,communication,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
-      SNAP_SEARCH_TERMS: "browser,office,photo,video,education,security,finance,communication,developer,utilities,media,archive,terminal,editor,cloud,backup,network,system,design,game"
-      STEAM_SEARCH_TERMS: "action,adventure,strategy,simulation,rpg,indie,free to play,multiplayer,racing,sports,casual,platformer,puzzle,shooter,role playing"
-      APPLE_LIMIT: "100"
-      WINGET_LIMIT: "24"
-      WINGET_PAGES: "3"
-      CATALOG_CONCURRENCY: "4"
-      BLUEJETTY_ENRICH_BATCH_SIZE: "100"
-      FEDORA_ENRICH_BATCH_SIZE: "15"
-      ENRICH_CONCURRENCY: "4"
-      ENRICHMENT_MAX_BATCHES: "1000"
-      ENRICHMENT_MAX_RUNTIME_MINUTES: "140"
-      GENERIC_DETAIL_BATCH_PER_SOURCE: "100"
-      GENERIC_DETAIL_CONCURRENCY: "4"
-      GENERIC_DETAIL_RUNTIME_MINUTES: "60"
+      MTA_PIPELINE_STAGE: retry_sync
+      SYNC_SOURCES: "fdroid,flathub,izzyondroid,fedora-packages,chocolatey"
     steps:
       - name: Checkout isolated development branch
         uses: actions/checkout@v4
@@ -91,23 +74,156 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      - name: Compile unified pipeline
+      - name: Compile pipeline and connectors
         run: python -m py_compile sync_catalogs.py catalog_sources.py expanded_catalog_sources.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/enrich_catalogue_official_pages.py scripts/run_unified_catalogue.py
       - name: Run catalogue and connector tests
         run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py tests/test_unified_catalogue_pipeline.py
-      - name: Execute selected resumable pipeline stage
+      - name: Retry failed sources and save checkpoints
         run: python scripts/run_unified_catalogue.py
-      - name: Commit resumable GitHub-native catalogue snapshot
+      - name: Commit remaining source snapshot changes
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then
-            echo "No catalogue changes to commit."
-            exit 0
-          fi
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
-          git commit -m "Run unified all-source catalogue discovery and enrichment"
+          git commit -m "Save failed-source recovery snapshot"
           git fetch origin feature/unified-catalogue-enrichment
           git rebase origin/feature/unified-catalogue-enrichment
+          git push origin HEAD:feature/unified-catalogue-enrichment
+
+  metadata-backfill:
+    name: Backfill explicit source metadata
+    needs: retry-failed-sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_PIPELINE_STAGE: backfill
+    steps:
+      - name: Checkout latest development snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: feature/unified-catalogue-enrichment
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Backfill verified metadata and save checkpoint
+        run: python scripts/run_unified_catalogue.py
+      - name: Commit remaining metadata changes
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Save explicit source metadata backfill"
+          git pull --rebase origin feature/unified-catalogue-enrichment
+          git push origin HEAD:feature/unified-catalogue-enrichment
+
+  detail-enrichment:
+    name: Enrich Blue Jetty and Fedora application details
+    needs: metadata-backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_PIPELINE_STAGE: detail
+    steps:
+      - name: Checkout latest development snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: feature/unified-catalogue-enrichment
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run resumable detail enrichment
+        run: python scripts/run_unified_catalogue.py
+      - name: Commit remaining detail enrichment changes
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Save Blue Jetty and Fedora detail enrichment"
+          git pull --rebase origin feature/unified-catalogue-enrichment
+          git push origin HEAD:feature/unified-catalogue-enrichment
+
+  generic-page-enrichment:
+    name: Enrich remaining official application pages
+    needs: detail-enrichment
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_PIPELINE_STAGE: generic
+    steps:
+      - name: Checkout latest development snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: feature/unified-catalogue-enrichment
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run generic official-page enrichment
+        run: python scripts/run_unified_catalogue.py
+      - name: Commit remaining official-page changes
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Save generic official-page enrichment"
+          git pull --rebase origin feature/unified-catalogue-enrichment
+          git push origin HEAD:feature/unified-catalogue-enrichment
+
+  final-quality-report:
+    name: Rebuild indexes and publish internal quality report
+    needs: generic-page-enrichment
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      MTA_PIPELINE_STAGE: report
+    steps:
+      - name: Checkout latest development snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: feature/unified-catalogue-enrichment
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Rebuild indexes and generate per-store quality state
+        run: python scripts/run_unified_catalogue.py
+      - name: Commit final quality report
+        run: |
+          if [ -z "$(git status --porcelain -- catalogue_data)" ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalogue_data/
+          git commit -m "Save final all-store catalogue quality report"
+          git pull --rebase origin feature/unified-catalogue-enrichment
           git push origin HEAD:feature/unified-catalogue-enrichment
