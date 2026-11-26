@@ -55,6 +55,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:37:22.979350+00:00",
       "fetched": 1344
+    },
+    "mta-curated-web": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:38:00.367784+00:00",
+      "fetched": 7
     }
   }
 }
