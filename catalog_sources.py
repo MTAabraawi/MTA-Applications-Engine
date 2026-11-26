@@ -115,7 +115,10 @@ async def _get_json(client: httpx.AsyncClient, url: str, **kwargs: Any) -> Any:
     for attempt in range(4):
         try:
             response = await client.get(url, **kwargs)
-            if response.status_code == 429 or response.status_code >= 500:
+            # Lightweight test doubles and compatible client adapters may not
+            # expose status_code; raise_for_status() remains the portable check.
+            status_code = getattr(response, "status_code", None)
+            if status_code is not None and (status_code == 429 or status_code >= 500):
                 response.raise_for_status()
             response.raise_for_status()
             return response.json()
