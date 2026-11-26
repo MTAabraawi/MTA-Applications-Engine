@@ -110,9 +110,24 @@ def _unique(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def _get_json(client: httpx.AsyncClient, url: str, **kwargs: Any) -> Any:
-    response = await client.get(url, **kwargs)
-    response.raise_for_status()
-    return response.json()
+    """GET JSON with bounded retries for transient network and upstream failures."""
+    last_error = None
+    for attempt in range(4):
+        try:
+            response = await client.get(url, **kwargs)
+            if response.status_code == 429 or response.status_code >= 500:
+                response.raise_for_status()
+            response.raise_for_status()
+            return response.json()
+        except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError, httpx.HTTPStatusError, ValueError) as exc:
+            last_error = exc
+            retryable = not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code == 429 or exc.response.status_code >= 500
+            if not retryable or attempt == 3:
+                raise
+            delay = min(2 ** attempt, 8)
+            log.warning("Retrying catalogue request %s after attempt %d (%s)", url, attempt + 1, exc)
+            await asyncio.sleep(delay)
+    raise last_error
 
 
 async def fetch_flathub(client: httpx.AsyncClient) -> list[dict[str, Any]]:
