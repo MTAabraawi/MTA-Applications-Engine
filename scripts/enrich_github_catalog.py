@@ -316,7 +316,9 @@ async def main():
                     target["fields_filled"][field] = target["fields_filled"].get(field, 0) + count
                 log.info("%s batch %s: selected=%s checked=%s enriched=%s failed=%s fields=%s",
                          source, batch + 1, len(selected), counts["checked"], counts["enriched"], counts["failed"], counts["fields_filled"])
-            if (batch + 1) % 10 == 0:
+            # Persist each completed batch: an Actions cancellation must not
+            # discard up to nine batches of verified metadata held in memory.
+            if any_selected:
                 store.checkpoint_git(f"Checkpoint verified detail enrichment batch {batch + 1}")
             if not any_selected:
                 break
