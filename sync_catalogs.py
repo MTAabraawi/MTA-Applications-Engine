@@ -87,7 +87,7 @@ async def main() -> None:
     
     def persist_checkpoint(source, result):
         sync_state["sources"][source] = {
-            "status": "success" if "error" not in result else "failed",
+            "status": "success" if "error" not in result and int(result.get("fetched", 0)) > 0 else ("failed" if "error" in result else "empty"),
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "fetched": int(result.get("fetched", 0)),
             **({"error": str(result["error"])[:500]} if "error" in result else {}),
