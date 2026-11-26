@@ -134,6 +134,12 @@ def enrich_from_source_metadata(store: GitHubCatalogueStore) -> dict:
         store.checkpoint_git("Checkpoint explicit source metadata backfill")
     return counts
 
+async def run_detail_enrichment() -> dict:
+    """Await the asynchronous verified detail adapters before reporting completion."""
+    await detail_enrichment.main()
+    return {"status": "executed", "adapters": ["bluejetty", "fedora-packages"]}
+
+
 def write_state(root: Path, quality: dict, manifest: dict) -> dict:
     registry_path = Path("store_sources.json")
     registry = json.loads(registry_path.read_text(encoding="utf-8")) if registry_path.exists() else []
@@ -210,8 +216,7 @@ async def main() -> None:
 
     detail_result = {"status": "not_requested"}
     if stage in {"all", "detail"}:
-        detail_enrichment.main()
-        detail_result = {"status": "executed", "adapters": ["bluejetty", "fedora-packages"]}
+        detail_result = await run_detail_enrichment()
 
     official_page_enrichment = {"status": "not_requested"}
     if stage in {"all", "generic"}:
