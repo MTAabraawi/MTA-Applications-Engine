@@ -115,6 +115,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:26:51.392694+00:00",
       "fetched": 465
+    },
+    "wordpress-plugins": {
+      "status": "success",
+      "completed_at": "2026-11-26T10:31:06.264755+00:00",
+      "fetched": 4183
     }
   }
 }
