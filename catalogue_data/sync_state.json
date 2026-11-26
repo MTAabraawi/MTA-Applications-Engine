@@ -20,6 +20,11 @@
       "status": "empty",
       "completed_at": "2026-11-26T09:24:56.243312+00:00",
       "fetched": 0
+    },
+    "steam": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:25:23.712229+00:00",
+      "fetched": 148
     }
   }
 }
