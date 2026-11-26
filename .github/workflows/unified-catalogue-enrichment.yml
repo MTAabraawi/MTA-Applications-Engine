@@ -31,7 +31,7 @@ permissions:
 
 concurrency:
   group: mta-unified-catalogue-enrichment
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   unified-catalogue:
