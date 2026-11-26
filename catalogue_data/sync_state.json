@@ -50,6 +50,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:34:41.430325+00:00",
       "fetched": 2343
+    },
+    "arch-linux": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:37:22.979350+00:00",
+      "fetched": 1344
     }
   }
 }
