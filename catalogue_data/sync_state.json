@@ -17,9 +17,9 @@
       "fetched": 0
     },
     "izzyondroid": {
-      "status": "empty",
-      "completed_at": "2026-11-26T09:24:56.243312+00:00",
-      "fetched": 0
+      "status": "success",
+      "completed_at": "2026-11-26T17:16:11.368282+00:00",
+      "fetched": 1402
     },
     "steam": {
       "status": "success",
