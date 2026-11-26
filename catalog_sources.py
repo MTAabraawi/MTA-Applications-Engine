@@ -681,25 +681,25 @@ async def fetch_all_catalogs(on_source=None, source_filter: set[str] | None = No
 
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=HEADERS) as client:
         jobs = {
-            "fdroid": fetch_fdroid(client),
-            "izzyondroid": fetch_izzyondroid(client),
-            "snap-store": fetch_snap_store(client),
-            "flathub": fetch_flathub(client),
-            "homebrew-cask": fetch_homebrew_cask(client),
-            "apple-itunes": fetch_apple_itunes(client),
-            "apple-macos": fetch_apple_macos(client),
-            "winget-run-community": fetch_winget_community(client),
-            "arch-linux": fetch_arch_linux(client),
-            "debian-packages": fetch_debian_packages(client),
-            "steam": fetch_steam(client),
+            "fdroid": lambda: fetch_fdroid(client),
+            "izzyondroid": lambda: fetch_izzyondroid(client),
+            "snap-store": lambda: fetch_snap_store(client),
+            "flathub": lambda: fetch_flathub(client),
+            "homebrew-cask": lambda: fetch_homebrew_cask(client),
+            "apple-itunes": lambda: fetch_apple_itunes(client),
+            "apple-macos": lambda: fetch_apple_macos(client),
+            "winget-run-community": lambda: fetch_winget_community(client),
+            "arch-linux": lambda: fetch_arch_linux(client),
+            "debian-packages": lambda: fetch_debian_packages(client),
+            "steam": lambda: fetch_steam(client),
         }
-        selected = set(source_filter) if source_filter else set(jobs)
+        selected = set(source_filter) if source_filter is not None else set(jobs) | {"mta-curated-web"}
         unknown = selected - set(jobs) - {"mta-curated-web"}
         if unknown:
             raise ValueError("Unknown base catalogue source(s): " + ", ".join(sorted(unknown)))
         jobs = {name: job for name, job in jobs.items() if name in selected}
         names = list(jobs)
-        jobs = {name: collect(name, job) for name, job in jobs.items()}
+        jobs = {name: collect(name, job()) for name, job in jobs.items()}
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
     output: dict[str, list[dict[str, Any]]] = {}
     for name, result in zip(names, results):
