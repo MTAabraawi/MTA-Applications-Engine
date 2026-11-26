@@ -28,9 +28,22 @@ CONCURRENCY = max(1, min(int(os.getenv("CATALOG_CONCURRENCY", "5")), 10))
 
 
 async def _json(client: httpx.AsyncClient, url: str, **kwargs: Any) -> Any:
-    response = await client.get(url, **kwargs)
-    response.raise_for_status()
-    return response.json()
+    """GET JSON with bounded retries for transient upstream errors."""
+    last_error = None
+    for attempt in range(4):
+        try:
+            response = await client.get(url, **kwargs)
+            response.raise_for_status()
+            return response.json()
+        except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError, httpx.HTTPStatusError, ValueError) as exc:
+            last_error = exc
+            retryable = not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code == 429 or exc.response.status_code >= 500
+            if not retryable or attempt == 3:
+                raise
+            delay = min(2 ** attempt, 8)
+            log.warning("Retrying expanded catalogue request %s after attempt %d (%s)", url, attempt + 1, exc)
+            await asyncio.sleep(delay)
+    raise last_error
 
 
 
