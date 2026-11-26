@@ -3,22 +3,27 @@ name: Unified Catalogue Discovery and Enrichment
 on:
   workflow_dispatch:
     inputs:
-      run_full_discovery:
-        description: "Run all configured public catalogue connectors"
+      stage:
+        description: "Select one resumable pipeline stage"
         required: true
-        type: boolean
-        default: true
+        type: choice
+        options:
+          - detail
+          - generic
+          - backfill
+          - retry_sync
+          - sync
+          - report
+          - all
+        default: detail
+      sync_sources:
+        description: "Comma-separated sources for retry_sync only"
+        required: false
+        type: string
+        default: "fdroid,flathub,izzyondroid,fedora-packages,chocolatey"
   push:
     branches: [feature/unified-catalogue-enrichment]
     paths:
-      - "scripts/run_unified_catalogue.py"
-      - "scripts/enrich_github_catalog.py"
-      - "sync_catalogs.py"
-      - "catalog_sources.py"
-      - "expanded_catalog_sources.py"
-      - "github_catalog_store.py"
-      - "store_sources.json"
-      - "tests/test_unified_catalogue_pipeline.py"
       - ".github/workflows/unified-catalogue-enrichment.yml"
 
 permissions:
@@ -26,7 +31,7 @@ permissions:
 
 concurrency:
   group: mta-unified-catalogue-enrichment
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   unified-catalogue:
@@ -35,6 +40,8 @@ jobs:
     timeout-minutes: 350
     env:
       MTA_STORAGE_BACKEND: github
+      MTA_PIPELINE_STAGE: ${{ inputs.stage || 'detail' }}
+      SYNC_SOURCES: ${{ inputs.sync_sources || '' }}
       MTA_GIT_CHECKPOINT: "true"
       SYNC_RESUME_HOURS: "24"
       GITHUB_CATALOGUE_DIR: catalogue_data
@@ -85,10 +92,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Compile unified pipeline
-        run: python -m py_compile sync_catalogs.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/enrich_catalogue_official_pages.py scripts/run_unified_catalogue.py
+        run: python -m py_compile sync_catalogs.py catalog_sources.py expanded_catalog_sources.py github_catalog_store.py scripts/enrich_github_catalog.py scripts/enrich_catalogue_official_pages.py scripts/run_unified_catalogue.py
       - name: Run catalogue and connector tests
         run: pytest -q tests/test_github_catalog_store.py tests/test_github_api_mode.py tests/test_expanded_catalog_sources.py tests/test_store_registry_and_connectors.py tests/test_unified_catalogue_pipeline.py
-      - name: Discover, synchronize, enrich and rebuild all indexes
+      - name: Execute selected resumable pipeline stage
         run: python scripts/run_unified_catalogue.py
       - name: Commit resumable GitHub-native catalogue snapshot
         shell: bash
