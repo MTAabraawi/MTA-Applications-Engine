@@ -279,6 +279,7 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
 
     if updates:
         store.upsert_many(updates, rebuild_indexes=False)
+        store.checkpoint_git("Checkpoint generic official-page metadata enrichment")
     return totals
 
 
