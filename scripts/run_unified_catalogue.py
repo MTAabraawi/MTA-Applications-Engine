@@ -131,6 +131,7 @@ def enrich_from_source_metadata(store: GitHubCatalogueStore) -> dict:
             counts["updated"] += 1
     if updates:
         store.upsert_many(updates, rebuild_indexes=False)
+        store.checkpoint_git("Checkpoint explicit source metadata backfill")
     return counts
 
 def write_state(root: Path, quality: dict, manifest: dict) -> dict:
@@ -209,6 +210,7 @@ async def main() -> None:
     quality = build_source_quality(records)
     manifest = store.rebuild_indexes()
     state = write_state(Path(os.getenv("GITHUB_CATALOGUE_DIR", "catalogue_data")), quality, manifest)
+    store.checkpoint_git("Save unified catalogue quality and enrichment state")
 
     summary = {
         "record_count": manifest["record_count"],
