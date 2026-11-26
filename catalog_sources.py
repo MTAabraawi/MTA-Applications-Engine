@@ -665,8 +665,8 @@ async def fetch_steam(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     return _unique(records)
 
 
-async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
-    """Fetch independent sources concurrently; isolate source failures."""
+async def fetch_all_catalogs(on_source=None, source_filter: set[str] | None = None) -> dict[str, list[dict[str, Any]]]:
+    """Fetch selected independent sources concurrently; isolate source failures."""
     async def collect(name: str, job):
         try:
             records = await job
@@ -693,6 +693,11 @@ async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
             "debian-packages": fetch_debian_packages(client),
             "steam": fetch_steam(client),
         }
+        selected = set(source_filter) if source_filter else set(jobs)
+        unknown = selected - set(jobs) - {"mta-curated-web"}
+        if unknown:
+            raise ValueError("Unknown base catalogue source(s): " + ", ".join(sorted(unknown)))
+        jobs = {name: job for name, job in jobs.items() if name in selected}
         names = list(jobs)
         jobs = {name: collect(name, job) for name, job in jobs.items()}
         results = await asyncio.gather(*jobs.values(), return_exceptions=True)
@@ -703,8 +708,9 @@ async def fetch_all_catalogs(on_source=None) -> dict[str, list[dict[str, Any]]]:
             output[name] = []
         else:
             output[name] = result
-    curated = fetch_curated_web_apps()
-    output["mta-curated-web"] = curated
-    if on_source:
-        on_source("mta-curated-web", curated)
+    if source_filter is None or "mta-curated-web" in source_filter:
+        curated = fetch_curated_web_apps()
+        output["mta-curated-web"] = curated
+        if on_source:
+            on_source("mta-curated-web", curated)
     return output
