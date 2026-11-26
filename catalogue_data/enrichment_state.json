@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-26T19:19:57.391125+00:00",
+  "updated_at": "2026-11-26T19:37:45.585317+00:00",
   "storage": "github-native-json-shards",
   "record_count": 366751,
   "registered_store_count": 53,
@@ -553,9 +553,9 @@
           "percent": 100.0
         },
         "summary": {
-          "present": 0,
-          "missing": 3634,
-          "percent": 0.0
+          "present": 100,
+          "missing": 3534,
+          "percent": 2.75
         },
         "developer": {
           "present": 3634,
@@ -601,9 +601,9 @@
           "percent": 100.0
         },
         "summary": {
-          "present": 0,
-          "missing": 2999,
-          "percent": 0.0
+          "present": 99,
+          "missing": 2900,
+          "percent": 3.3
         },
         "developer": {
           "present": 2999,
@@ -682,9 +682,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 2850,
-          "missing": 197206,
-          "percent": 1.42
+          "present": 2946,
+          "missing": 197110,
+          "percent": 1.47
         },
         "app_url": {
           "present": 200056,
@@ -730,9 +730,9 @@
       "integration_mode": "cli_search",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 98,
-          "percent": 0.0
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
         },
         "app_url": {
           "present": 98,
@@ -740,14 +740,14 @@
           "percent": 100.0
         },
         "description": {
-          "present": 0,
-          "missing": 98,
-          "percent": 0.0
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
         },
         "summary": {
-          "present": 0,
-          "missing": 98,
-          "percent": 0.0
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
         },
         "developer": {
           "present": 0,
@@ -760,9 +760,9 @@
           "percent": 0.0
         },
         "license": {
-          "present": 0,
-          "missing": 98,
-          "percent": 0.0
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
         },
         "source_url": {
           "present": 98,
@@ -798,9 +798,9 @@
           "percent": 100.0
         },
         "developer": {
-          "present": 0,
-          "missing": 25,
-          "percent": 0.0
+          "present": 25,
+          "missing": 0,
+          "percent": 100.0
         },
         "category": {
           "present": 0,
@@ -826,9 +826,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 4698,
-          "missing": 372,
-          "percent": 92.66
+          "present": 4729,
+          "missing": 341,
+          "percent": 93.27
         },
         "app_url": {
           "present": 4980,
@@ -836,14 +836,14 @@
           "percent": 98.22
         },
         "description": {
-          "present": 5048,
-          "missing": 22,
-          "percent": 99.57
+          "present": 5049,
+          "missing": 21,
+          "percent": 99.59
         },
         "summary": {
-          "present": 5054,
-          "missing": 16,
-          "percent": 99.68
+          "present": 5055,
+          "missing": 15,
+          "percent": 99.7
         },
         "developer": {
           "present": 4146,
@@ -884,14 +884,14 @@
           "percent": 19.55
         },
         "description": {
-          "present": 21835,
-          "missing": 61726,
-          "percent": 26.13
+          "present": 21854,
+          "missing": 61707,
+          "percent": 26.15
         },
         "summary": {
-          "present": 21835,
-          "missing": 61726,
-          "percent": 26.13
+          "present": 21854,
+          "missing": 61707,
+          "percent": 26.15
         },
         "developer": {
           "present": 0,
@@ -970,9 +970,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 3406,
-          "missing": 30,
-          "percent": 99.13
+          "present": 3407,
+          "missing": 29,
+          "percent": 99.16
         },
         "app_url": {
           "present": 0,
@@ -1018,9 +1018,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 2748,
-          "percent": 0.0
+          "present": 98,
+          "missing": 2650,
+          "percent": 3.57
         },
         "app_url": {
           "present": 2748,
@@ -1028,14 +1028,14 @@
           "percent": 100.0
         },
         "description": {
-          "present": 2400,
-          "missing": 348,
-          "percent": 87.34
+          "present": 2411,
+          "missing": 337,
+          "percent": 87.74
         },
         "summary": {
-          "present": 2400,
-          "missing": 348,
-          "percent": 87.34
+          "present": 2411,
+          "missing": 337,
+          "percent": 87.74
         },
         "developer": {
           "present": 2748,
@@ -1114,9 +1114,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 7858,
-          "percent": 0.0
+          "present": 100,
+          "missing": 7758,
+          "percent": 1.27
         },
         "app_url": {
           "present": 7835,
@@ -1124,14 +1124,14 @@
           "percent": 99.71
         },
         "description": {
-          "present": 5224,
-          "missing": 2634,
-          "percent": 66.48
+          "present": 5260,
+          "missing": 2598,
+          "percent": 66.94
         },
         "summary": {
-          "present": 5224,
-          "missing": 2634,
-          "percent": 66.48
+          "present": 5260,
+          "missing": 2598,
+          "percent": 66.94
         },
         "developer": {
           "present": 0,
@@ -1162,9 +1162,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 8746,
-          "percent": 0.0
+          "present": 100,
+          "missing": 8646,
+          "percent": 1.14
         },
         "app_url": {
           "present": 8608,
@@ -1210,9 +1210,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 577,
-          "percent": 0.0
+          "present": 100,
+          "missing": 477,
+          "percent": 17.33
         },
         "app_url": {
           "present": 577,
@@ -1220,14 +1220,14 @@
           "percent": 100.0
         },
         "description": {
-          "present": 576,
-          "missing": 1,
-          "percent": 99.83
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
         },
         "summary": {
-          "present": 576,
-          "missing": 1,
-          "percent": 99.83
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
         },
         "developer": {
           "present": 577,
@@ -1240,9 +1240,9 @@
           "percent": 100.0
         },
         "license": {
-          "present": 0,
-          "missing": 577,
-          "percent": 0.0
+          "present": 36,
+          "missing": 541,
+          "percent": 6.24
         },
         "source_url": {
           "present": 577,
@@ -1258,9 +1258,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 1340,
-          "missing": 62,
-          "percent": 95.58
+          "present": 1400,
+          "missing": 2,
+          "percent": 99.86
         },
         "app_url": {
           "present": 1397,
@@ -1306,9 +1306,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 209,
-          "missing": 76,
-          "percent": 73.33
+          "present": 238,
+          "missing": 47,
+          "percent": 83.51
         },
         "app_url": {
           "present": 0,
@@ -1384,9 +1384,9 @@
           "percent": 100.0
         },
         "license": {
-          "present": 0,
-          "missing": 7,
-          "percent": 0.0
+          "present": 1,
+          "missing": 6,
+          "percent": 14.29
         },
         "source_url": {
           "present": 7,
@@ -1402,9 +1402,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 752,
-          "missing": 236,
-          "percent": 76.11
+          "present": 773,
+          "missing": 215,
+          "percent": 78.24
         },
         "app_url": {
           "present": 982,
@@ -1412,9 +1412,9 @@
           "percent": 99.39
         },
         "description": {
-          "present": 0,
-          "missing": 988,
-          "percent": 0.0
+          "present": 99,
+          "missing": 889,
+          "percent": 10.02
         },
         "summary": {
           "present": 988,
@@ -1450,9 +1450,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 5276,
-          "percent": 0.0
+          "present": 37,
+          "missing": 5239,
+          "percent": 0.7
         },
         "app_url": {
           "present": 5103,
@@ -1498,9 +1498,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "app_url": {
           "present": 0,
@@ -1508,29 +1508,29 @@
           "percent": 0.0
         },
         "description": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "summary": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "developer": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "category": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "license": {
-          "present": 0,
-          "missing": 729,
-          "percent": 0.0
+          "present": 100,
+          "missing": 629,
+          "percent": 13.72
         },
         "source_url": {
           "present": 729,
@@ -1556,14 +1556,14 @@
           "percent": 0.0
         },
         "description": {
-          "present": 0,
-          "missing": 179,
-          "percent": 0.0
+          "present": 94,
+          "missing": 85,
+          "percent": 52.51
         },
         "summary": {
-          "present": 0,
-          "missing": 179,
-          "percent": 0.0
+          "present": 94,
+          "missing": 85,
+          "percent": 52.51
         },
         "developer": {
           "present": 0,
@@ -1594,9 +1594,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 0,
-          "missing": 974,
-          "percent": 0.0
+          "present": 4,
+          "missing": 970,
+          "percent": 0.41
         },
         "app_url": {
           "present": 788,
@@ -1647,9 +1647,9 @@
           "percent": 100.0
         },
         "app_url": {
-          "present": 3585,
-          "missing": 1065,
-          "percent": 77.1
+          "present": 3603,
+          "missing": 1047,
+          "percent": 77.48
         },
         "description": {
           "present": 4650,
