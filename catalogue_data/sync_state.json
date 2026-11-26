@@ -70,6 +70,11 @@
       "status": "empty",
       "completed_at": "2026-11-26T09:38:05.289093+00:00",
       "fetched": 0
+    },
+    "chocolatey": {
+      "status": "empty",
+      "completed_at": "2026-11-26T09:38:07.323349+00:00",
+      "fetched": 0
     }
   }
 }
