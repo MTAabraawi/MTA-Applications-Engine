@@ -40,6 +40,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:28:18.640313+00:00",
       "fetched": 25
+    },
+    "apple-itunes": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:31:13.318496+00:00",
+      "fetched": 2676
     }
   }
 }
