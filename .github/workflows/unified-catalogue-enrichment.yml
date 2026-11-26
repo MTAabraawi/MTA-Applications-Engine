@@ -9,6 +9,9 @@ on:
     branches: [feature/unified-catalogue-enrichment]
     paths:
       - ".github/workflows/unified-catalogue-enrichment.yml"
+      - "scripts/run_unified_catalogue.py"
+      - "scripts/enrich_github_catalog.py"
+      - "tests/test_unified_catalogue_pipeline.py"
 
 permissions:
   contents: write
