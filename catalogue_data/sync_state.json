@@ -130,6 +130,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:42:37.307946+00:00",
       "fetched": 1243
+    },
+    "bluejetty": {
+      "status": "success",
+      "completed_at": "2026-11-26T14:25:17.271925+00:00",
+      "fetched": 200041
     }
   }
 }
