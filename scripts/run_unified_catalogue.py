@@ -190,21 +190,35 @@ def write_state(root: Path, quality: dict, manifest: dict) -> dict:
     return state
 
 async def main() -> None:
-    # Full source discovery/import is the first stage; blank SYNC_SOURCES means
-    # all configured connectors, not a selected subset.
+    # Stages are independently runnable so long detail enrichment never shares
+    # the same Actions time budget with a full source discovery pass.
+    stage = os.getenv("MTA_PIPELINE_STAGE", "all").strip().casefold()
+    allowed = {"all", "sync", "detail", "generic", "report", "backfill", "retry_sync"}
+    if stage not in allowed:
+        raise SystemExit(f"Unsupported MTA_PIPELINE_STAGE={stage!r}; choose one of {sorted(allowed)}")
     os.environ["MTA_STORAGE_BACKEND"] = "github"
     os.environ.setdefault("GITHUB_CATALOGUE_DIR", "catalogue_data")
-    os.environ["SYNC_SOURCES"] = ""
-    await sync_catalogs.main()
+    if stage in {"all", "sync", "retry_sync"}:
+        if stage == "retry_sync" and not os.getenv("SYNC_SOURCES", "").strip():
+            raise SystemExit("retry_sync requires an explicit comma-separated SYNC_SOURCES list.")
+        await sync_catalogs.main()
 
     store = GitHubCatalogueStore(os.getenv("GITHUB_CATALOGUE_DIR", "catalogue_data"))
-    metadata_backfill = enrich_from_source_metadata(store)
+    metadata_backfill = {"scanned": 0, "updated": 0, "fields_filled": {}}
+    if stage in {"all", "backfill"}:
+        metadata_backfill = enrich_from_source_metadata(store)
 
-    # Retain the already-tested Blue Jetty/Fedora detail parsers and exact
-    # official mobile-store icon cross-match while the remaining source-specific
-    # detail adapters are implemented and verified.
-    await detail_enrichment.main()
-    official_page_enrichment = await enrich_official_pages(store)
+    detail_result = {"status": "not_requested"}
+    if stage in {"all", "detail"}:
+        detail_enrichment.main()
+        detail_result = {"status": "executed", "adapters": ["bluejetty", "fedora-packages"]}
+
+    official_page_enrichment = {"status": "not_requested"}
+    if stage in {"all", "generic"}:
+        official_page_enrichment = await enrich_official_pages(store)
+
+    if stage not in {"all", "report"}:
+        store.checkpoint_git(f"Save catalogue {stage} stage checkpoint")
 
     records = list(store.iter_records())
     quality = build_source_quality(records)
@@ -218,6 +232,8 @@ async def main() -> None:
         "sources_with_records": state["sources_with_records"],
         "source_metadata_backfill": metadata_backfill,
         "official_page_enrichment": official_page_enrichment,
+        "detail_enrichment": detail_result,
+        "pipeline_stage": stage,
         "source_quality": quality,
         "detail_adapters_verified": ["bluejetty", "fedora-packages", "generic_official_html_schema_org"],
         "detail_adapters_pending": sorted(
