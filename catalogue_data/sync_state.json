@@ -7,9 +7,9 @@
       "fetched": 7853
     },
     "fdroid": {
-      "status": "empty",
-      "completed_at": "2026-11-26T09:24:51.943101+00:00",
-      "fetched": 0
+      "status": "success",
+      "completed_at": "2026-11-26T17:23:30.410682+00:00",
+      "fetched": 5056
     },
     "flathub": {
       "status": "empty",
