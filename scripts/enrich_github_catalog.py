@@ -257,6 +257,7 @@ async def main():
     cross_updates, cross_counts = crossmatch_icons(records, providers, datetime.now(timezone.utc).isoformat())
     if cross_updates:
         store.upsert_many(cross_updates, rebuild_indexes=False)
+        store.checkpoint_git("Checkpoint exact official-store icon crossmatch")
         cross_by_key = {(row["source_key"], row["external_id"]): row for row in cross_updates}
         for index, row in enumerate(records):
             replacement = cross_by_key.get((row.get("source_key"), row.get("external_id")))
@@ -306,10 +307,13 @@ async def main():
                     target["fields_filled"][field] = target["fields_filled"].get(field, 0) + count
                 log.info("%s batch %s: selected=%s checked=%s enriched=%s failed=%s fields=%s",
                          source, batch + 1, len(selected), counts["checked"], counts["enriched"], counts["failed"], counts["fields_filled"])
+            if (batch + 1) % 10 == 0:
+                store.checkpoint_git(f"Checkpoint verified detail enrichment batch {batch + 1}")
             if not any_selected:
                 break
 
     manifest = store.rebuild_indexes()
+    store.checkpoint_git("Checkpoint verified Blue Jetty and Fedora enrichment")
     print(json.dumps({
         "enrichment": totals,
         "icon_crossmatch": cross_counts,
