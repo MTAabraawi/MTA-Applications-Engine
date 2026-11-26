@@ -82,9 +82,9 @@
       "fetched": 5275
     },
     "fedora-packages": {
-      "status": "empty",
-      "completed_at": "2026-11-26T09:44:35.509037+00:00",
-      "fetched": 0
+      "status": "success",
+      "completed_at": "2026-11-26T19:03:49.563346+00:00",
+      "fetched": 83111
     },
     "alpine-linux": {
       "status": "success",
