@@ -65,6 +65,11 @@
       "status": "empty",
       "completed_at": "2026-11-26T09:38:03.066027+00:00",
       "fetched": 0
+    },
+    "apple-appbrain": {
+      "status": "empty",
+      "completed_at": "2026-11-26T09:38:05.289093+00:00",
+      "fetched": 0
     }
   }
 }
