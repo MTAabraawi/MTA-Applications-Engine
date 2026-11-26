@@ -46,6 +46,15 @@ def has_value(value):
     return value is not None and (not isinstance(value, str) or bool(value.strip()))
 
 
+def metadata_object(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError):
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
 def trusted_url(value, hostname):
     if not isinstance(value, str):
         return False
@@ -87,7 +96,7 @@ async def get_response(client, url, trusted_host):
 def due(record, prefix, days, required_fields):
     if not any(not has_value(record.get(field)) for field in required_fields):
         return False
-    metadata = record.get("metadata_json") or {}
+    metadata = metadata_object(record.get("metadata_json"))
     attempt = metadata.get(f"{prefix}_enrichment_last_attempt_at")
     if not attempt:
         return True
@@ -104,7 +113,7 @@ async def fetch_records(rows, client, parser, hostname, concurrency):
     semaphore = asyncio.Semaphore(concurrency)
 
     async def one(row):
-        metadata = row.get("metadata_json") or {}
+        metadata = metadata_object(row.get("metadata_json"))
         url = metadata.get("record_json_url") if hostname == "bluejetty.ai" else row.get("source_url")
         if not trusted_url(url, hostname):
             return row, None, ValueError("Untrusted or missing detail URL")
@@ -127,7 +136,7 @@ def apply_results(results, prefix, now):
     for row, data, error in results:
         counts["checked"] += 1
         item = dict(row)
-        metadata = dict(item.get("metadata_json") or {})
+        metadata = metadata_object(item.get("metadata_json"))
         metadata[f"{prefix}_enrichment_last_attempt_at"] = now
         if error is not None or not isinstance(data, dict):
             metadata[f"{prefix}_enrichment_status"] = "failed"
@@ -201,7 +210,7 @@ def crossmatch_icons(records, provider_index, now):
             continue
         if row.get("source_key") in {"google-play", "apple-itunes", "apple-appbrain", "fdroid", "izzyondroid"}:
             continue
-        metadata = dict(row.get("metadata_json") or {})
+        metadata = metadata_object(row.get("metadata_json"))
         candidates = []
         link_evidence = {
             "source_url": row.get("source_url"),
@@ -280,10 +289,10 @@ async def main():
                 eligible = [row for row in records if row.get("source_key") == ("bluejetty" if source == "bluejetty" else "fedora-packages")
                             and due(row, prefix, days, fields)]
                 if source == "bluejetty":
-                    eligible = [row for row in eligible if trusted_url((row.get("metadata_json") or {}).get("record_json_url"), hostname)]
+                    eligible = [row for row in eligible if trusted_url(metadata_object(row.get("metadata_json")).get("record_json_url"), hostname)]
                 else:
                     eligible.sort(key=lambda row: (0 if str(row.get("name") or "").casefold() in PRIORITY else 1,
-                                                   str((row.get("metadata_json") or {}).get("fedora_enrichment_last_attempt_at") or ""),
+                                                   str(metadata_object(row.get("metadata_json")).get("fedora_enrichment_last_attempt_at") or ""),
                                                    str(row.get("name") or "").casefold()))
                 selected = eligible[:limit]
                 if not selected:
