@@ -95,6 +95,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:20:13.198347+00:00",
       "fetched": 8740
+    },
+    "gnome-extensions": {
+      "status": "success",
+      "completed_at": "2026-11-26T10:21:24.545499+00:00",
+      "fetched": 119
     }
   }
 }
