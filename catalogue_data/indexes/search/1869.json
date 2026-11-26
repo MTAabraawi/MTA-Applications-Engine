@@ -1,1 +1,1 @@
-{"監視":["bluejetty:00179193:ios"],"qmk":["homebrew-cask:qmk-toolbox","scoop:qmk-toolbox","scoop:vial","winget-run-community:QMK.QMKToolbox"]}
+{"qmk":["fedora-packages:kmonad/kmonad","homebrew-cask:qmk-toolbox","scoop:qmk-toolbox","scoop:vial","winget-run-community:QMK.QMKToolbox"],"監視":["bluejetty:00179193:ios"]}

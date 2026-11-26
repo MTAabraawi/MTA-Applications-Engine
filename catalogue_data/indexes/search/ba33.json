@@ -1,1 +1,1 @@
-{"npu":["bluejetty:00076619:ios","homebrew-cask:lemonade-server","homebrew-formulae:npush","izzyondroid:com.nostros"]}
+{"npu":["bluejetty:00076619:ios","fedora-packages:intel-npu-driver/intel-npu-driver","fedora-packages:intel-npu-driver/intel-npu-smi","fedora-packages:lemonade-server/lemonade-server","fedora-packages:linux-firmware/intel-npu-firmware","fedora-packages:openvino/intel-npu-compiler","fedora-packages:openvino/libopenvino-intel-npu-plugin","homebrew-cask:lemonade-server","homebrew-formulae:npush","izzyondroid:com.nostros"]}

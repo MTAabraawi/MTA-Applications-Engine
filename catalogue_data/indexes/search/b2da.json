@@ -1,1 +1,1 @@
-{"bso":["alpine-linux:community/libbson","bluejetty:00109740:android"]}
+{"bso":["alpine-linux:community/libbson","bluejetty:00109740:android","fedora-packages:mongo-c-driver/libbson"]}
