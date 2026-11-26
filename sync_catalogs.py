@@ -9,7 +9,7 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import inspect, text
 
@@ -79,7 +79,7 @@ async def main() -> None:
             previous = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
             if previous.tzinfo is None:
                 previous = previous.replace(tzinfo=timezone.utc)
-            return entry.get("status") == "success" and previous >= now - __import__("datetime").timedelta(hours=resume_hours)
+            return entry.get("status") == "success" and previous >= now - timedelta(hours=resume_hours)
         except (TypeError, ValueError):
             return False
     pending_sources = {source for source in requested if not recently_completed(source)}
@@ -94,7 +94,7 @@ async def main() -> None:
         }
         state_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = state_path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps(sync_state, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        temporary.write_text(json.dumps(sync_state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         temporary.replace(state_path)
         if os.getenv("MTA_GIT_CHECKPOINT", "").casefold() not in {"1", "true", "yes"}:
             return
@@ -159,7 +159,10 @@ async def main() -> None:
         logging.info("Git-backed catalogue manifest: %s", json.dumps(manifest, ensure_ascii=False))
 
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
-    if not any("error" not in result and result.get("fetched", 0) for result in summary.values()):
+    if (
+        not any("error" not in result and result.get("fetched", 0) for result in summary.values())
+        and not any(result.get("skipped") == "recently_completed_checkpoint" for result in summary.values())
+    ):
         raise SystemExit("No catalogue source returned records; review source availability/logs.")
 
 
