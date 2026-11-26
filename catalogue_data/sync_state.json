@@ -45,6 +45,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:31:13.318496+00:00",
       "fetched": 2676
+    },
+    "apple-macos": {
+      "status": "success",
+      "completed_at": "2026-11-26T09:34:41.430325+00:00",
+      "fetched": 2343
     }
   }
 }
