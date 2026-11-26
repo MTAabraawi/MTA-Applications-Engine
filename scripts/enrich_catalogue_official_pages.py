@@ -164,6 +164,15 @@ def parse_official_metadata(html, page_url):
     return {k: v for k, v in result.items() if v is not None and (not isinstance(v, str) or v.strip())}
 
 
+def _metadata_object(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError):
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
 def _retry_due(metadata, now):
     attempt = metadata.get("generic_detail_last_attempt_at")
     if not attempt:
@@ -187,7 +196,7 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
         if not valid_https(row.get("source_url")):
             continue
         missing = any(not row.get(field) for field in FIELDS)
-        metadata = row.get("metadata_json") if isinstance(row.get("metadata_json"), dict) else {}
+        metadata = _metadata_object(row.get("metadata_json"))
         if missing and _retry_due(metadata, now):
             by_source.setdefault(row.get("source_key") or "unknown", []).append(row)
 
@@ -204,7 +213,7 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
         headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
     ) as client:
         # Round-robin source ordering avoids starving smaller stores.
-        queues = {source: sorted(rows, key=lambda r: str((r.get("metadata_json") or {}).get("generic_detail_last_attempt_at") or ""))[:per_source_limit]
+        queues = {source: sorted(rows, key=lambda r: str(_metadata_object(r.get("metadata_json")).get("generic_detail_last_attempt_at") or ""))[:per_source_limit]
                   for source, rows in by_source.items()}
         selected = [row for source in sorted(queues) for row in queues[source]]
         totals["selected"] = len(selected)
@@ -243,7 +252,7 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
     updates = []
     for row, parsed, error in pending:
         item = dict(row)
-        metadata = dict(item.get("metadata_json") or {})
+        metadata = _metadata_object(item.get("metadata_json"))
         metadata["generic_detail_last_attempt_at"] = now.isoformat()
         totals["checked"] += 1
         source = item.get("source_key") or "unknown"
