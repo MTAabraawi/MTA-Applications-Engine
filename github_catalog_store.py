@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -214,6 +215,22 @@ class GitHubCatalogueStore:
         if rebuild_indexes and (inserted or updated):
             self.rebuild_indexes()
         return {"inserted": inserted, "updated": updated, "unchanged": unchanged, "skipped": skipped}
+
+    def checkpoint_git(self, message: str = "Checkpoint GitHub-native catalogue") -> bool:
+        """Commit the current catalogue snapshot to the checked-out development branch."""
+        if os.getenv("MTA_GIT_CHECKPOINT", "").casefold() not in {"1", "true", "yes"}:
+            return False
+        subprocess.run(["git", "add", str(self.root)], check=True, capture_output=True, text=True)
+        changed = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True)
+        if changed.returncode == 0:
+            return False
+        subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+        subprocess.run(["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"], check=True)
+        subprocess.run(["git", "commit", "-m", message], check=True, capture_output=True, text=True)
+        branch = os.getenv("GITHUB_REF_NAME", "feature/unified-catalogue-enrichment")
+        subprocess.run(["git", "pull", "--rebase", "origin", branch], check=True, capture_output=True, text=True)
+        subprocess.run(["git", "push", "origin", f"HEAD:{branch}"], check=True, capture_output=True, text=True)
+        return True
 
     def iter_records(self):
         for path in sorted(self.shards_dir.glob("*.json")):
