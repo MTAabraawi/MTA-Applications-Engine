@@ -1,0 +1,1689 @@
+{
+  "schema_version": 2,
+  "updated_at": "2026-11-26T19:10:54.169743+00:00",
+  "storage": "github-native-json-shards",
+  "record_count": 366751,
+  "registered_store_count": 53,
+  "sources_with_records": 25,
+  "stores": {
+    "google-play": {
+      "name": "Google Play",
+      "platform": "android",
+      "source_key": "google-play",
+      "integration_mode": "credential_required",
+      "record_count": 0,
+      "status": "credential_required",
+      "reason": "Optional AppBrain documented API connector is implemented but requires an AppBrain API key. Google's official Play Catalog Access Program is limited to eligible US third-party app stores and has a $5,000 annual review fee."
+    },
+    "apkmirror": {
+      "name": "APKMirror",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue API verified."
+    },
+    "apkpure": {
+      "name": "APKPure",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue API verified."
+    },
+    "uptodown": {
+      "name": "Uptodown",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue API verified."
+    },
+    "aptoide": {
+      "name": "Aptoide",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Partner/developer access is required for a reliable catalogue feed."
+    },
+    "amazon-appstore": {
+      "name": "Amazon Appstore",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue feed verified."
+    },
+    "fdroid": {
+      "name": "F-Droid",
+      "platform": "android",
+      "source_key": "fdroid",
+      "integration_mode": "live_api",
+      "record_count": 5070,
+      "status": "indexed",
+      "reason": "Public F-Droid v2 repository index."
+    },
+    "huawei-appgallery": {
+      "name": "Huawei AppGallery",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "credential_required",
+      "record_count": 0,
+      "status": "credential_required",
+      "reason": "AppGallery Connect APIs require developer credentials and expose the authenticated developer's projects/apps; they are not a public global store-search API."
+    },
+    "samsung-galaxy-store": {
+      "name": "Samsung Galaxy Store",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No public third-party catalogue feed verified."
+    },
+    "xiaomi-getapps": {
+      "name": "Xiaomi GetApps",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No public third-party catalogue feed verified."
+    },
+    "oppo-app-market": {
+      "name": "OPPO App Market",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No public third-party catalogue feed verified."
+    },
+    "vivo-app-store": {
+      "name": "Vivo App Store",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No public third-party catalogue feed verified."
+    },
+    "one-store": {
+      "name": "ONE Store",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue feed verified."
+    },
+    "taptap": {
+      "name": "TapTap",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue API verified."
+    },
+    "qooapp": {
+      "name": "QooApp",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public catalogue API verified."
+    },
+    "izzyondroid": {
+      "name": "IzzyOnDroid",
+      "platform": "android",
+      "source_key": "izzyondroid",
+      "integration_mode": "live_api",
+      "record_count": 1402,
+      "status": "indexed",
+      "reason": "Independent F-Droid-compatible public repository index."
+    },
+    "accrescent": {
+      "name": "Accrescent",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No public third-party catalogue API; not an F-Droid-compatible feed."
+    },
+    "aurora-store": {
+      "name": "Aurora Store",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Alternative Google Play client, not an independent catalogue source."
+    },
+    "apple-itunes": {
+      "name": "Apple App Store",
+      "platform": "ios",
+      "source_key": "apple-itunes",
+      "integration_mode": "live_api",
+      "record_count": 3634,
+      "status": "indexed",
+      "reason": "Apple public Search API."
+    },
+    "microsoft-store": {
+      "name": "Microsoft Store",
+      "platform": "windows",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public bulk catalogue API verified."
+    },
+    "winget-run-community": {
+      "name": "WinGet",
+      "platform": "windows",
+      "source_key": "winget-run-community",
+      "integration_mode": "live_api",
+      "record_count": 974,
+      "status": "indexed",
+      "reason": "Community search API; not the official Microsoft Store."
+    },
+    "chocolatey": {
+      "name": "Chocolatey",
+      "platform": "windows",
+      "source_key": "chocolatey",
+      "integration_mode": "cli_search",
+      "record_count": 98,
+      "status": "indexed",
+      "reason": "Community Repository queried through the supported Chocolatey CLI on a Windows runner; direct custom OData querying is intentionally not used."
+    },
+    "flathub": {
+      "name": "Flathub",
+      "platform": "linux",
+      "source_key": "flathub",
+      "integration_mode": "live_api",
+      "record_count": 3436,
+      "status": "indexed",
+      "reason": "Flathub AppStream API."
+    },
+    "snap-store": {
+      "name": "Snap Store",
+      "platform": "linux",
+      "source_key": "snap-store",
+      "integration_mode": "live_api",
+      "record_count": 729,
+      "status": "indexed",
+      "reason": "Public snapd /v2/find endpoint."
+    },
+    "ubuntu-app-center": {
+      "name": "Ubuntu App Center",
+      "platform": "linux",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No separate public catalogue feed verified; overlaps underlying package sources."
+    },
+    "apple-macos": {
+      "name": "Mac App Store",
+      "platform": "macos",
+      "source_key": "apple-macos",
+      "integration_mode": "live_api",
+      "record_count": 2999,
+      "status": "indexed",
+      "reason": "Apple public Search API with macSoftware entity."
+    },
+    "homebrew-cask": {
+      "name": "Homebrew",
+      "platform": "macos",
+      "source_key": "homebrew-cask",
+      "integration_mode": "live_api",
+      "record_count": 7858,
+      "status": "indexed",
+      "reason": "Official Homebrew Cask JSON feed."
+    },
+    "steam": {
+      "name": "Steam",
+      "platform": "pc-games",
+      "source_key": "steam",
+      "integration_mode": "live_api",
+      "record_count": 179,
+      "status": "indexed",
+      "reason": "Public Steam storefront JSON search endpoint; query-limited results only, not a complete inventory."
+    },
+    "epic-games-store": {
+      "name": "Epic Games Store",
+      "platform": "pc-games",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public bulk catalogue API verified."
+    },
+    "gog": {
+      "name": "GOG",
+      "platform": "pc-games",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "No supported public bulk catalogue API verified."
+    },
+    "mta-curated-web": {
+      "name": "MTA Web Apps",
+      "platform": "web",
+      "source_key": "mta-curated-web",
+      "integration_mode": "live_api",
+      "record_count": 7,
+      "status": "indexed",
+      "reason": "MTA-maintained curated web application metadata."
+    },
+    "product-hunt": {
+      "name": "Product Hunt",
+      "platform": "web",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Public API requires an approved developer token."
+    },
+    "arch-linux": {
+      "name": "Arch Linux Packages",
+      "platform": "linux",
+      "source_key": "arch-linux",
+      "integration_mode": "live_api",
+      "record_count": 1450,
+      "status": "indexed",
+      "reason": "Arch Linux documented public package search JSON interface."
+    },
+    "debian-packages": {
+      "name": "Debian Packages",
+      "platform": "linux",
+      "source_key": "debian-packages",
+      "integration_mode": "live_api",
+      "record_count": 25,
+      "status": "indexed",
+      "reason": "Debian Sources public package search API plus official Debian package detail pages."
+    },
+    "firefox-addons": {
+      "name": "Firefox Add-ons",
+      "platform": "browser-extensions",
+      "source_key": "firefox-addons",
+      "integration_mode": "live_api",
+      "record_count": 3222,
+      "status": "indexed",
+      "reason": "Mozilla Add-ons public API v5."
+    },
+    "wordpress-plugins": {
+      "name": "WordPress Plugin Directory",
+      "platform": "web-plugins",
+      "source_key": "wordpress-plugins",
+      "integration_mode": "live_api",
+      "record_count": 4650,
+      "status": "indexed",
+      "reason": "Official WordPress.org plugin directory API."
+    },
+    "homebrew-formulae": {
+      "name": "Homebrew Formulae",
+      "platform": "macos",
+      "source_key": "homebrew-formulae",
+      "integration_mode": "live_api",
+      "record_count": 8746,
+      "status": "indexed",
+      "reason": "Official Homebrew core formula JSON feed; formulae may also be usable on Linux."
+    },
+    "scoop": {
+      "name": "Scoop Buckets",
+      "platform": "windows",
+      "source_key": "scoop",
+      "integration_mode": "live_api",
+      "record_count": 5276,
+      "status": "indexed",
+      "reason": "Public JSON manifests from official Scoop main, extras, games and versions GitHub buckets."
+    },
+    "alpine-linux": {
+      "name": "Alpine Linux Packages",
+      "platform": "linux",
+      "source_key": "alpine-linux",
+      "integration_mode": "live_api",
+      "record_count": 28608,
+      "status": "indexed",
+      "reason": "Official Alpine edge APKINDEX archives for main and community on x86_64."
+    },
+    "jetbrains-marketplace": {
+      "name": "JetBrains Marketplace",
+      "platform": "ide-plugins",
+      "source_key": "jetbrains-marketplace",
+      "integration_mode": "live_api",
+      "record_count": 285,
+      "status": "indexed",
+      "reason": "Public JetBrains Marketplace search endpoint used by its website; response schema is not a versioned public API contract."
+    },
+    "gnome-extensions": {
+      "name": "GNOME Extensions",
+      "platform": "desktop-extensions",
+      "source_key": "gnome-extensions",
+      "integration_mode": "live_api",
+      "record_count": 173,
+      "status": "indexed",
+      "reason": "Public extensions.gnome.org catalogue search endpoint."
+    },
+    "fedora-packages": {
+      "name": "Fedora Packages",
+      "platform": "linux",
+      "source_key": "fedora-packages",
+      "integration_mode": "live_api",
+      "record_count": 83561,
+      "status": "indexed",
+      "reason": "Fedora's public alphabetic static package index; stores package names and official detail links without crawling every detail page."
+    },
+    "bluejetty-app-index": {
+      "name": "Blue Jetty App Index",
+      "platform": "multi",
+      "source_key": "bluejetty",
+      "integration_mode": "live_api",
+      "record_count": 200056,
+      "status": "indexed",
+      "reason": "Public paginated mobile app index; no API key. Index is a focused corpus, not a complete copy of Apple or Google stores."
+    },
+    "openuse-catalog": {
+      "name": "OpenUse Software Catalog",
+      "platform": "multi",
+      "source_key": "openuse",
+      "integration_mode": "live_api",
+      "record_count": 988,
+      "status": "indexed",
+      "reason": "Free read-only public JSON API with pagination and official release references; no API key. Focuses on free and open-source software."
+    },
+    "huggingface-ai-spaces": {
+      "name": "Hugging Face Spaces",
+      "platform": "web",
+      "source_key": "huggingface-ai-spaces",
+      "integration_mode": "live_api",
+      "record_count": 577,
+      "status": "indexed",
+      "reason": "Public semantic search API for hosted AI web applications; origin country is not inferred."
+    },
+    "github-ai-applications": {
+      "name": "GitHub AI Applications",
+      "platform": "cross-platform",
+      "source_key": "github-ai-applications",
+      "integration_mode": "live_api",
+      "record_count": 2748,
+      "status": "indexed",
+      "reason": "Authenticated public repository search for open-source AI applications; repositories are distinguished from verified runnable releases."
+    },
+    "modelscope": {
+      "name": "ModelScope",
+      "platform": "web",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "China-focused model and application ecosystem; no stable public application catalogue API has been verified for automated ingestion."
+    },
+    "openxlab": {
+      "name": "OpenXLab",
+      "platform": "web",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "China-based AI model and application ecosystem; integration remains external until a supported public application API is verified."
+    },
+    "baidu-ai-apps": {
+      "name": "Baidu AI Applications",
+      "platform": "web",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Chinese AI products and application listings; no supported comprehensive public catalogue API verified."
+    },
+    "tencent-ai-apps": {
+      "name": "Tencent AI Applications",
+      "platform": "cross-platform",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Chinese AI applications and services; no supported comprehensive public catalogue API verified."
+    },
+    "yandex-ai-apps": {
+      "name": "Yandex AI Applications",
+      "platform": "cross-platform",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Russian AI products and services; no supported comprehensive public catalogue API verified."
+    },
+    "sber-ai-apps": {
+      "name": "Sber AI Applications",
+      "platform": "cross-platform",
+      "source_key": null,
+      "integration_mode": "external_only",
+      "record_count": 0,
+      "status": "external_only",
+      "reason": "Russian AI applications and services; no supported comprehensive public catalogue API verified."
+    },
+    "rustore": {
+      "name": "RuStore",
+      "platform": "android",
+      "source_key": null,
+      "integration_mode": "credential_required",
+      "record_count": 0,
+      "status": "credential_required",
+      "reason": "RuStore Public API requires a developer Public-Token and lists apps available to that account owner, not the public global catalogue."
+    }
+  },
+  "sources": {
+    "alpine-linux": {
+      "record_count": 28608,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 28608,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 27560,
+          "missing": 1048,
+          "percent": 96.34
+        },
+        "description": {
+          "present": 28608,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 28608,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 26494,
+          "missing": 2114,
+          "percent": 92.61
+        },
+        "category": {
+          "present": 0,
+          "missing": 28608,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 28608,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 28608,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "apple-itunes": {
+      "record_count": 3634,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 3634,
+          "percent": 0.0
+        },
+        "developer": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 3634,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 3634,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "apple-macos": {
+      "record_count": 2999,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 2999,
+          "percent": 0.0
+        },
+        "developer": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 2999,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 2999,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "arch-linux": {
+      "record_count": 1450,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 1450,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 1369,
+          "missing": 81,
+          "percent": 94.41
+        },
+        "description": {
+          "present": 1450,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 1450,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 1450,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 258,
+          "missing": 1192,
+          "percent": 17.79
+        },
+        "license": {
+          "present": 1450,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 1450,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "bluejetty": {
+      "record_count": 200056,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 2850,
+          "missing": 197206,
+          "percent": 1.42
+        },
+        "app_url": {
+          "present": 200056,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 112272,
+          "missing": 87784,
+          "percent": 56.12
+        },
+        "summary": {
+          "present": 112272,
+          "missing": 87784,
+          "percent": 56.12
+        },
+        "developer": {
+          "present": 107927,
+          "missing": 92129,
+          "percent": 53.95
+        },
+        "category": {
+          "present": 112437,
+          "missing": 87619,
+          "percent": 56.2
+        },
+        "license": {
+          "present": 0,
+          "missing": 200056,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 200056,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "verified_detail_adapter",
+      "status": "indexed"
+    },
+    "chocolatey": {
+      "record_count": 98,
+      "integration_mode": "cli_search",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 98,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 98,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "debian-packages": {
+      "record_count": 25,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 25,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 25,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 25,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 25,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 25,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 25,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 25,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 25,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "fdroid": {
+      "record_count": 5070,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 4698,
+          "missing": 372,
+          "percent": 92.66
+        },
+        "app_url": {
+          "present": 4980,
+          "missing": 90,
+          "percent": 98.22
+        },
+        "description": {
+          "present": 5048,
+          "missing": 22,
+          "percent": 99.57
+        },
+        "summary": {
+          "present": 5054,
+          "missing": 16,
+          "percent": 99.68
+        },
+        "developer": {
+          "present": 4146,
+          "missing": 924,
+          "percent": 81.78
+        },
+        "category": {
+          "present": 5070,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 5070,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 5070,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "fedora-packages": {
+      "record_count": 83561,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 83561,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 16332,
+          "missing": 67229,
+          "percent": 19.55
+        },
+        "description": {
+          "present": 21835,
+          "missing": 61726,
+          "percent": 26.13
+        },
+        "summary": {
+          "present": 21835,
+          "missing": 61726,
+          "percent": 26.13
+        },
+        "developer": {
+          "present": 0,
+          "missing": 83561,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 83561,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 83561,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 83561,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "verified_detail_adapter",
+      "status": "indexed"
+    },
+    "firefox-addons": {
+      "record_count": 3222,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 3222,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 3222,
+          "percent": 0.0
+        },
+        "description": {
+          "present": 2988,
+          "missing": 234,
+          "percent": 92.74
+        },
+        "summary": {
+          "present": 3222,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 3222,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 3218,
+          "missing": 4,
+          "percent": 99.88
+        },
+        "license": {
+          "present": 0,
+          "missing": 3222,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 3222,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "flathub": {
+      "record_count": 3436,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 3406,
+          "missing": 30,
+          "percent": 99.13
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 3436,
+          "percent": 0.0
+        },
+        "description": {
+          "present": 3436,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 3436,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 3431,
+          "missing": 5,
+          "percent": 99.85
+        },
+        "category": {
+          "present": 3417,
+          "missing": 19,
+          "percent": 99.45
+        },
+        "license": {
+          "present": 0,
+          "missing": 3436,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 3436,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "github-ai-applications": {
+      "record_count": 2748,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 2748,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 2748,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 2400,
+          "missing": 348,
+          "percent": 87.34
+        },
+        "summary": {
+          "present": 2400,
+          "missing": 348,
+          "percent": 87.34
+        },
+        "developer": {
+          "present": 2748,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 2748,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 1584,
+          "missing": 1164,
+          "percent": 57.64
+        },
+        "source_url": {
+          "present": 2748,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "gnome-extensions": {
+      "record_count": 173,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 173,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 135,
+          "missing": 38,
+          "percent": 78.03
+        },
+        "description": {
+          "present": 173,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 173,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 173,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 173,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 173,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 173,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "homebrew-cask": {
+      "record_count": 7858,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 7858,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 7835,
+          "missing": 23,
+          "percent": 99.71
+        },
+        "description": {
+          "present": 5224,
+          "missing": 2634,
+          "percent": 66.48
+        },
+        "summary": {
+          "present": 5224,
+          "missing": 2634,
+          "percent": 66.48
+        },
+        "developer": {
+          "present": 0,
+          "missing": 7858,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 7858,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 7858,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 7858,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "homebrew-formulae": {
+      "record_count": 8746,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 8746,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 8608,
+          "missing": 138,
+          "percent": 98.42
+        },
+        "description": {
+          "present": 8746,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 8746,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 8746,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 8746,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 8746,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 8746,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "huggingface-ai-spaces": {
+      "record_count": 577,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 577,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 576,
+          "missing": 1,
+          "percent": 99.83
+        },
+        "summary": {
+          "present": 576,
+          "missing": 1,
+          "percent": 99.83
+        },
+        "developer": {
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 577,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 577,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "izzyondroid": {
+      "record_count": 1402,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 1340,
+          "missing": 62,
+          "percent": 95.58
+        },
+        "app_url": {
+          "present": 1397,
+          "missing": 5,
+          "percent": 99.64
+        },
+        "description": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 1402,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "jetbrains-marketplace": {
+      "record_count": 285,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 209,
+          "missing": 76,
+          "percent": 73.33
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 285,
+          "percent": 0.0
+        },
+        "description": {
+          "present": 285,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 285,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 281,
+          "missing": 4,
+          "percent": 98.6
+        },
+        "category": {
+          "present": 279,
+          "missing": 6,
+          "percent": 97.89
+        },
+        "license": {
+          "present": 0,
+          "missing": 285,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 285,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "mta-curated-web": {
+      "record_count": 7,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "description": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 7,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 7,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "openuse": {
+      "record_count": 988,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 752,
+          "missing": 236,
+          "percent": 76.11
+        },
+        "app_url": {
+          "present": 982,
+          "missing": 6,
+          "percent": 99.39
+        },
+        "description": {
+          "present": 0,
+          "missing": 988,
+          "percent": 0.0
+        },
+        "summary": {
+          "present": 988,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 988,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 988,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 988,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 988,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "scoop": {
+      "record_count": 5276,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 5276,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 5103,
+          "missing": 173,
+          "percent": 96.72
+        },
+        "description": {
+          "present": 5275,
+          "missing": 1,
+          "percent": 99.98
+        },
+        "summary": {
+          "present": 5275,
+          "missing": 1,
+          "percent": 99.98
+        },
+        "developer": {
+          "present": 0,
+          "missing": 5276,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 5276,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 4414,
+          "missing": 862,
+          "percent": 83.66
+        },
+        "source_url": {
+          "present": 5276,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "snap-store": {
+      "record_count": 729,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 729,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 729,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "steam": {
+      "record_count": 179,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 179,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "description": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "summary": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "developer": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 179,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 179,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "winget-run-community": {
+      "record_count": 974,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 0,
+          "missing": 974,
+          "percent": 0.0
+        },
+        "app_url": {
+          "present": 788,
+          "missing": 186,
+          "percent": 80.9
+        },
+        "description": {
+          "present": 974,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 974,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 974,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 0,
+          "missing": 974,
+          "percent": 0.0
+        },
+        "license": {
+          "present": 974,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "source_url": {
+          "present": 974,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    },
+    "wordpress-plugins": {
+      "record_count": 4650,
+      "integration_mode": "live_api",
+      "quality": {
+        "icon_url": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "app_url": {
+          "present": 3585,
+          "missing": 1065,
+          "percent": 77.1
+        },
+        "description": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "summary": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "developer": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "category": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        },
+        "license": {
+          "present": 0,
+          "missing": 4650,
+          "percent": 0.0
+        },
+        "source_url": {
+          "present": 4650,
+          "missing": 0,
+          "percent": 100.0
+        }
+      },
+      "detail_enrichment": "source_metadata_backfill_only",
+      "status": "indexed"
+    }
+  }
+}
