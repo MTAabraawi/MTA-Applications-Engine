@@ -90,6 +90,11 @@
       "status": "success",
       "completed_at": "2026-11-26T10:11:21.993142+00:00",
       "fetched": 28562
+    },
+    "homebrew-formulae": {
+      "status": "success",
+      "completed_at": "2026-11-26T10:20:13.198347+00:00",
+      "fetched": 8740
     }
   }
 }
