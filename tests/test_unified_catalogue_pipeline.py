@@ -1,5 +1,7 @@
+import asyncio
 import json
 
+import scripts.run_unified_catalogue as pipeline
 from scripts.run_unified_catalogue import build_source_quality
 
 
@@ -101,3 +103,20 @@ def test_official_page_parser_does_not_accept_http_images_or_guess_reviews():
     assert "icon_url" not in result
     assert "_rating" not in result
     assert "_reviews" not in result
+
+
+
+def test_detail_enrichment_is_awaited(monkeypatch):
+    called = []
+
+    async def fake_detail_main():
+        called.append("completed")
+
+    monkeypatch.setattr(pipeline.detail_enrichment, "main", fake_detail_main)
+    result = asyncio.run(pipeline.run_detail_enrichment())
+
+    assert called == ["completed"]
+    assert result == {
+        "status": "executed",
+        "adapters": ["bluejetty", "fedora-packages"],
+    }
