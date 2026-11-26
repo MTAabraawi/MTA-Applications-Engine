@@ -35,6 +35,8 @@ jobs:
     timeout-minutes: 350
     env:
       MTA_STORAGE_BACKEND: github
+      MTA_GIT_CHECKPOINT: "true"
+      SYNC_RESUME_HOURS: "24"
       GITHUB_CATALOGUE_DIR: catalogue_data
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       APPLE_COUNTRY: ${{ vars.APPLE_COUNTRY || 'us' }}
