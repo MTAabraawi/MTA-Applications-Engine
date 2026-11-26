@@ -5,6 +5,11 @@
       "status": "success",
       "completed_at": "2026-11-26T09:23:49.613763+00:00",
       "fetched": 7853
+    },
+    "fdroid": {
+      "status": "empty",
+      "completed_at": "2026-11-26T09:24:51.943101+00:00",
+      "fetched": 0
     }
   }
 }
