@@ -2,6 +2,8 @@ name: Unified Catalogue Discovery and Enrichment
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"
   push:
     branches: [feature/unified-catalogue-enrichment]
     paths:
@@ -46,7 +48,7 @@ env:
   FEDORA_ENRICH_BATCH_SIZE: "15"
   ENRICH_CONCURRENCY: "4"
   ENRICHMENT_MAX_BATCHES: "1000"
-  ENRICHMENT_MAX_RUNTIME_MINUTES: "140"
+  ENRICHMENT_MAX_RUNTIME_MINUTES: "300"
   GENERIC_DETAIL_BATCH_PER_SOURCE: "100"
   GENERIC_DETAIL_CONCURRENCY: "4"
   GENERIC_DETAIL_RUNTIME_MINUTES: "60"
