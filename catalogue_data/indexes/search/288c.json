@@ -1,1 +1,1 @@
-{"b+t":["fedora-packages:golang-etcd-bbolt/golang-etcd-bbolt","fedora-packages:golang-etcd-bbolt/golang-etcd-bbolt-devel"],"손택":["bluejetty:00199787:android"]}
+{"b+t":["fedora-packages:golang-etcd-bbolt/golang-etcd-bbolt","fedora-packages:golang-etcd-bbolt/golang-etcd-bbolt-devel","fedora-packages:libdb/libdb","fedora-packages:libdb/libdb-cxx","fedora-packages:libdb/libdb-cxx-devel","fedora-packages:libdb/libdb-utils"],"손택":["bluejetty:00199787:android"]}

@@ -1,1 +1,1 @@
-{"ibv":["apple-macos:961073150","bluejetty:00027036:ios","bluejetty:00116608:android"],"파스타":["bluejetty:00168280:ios"]}
+{"ibv":["apple-macos:961073150","bluejetty:00027036:ios","bluejetty:00116608:android","fedora-packages:rdma-core/libibverbs","fedora-packages:rdma-core/libibverbs-utils"],"파스타":["bluejetty:00168280:ios"]}
