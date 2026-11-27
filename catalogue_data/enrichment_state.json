@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-27T11:21:25.931376+00:00",
+  "updated_at": "2026-11-27T12:58:01.916879+00:00",
   "storage": "github-native-json-shards",
   "record_count": 366751,
   "registered_store_count": 53,
@@ -530,7 +530,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "apple-itunes": {
@@ -578,7 +578,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "apple-macos": {
@@ -626,7 +626,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "arch-linux": {
@@ -674,7 +674,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "bluejetty": {
@@ -722,7 +722,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "verified_detail_adapter",
+      "detail_enrichment": "verified_source_specific_adapter",
       "status": "indexed"
     },
     "chocolatey": {
@@ -770,7 +770,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "debian-packages": {
@@ -818,7 +818,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "fdroid": {
@@ -866,7 +866,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "fedora-packages": {
@@ -914,7 +914,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "verified_detail_adapter",
+      "detail_enrichment": "verified_source_specific_adapter",
       "status": "indexed"
     },
     "firefox-addons": {
@@ -962,7 +962,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "flathub": {
@@ -1010,7 +1010,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "github-ai-applications": {
@@ -1058,7 +1058,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "gnome-extensions": {
@@ -1106,7 +1106,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "homebrew-cask": {
@@ -1154,7 +1154,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "homebrew-formulae": {
@@ -1202,7 +1202,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "huggingface-ai-spaces": {
@@ -1250,7 +1250,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "izzyondroid": {
@@ -1298,7 +1298,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "jetbrains-marketplace": {
@@ -1346,7 +1346,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "mta-curated-web": {
@@ -1394,7 +1394,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "openuse": {
@@ -1442,7 +1442,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "scoop": {
@@ -1490,7 +1490,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "snap-store": {
@@ -1538,7 +1538,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "steam": {
@@ -1586,7 +1586,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "winget-run-community": {
@@ -1634,7 +1634,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     },
     "wordpress-plugins": {
@@ -1682,7 +1682,7 @@
           "percent": 100.0
         }
       },
-      "detail_enrichment": "source_metadata_backfill_only",
+      "detail_enrichment": "generic_official_page_adapter_available_for_https_source_urls",
       "status": "indexed"
     }
   }
