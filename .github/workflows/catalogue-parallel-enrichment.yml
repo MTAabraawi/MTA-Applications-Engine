@@ -103,6 +103,7 @@ jobs:
     timeout-minutes: 350
     permissions:
       contents: read
+      actions: read
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -241,7 +242,7 @@ jobs:
                   f"{fields['category']['percent']}% |"
               )
           Path("catalogue-audit-summary.md").write_text("\n".join(lines) + "\n")
-          Path("${{ github.step_summary }}").write_text("\n".join(lines) + "\n")
+          Path(__import__("os").environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(lines) + "\n")
           PY
       - name: Upload final catalogue audit
         uses: actions/upload-artifact@v4
