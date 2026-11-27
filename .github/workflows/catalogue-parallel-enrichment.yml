@@ -1,0 +1,255 @@
+name: MTA Parallel Catalogue Completion
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_batch_size:
+        description: "Records per source batch (10-1000)"
+        required: false
+        default: "300"
+        type: string
+      source_concurrency:
+        description: "Concurrent official-page requests per source (1-16)"
+        required: false
+        default: "8"
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: mta-catalogue-parallel-completion-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate catalogue pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out selected development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Compile enrichment and storage modules
+        run: |
+          python -m py_compile github_catalog_store.py fedora_catalog_source.py open_catalog_sources.py scripts/enrich_github_catalog.py scripts/enrich_catalogue_official_pages.py scripts/enrich_catalogue_batch.py scripts/apply_catalogue_enrichment_batches.py scripts/run_unified_catalogue.py
+      - name: Run catalogue quality and storage tests
+        run: pytest -q tests/test_unified_catalogue_pipeline.py tests/test_github_catalog_store.py tests/test_store_registry_and_connectors.py
+
+  source-specific-details:
+    name: Complete Blue Jetty and Fedora detail enrichment
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: write
+    env:
+      MTA_STORAGE_BACKEND: github
+      MTA_GIT_CHECKPOINT: "true"
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      BLUEJETTY_ENRICH_BATCH_SIZE: "500"
+      FEDORA_ENRICH_BATCH_SIZE: "100"
+      ENRICH_CONCURRENCY: "4"
+      ENRICHMENT_MAX_BATCHES: "1000"
+      ENRICHMENT_MAX_RUNTIME_MINUTES: "320"
+    steps:
+      - name: Check out selected development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run resumable source-specific enrichment
+        run: python scripts/enrich_github_catalog.py
+      - name: Preserve enrichment log
+        if: always()
+        run: |
+          mkdir -p run-reports
+          git status --short -- catalogue_data > run-reports/catalogue-git-status.txt
+      - name: Upload source-specific run report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-enrichment-source-specific-report
+          path: run-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  generic-source-enrichment:
+    name: Enrich official metadata — ${{ matrix.source }}
+    needs: source-specific-details
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        source:
+          - alpine-linux
+          - apple-itunes
+          - apple-macos
+          - arch-linux
+          - chocolatey
+          - debian-packages
+          - fdroid
+          - firefox-addons
+          - flathub
+          - github-ai-applications
+          - gnome-extensions
+          - homebrew-cask
+          - homebrew-formulae
+          - huggingface-ai-spaces
+          - izzyondroid
+          - jetbrains-marketplace
+          - mta-curated-web
+          - openuse
+          - scoop
+          - snap-store
+          - steam
+          - winget-run-community
+          - wordpress-plugins
+    env:
+      MTA_STORAGE_BACKEND: github
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      MTA_ENRICH_SOURCE: ${{ matrix.source }}
+      SOURCE_BATCH_SIZE: ${{ inputs.source_batch_size || '300' }}
+      SOURCE_BATCH_CONCURRENCY: ${{ inputs.source_concurrency || '8' }}
+      SOURCE_BATCH_RUNTIME_MINUTES: "320"
+      SOURCE_BATCH_OUTPUT_DIR: catalogue_data/enrichment-batch-output
+    steps:
+      - name: Check out latest selected development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run resumable source-isolated enrichment batch
+        run: python scripts/enrich_catalogue_batch.py
+      - name: Upload source patches and progress report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-enrichment-${{ matrix.source }}
+          path: catalogue_data/enrichment-batch-output/
+          if-no-files-found: warn
+          retention-days: 14
+
+  collect-and-audit:
+    name: Apply patches and rebuild complete quality report
+    needs:
+      - preflight
+      - source-specific-details
+      - generic-source-enrichment
+    if: ${{ always() && needs.preflight.result == 'success' && needs.source-specific-details.result == 'success' && needs.generic-source-enrichment.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: read
+    env:
+      MTA_STORAGE_BACKEND: github
+      MTA_GIT_CHECKPOINT: "true"
+      GITHUB_CATALOGUE_DIR: catalogue_data
+      MTA_PIPELINE_STAGE: report
+      SOURCE_BATCH_OUTPUT_DIR: catalogue_data/enrichment-batch-output
+    steps:
+      - name: Check out selected development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Download all completed source-worker artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mta-enrichment-*
+          path: catalogue_data/enrichment-batch-output/
+          merge-multiple: true
+      - name: Apply isolated source patches
+        run: python scripts/apply_catalogue_enrichment_batches.py
+      - name: Rebuild indexes and per-store quality metrics
+        run: python scripts/run_unified_catalogue.py
+      - name: Verify catalogue snapshot and publish audit summary to the run
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          stats = json.loads(Path("catalogue_data/indexes/stats.json").read_text())
+          state = json.loads(Path("catalogue_data/enrichment_state.json").read_text())
+          q = stats["quality"]["fields"]
+          lines = [
+              "## MTA catalogue enrichment audit",
+              "",
+              f"- Application records: **{stats['total']:,}**",
+              f"- Registered stores: **{state['registered_store_count']}**",
+              f"- Stores with records: **{state['sources_with_records']}**",
+              f"- Icon coverage: **{q['icon_url']['present']:,}/{stats['total']:,} ({q['icon_url']['percent']}%)**",
+              f"- Description coverage: **{q['description']['percent']}%**",
+              f"- Developer coverage: **{q['developer']['percent']}%**",
+              f"- Category coverage: **{q['category']['percent']}%**",
+              f"- App URL coverage: **{q['app_url']['percent']}%**",
+              "",
+              "### Per-source records and icon coverage",
+              "",
+              "| Source | Records | Icons | Description | Developer | Category |",
+              "|---|---:|---:|---:|---:|---:|",
+          ]
+          for source, item in sorted(stats["quality"]["sources"].items()):
+              fields = item["fields"]
+              lines.append(
+                  f"| {source} | {item['total']:,} | {fields['icon_url']['percent']}% | "
+                  f"{fields['description']['percent']}% | {fields['developer']['percent']}% | "
+                  f"{fields['category']['percent']}% |"
+              )
+          Path("catalogue-audit-summary.md").write_text("\n".join(lines) + "\n")
+          Path("${{ github.step_summary }}").write_text("\n".join(lines) + "\n")
+          PY
+      - name: Upload final catalogue audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-catalogue-final-audit
+          path: |
+            catalogue-audit-summary.md
+            catalogue_data/enrichment_state.json
+            catalogue_data/indexes/stats.json
+          if-no-files-found: error
+          retention-days: 30
