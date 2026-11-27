@@ -120,27 +120,59 @@ def parse_official_metadata(html, page_url):
     if license_value and "http" not in license_value.lower():
         result["license"] = license_value[:300]
 
-    image = first("og:image", "og:image:url", "twitter:image", "twitter:image:src")
+    # Prefer explicit icon links; social preview images are a lower-confidence
+    # fallback because they may be banners rather than application icons.
+    icon_href = next(
+        (link.get("href") for link in parser.links
+         if link.get("href") and any(
+             token in str(link.get("rel") or "").casefold().split()
+             for token in (["icon"], ["apple-touch-icon"], ["mask-icon"])
+         )),
+        None,
+    )
+    image = icon_href or first("og:image", "og:image:url", "twitter:image", "twitter:image:src")
     if image:
         image_url = urljoin(page_url, image)
         if valid_https(image_url):
             result["icon_url"] = image_url
+
+    canonical = next(
+        (link.get("href") for link in parser.links
+         if link.get("href") and "canonical" in str(link.get("rel") or "").casefold().split()),
+        None,
+    )
+    if canonical:
+        canonical_url = urljoin(page_url, canonical)
+        if valid_https(canonical_url):
+            result["app_url"] = canonical_url
+
+    def named(value):
+        if isinstance(value, dict):
+            return value.get("name") or value.get("legalName") or value.get("url")
+        if isinstance(value, list):
+            names = [named(item) for item in value]
+            return ", ".join(str(item) for item in names if item)
+        return value if isinstance(value, str) else None
 
     for obj in parser.jsonld:
         for node in _walk_jsonld(obj):
             kind = node.get("@type", [])
             kinds = {str(x).casefold() for x in (kind if isinstance(kind, list) else [kind])}
             if kinds & {"softwareapplication", "mobileapplication", "webapplication"}:
-                result.setdefault("developer", (node.get("author") or {}).get("name") if isinstance(node.get("author"), dict) else node.get("author"))
+                result.setdefault("developer", named(node.get("author")) or named(node.get("publisher")))
                 result.setdefault("description", node.get("description"))
-                result.setdefault("category", node.get("applicationCategory"))
-                result.setdefault("license", node.get("license"))
-                app_url = node.get("url")
+                category_value = node.get("applicationCategory")
+                if isinstance(category_value, list):
+                    category_value = ", ".join(str(x) for x in category_value if x)
+                result.setdefault("category", category_value)
+                result.setdefault("license", named(node.get("license")))
+                app_url = named(node.get("url"))
                 if isinstance(app_url, str) and valid_https(urljoin(page_url, app_url)):
                     result.setdefault("app_url", urljoin(page_url, app_url))
                 image_value = node.get("image")
-                if isinstance(image_value, dict):
-                    image_value = image_value.get("url")
+                if isinstance(image_value, list):
+                    image_value = image_value[0] if image_value else None
+                image_value = named(image_value)
                 if isinstance(image_value, str) and valid_https(urljoin(page_url, image_value)):
                     result.setdefault("icon_url", urljoin(page_url, image_value))
                 rating = node.get("aggregateRating")
@@ -200,8 +232,8 @@ async def enrich(store: GitHubCatalogueStore) -> dict:
         if missing and _retry_due(metadata, now):
             by_source.setdefault(row.get("source_key") or "unknown", []).append(row)
 
-    per_source_limit = max(1, min(int(os.getenv("GENERIC_DETAIL_BATCH_PER_SOURCE", "80")), 300))
-    concurrency = max(1, min(int(os.getenv("GENERIC_DETAIL_CONCURRENCY", "4")), 8))
+    per_source_limit = max(1, min(int(os.getenv("GENERIC_DETAIL_BATCH_PER_SOURCE", "300")), 300))
+    concurrency = max(1, min(int(os.getenv("GENERIC_DETAIL_CONCURRENCY", "8")), 8))
     runtime = max(5, min(int(os.getenv("GENERIC_DETAIL_RUNTIME_MINUTES", "300")), 330))
     deadline = time.monotonic() + runtime * 60
     totals = {"selected": 0, "checked": 0, "enriched": 0, "retryable": 0, "fields_filled": {}, "sources": {}}
