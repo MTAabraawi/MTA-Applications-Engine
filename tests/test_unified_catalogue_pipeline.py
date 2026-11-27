@@ -120,3 +120,24 @@ def test_detail_enrichment_is_awaited(monkeypatch):
         "status": "executed",
         "adapters": ["bluejetty", "fedora-packages"],
     }
+
+def test_official_page_parser_prefers_explicit_icon_and_reads_canonical_and_publisher():
+    from scripts.enrich_catalogue_official_pages import parse_official_metadata
+
+    html = """
+    <html><head>
+      <link rel="icon" href="/assets/app-icon.png">
+      <link rel="canonical" href="https://publisher.example/apps/example">
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication",
+       "publisher":{"@type":"Organization","name":"Verified Publisher"},
+       "applicationCategory":["Utilities","Productivity"],
+       "image":{"url":"https://cdn.example/schema-icon.png"}}
+      </script>
+    </head></html>
+    """
+    result = parse_official_metadata(html, "https://store.example/listing/example")
+    assert result["icon_url"] == "https://store.example/assets/app-icon.png"
+    assert result["app_url"] == "https://publisher.example/apps/example"
+    assert result["developer"] == "Verified Publisher"
+    assert result["category"] == "Utilities, Productivity"
