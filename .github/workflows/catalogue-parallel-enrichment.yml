@@ -1,6 +1,10 @@
 name: MTA Parallel Catalogue Completion
 
 on:
+  push:
+    branches: [feature/catalogue-parallel-enrichment]
+    paths:
+      - ".github/workflows/catalogue-parallel-enrichment.yml"
   workflow_dispatch:
     inputs:
       source_batch_size:
