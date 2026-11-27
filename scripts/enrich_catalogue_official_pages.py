@@ -124,9 +124,9 @@ def parse_official_metadata(html, page_url):
     # fallback because they may be banners rather than application icons.
     icon_href = next(
         (link.get("href") for link in parser.links
-         if link.get("href") and any(
-             token in str(link.get("rel") or "").casefold().split()
-             for token in (["icon"], ["apple-touch-icon"], ["mask-icon"])
+         if link.get("href") and (
+             {"icon", "apple-touch-icon", "mask-icon"}
+             & set(str(link.get("rel") or "").casefold().split())
          )),
         None,
     )
