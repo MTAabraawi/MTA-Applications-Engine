@@ -6,18 +6,24 @@ on:
   schedule:
     - cron: "0 1 * * *"
   push:
-    branches: [feature/unified-catalogue-enrichment]
+    branches: [feature/catalogue-quality-completion]
     paths:
       - ".github/workflows/unified-catalogue-enrichment.yml"
       - "scripts/run_unified_catalogue.py"
       - "scripts/enrich_github_catalog.py"
+      - "scripts/enrich_catalogue_official_pages.py"
+      - "scripts/run_unified_catalogue.py"
+      - "catalog_sources.py"
+      - "expanded_catalog_sources.py"
+      - "fedora_catalog_source.py"
+      - "open_catalog_sources.py"
       - "tests/test_unified_catalogue_pipeline.py"
 
 permissions:
   contents: write
 
 concurrency:
-  group: mta-unified-catalogue-enrichment
+  group: mta-catalogue-quality-completion
   cancel-in-progress: true
 
 env:
@@ -48,14 +54,14 @@ env:
   WINGET_LIMIT: "24"
   WINGET_PAGES: "3"
   CATALOG_CONCURRENCY: "4"
-  BLUEJETTY_ENRICH_BATCH_SIZE: "100"
-  FEDORA_ENRICH_BATCH_SIZE: "15"
+  BLUEJETTY_ENRICH_BATCH_SIZE: "500"
+  FEDORA_ENRICH_BATCH_SIZE: "100"
   ENRICH_CONCURRENCY: "4"
   ENRICHMENT_MAX_BATCHES: "1000"
   ENRICHMENT_MAX_RUNTIME_MINUTES: "300"
-  GENERIC_DETAIL_BATCH_PER_SOURCE: "100"
-  GENERIC_DETAIL_CONCURRENCY: "4"
-  GENERIC_DETAIL_RUNTIME_MINUTES: "60"
+  GENERIC_DETAIL_BATCH_PER_SOURCE: "300"
+  GENERIC_DETAIL_CONCURRENCY: "8"
+  GENERIC_DETAIL_RUNTIME_MINUTES: "300"
 
 jobs:
   retry-failed-sources:
@@ -69,7 +75,7 @@ jobs:
       - name: Checkout isolated development branch
         uses: actions/checkout@v4
         with:
-          ref: feature/unified-catalogue-enrichment
+          ref: feature/catalogue-quality-completion
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -94,9 +100,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
           git commit -m "Save failed-source recovery snapshot"
-          git fetch origin feature/unified-catalogue-enrichment
-          git rebase origin/feature/unified-catalogue-enrichment
-          git push origin HEAD:feature/unified-catalogue-enrichment
+          git fetch origin feature/catalogue-quality-completion
+          git rebase origin/feature/catalogue-quality-completion
+          git push origin HEAD:feature/catalogue-quality-completion
 
   metadata-backfill:
     name: Backfill explicit source metadata
@@ -109,7 +115,7 @@ jobs:
       - name: Checkout latest development snapshot
         uses: actions/checkout@v4
         with:
-          ref: feature/unified-catalogue-enrichment
+          ref: feature/catalogue-quality-completion
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -129,8 +135,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
           git commit -m "Save explicit source metadata backfill"
-          git pull --rebase origin feature/unified-catalogue-enrichment
-          git push origin HEAD:feature/unified-catalogue-enrichment
+          git pull --rebase origin feature/catalogue-quality-completion
+          git push origin HEAD:feature/catalogue-quality-completion
 
   detail-enrichment:
     name: Enrich Blue Jetty and Fedora application details
@@ -143,7 +149,7 @@ jobs:
       - name: Checkout latest development snapshot
         uses: actions/checkout@v4
         with:
-          ref: feature/unified-catalogue-enrichment
+          ref: feature/catalogue-quality-completion
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -163,8 +169,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
           git commit -m "Save Blue Jetty and Fedora detail enrichment"
-          git pull --rebase origin feature/unified-catalogue-enrichment
-          git push origin HEAD:feature/unified-catalogue-enrichment
+          git pull --rebase origin feature/catalogue-quality-completion
+          git push origin HEAD:feature/catalogue-quality-completion
 
   generic-page-enrichment:
     name: Enrich remaining official application pages
@@ -177,7 +183,7 @@ jobs:
       - name: Checkout latest development snapshot
         uses: actions/checkout@v4
         with:
-          ref: feature/unified-catalogue-enrichment
+          ref: feature/catalogue-quality-completion
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -197,8 +203,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
           git commit -m "Save generic official-page enrichment"
-          git pull --rebase origin feature/unified-catalogue-enrichment
-          git push origin HEAD:feature/unified-catalogue-enrichment
+          git pull --rebase origin feature/catalogue-quality-completion
+          git push origin HEAD:feature/catalogue-quality-completion
 
   final-quality-report:
     name: Rebuild indexes and publish internal quality report
@@ -211,7 +217,7 @@ jobs:
       - name: Checkout latest development snapshot
         uses: actions/checkout@v4
         with:
-          ref: feature/unified-catalogue-enrichment
+          ref: feature/catalogue-quality-completion
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -231,5 +237,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalogue_data/
           git commit -m "Save final all-store catalogue quality report"
-          git pull --rebase origin feature/unified-catalogue-enrichment
-          git push origin HEAD:feature/unified-catalogue-enrichment
+          git pull --rebase origin feature/catalogue-quality-completion
+          git push origin HEAD:feature/catalogue-quality-completion
