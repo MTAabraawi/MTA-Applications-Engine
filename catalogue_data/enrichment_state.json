@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-26T19:42:12.236141+00:00",
+  "updated_at": "2026-11-27T02:28:20.863725+00:00",
   "storage": "github-native-json-shards",
   "record_count": 366751,
   "registered_store_count": 53,
@@ -682,9 +682,9 @@
       "integration_mode": "live_api",
       "quality": {
         "icon_url": {
-          "present": 2946,
-          "missing": 197110,
-          "percent": 1.47
+          "present": 3003,
+          "missing": 197053,
+          "percent": 1.5
         },
         "app_url": {
           "present": 200056,
@@ -692,24 +692,24 @@
           "percent": 100.0
         },
         "description": {
-          "present": 112272,
-          "missing": 87784,
-          "percent": 56.12
+          "present": 123456,
+          "missing": 76600,
+          "percent": 61.71
         },
         "summary": {
-          "present": 112272,
-          "missing": 87784,
-          "percent": 56.12
+          "present": 123456,
+          "missing": 76600,
+          "percent": 61.71
         },
         "developer": {
-          "present": 107927,
-          "missing": 92129,
-          "percent": 53.95
+          "present": 118658,
+          "missing": 81398,
+          "percent": 59.31
         },
         "category": {
-          "present": 112437,
-          "missing": 87619,
-          "percent": 56.2
+          "present": 123637,
+          "missing": 76419,
+          "percent": 61.8
         },
         "license": {
           "present": 0,
@@ -879,19 +879,19 @@
           "percent": 0.0
         },
         "app_url": {
-          "present": 16332,
-          "missing": 67229,
-          "percent": 19.55
+          "present": 17400,
+          "missing": 66161,
+          "percent": 20.82
         },
         "description": {
-          "present": 21854,
-          "missing": 61707,
-          "percent": 26.15
+          "present": 23506,
+          "missing": 60055,
+          "percent": 28.13
         },
         "summary": {
-          "present": 21854,
-          "missing": 61707,
-          "percent": 26.15
+          "present": 23506,
+          "missing": 60055,
+          "percent": 28.13
         },
         "developer": {
           "present": 0,
