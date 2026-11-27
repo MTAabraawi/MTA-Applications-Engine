@@ -141,3 +141,25 @@ def test_official_page_parser_prefers_explicit_icon_and_reads_canonical_and_publ
     assert result["app_url"] == "https://publisher.example/apps/example"
     assert result["developer"] == "Verified Publisher"
     assert result["category"] == "Utilities, Productivity"
+
+
+
+def test_source_batch_candidate_selection_is_scoped_and_resumable():
+    from datetime import datetime, timedelta, timezone
+    from scripts.enrich_catalogue_batch import candidates_for_source
+
+    now = datetime.now(timezone.utc)
+    due = {
+        "source_key": "flathub", "external_id": "due", "source_url": "https://flathub.org/apps/due",
+        "metadata_json": {"generic_detail_last_attempt_at": (now - timedelta(days=8)).isoformat()},
+    }
+    recent = {
+        "source_key": "flathub", "external_id": "recent", "source_url": "https://flathub.org/apps/recent",
+        "metadata_json": {"generic_detail_last_attempt_at": (now - timedelta(days=1)).isoformat(),
+                          "generic_detail_status": "checked_no_new_fields"},
+    }
+    other = {"source_key": "fdroid", "external_id": "other", "source_url": "https://f-droid.org/packages/other"}
+    invalid = {"source_key": "flathub", "external_id": "bad", "source_url": "http://flathub.org/apps/bad"}
+
+    selected = candidates_for_source([due, recent, other, invalid], "flathub", now)
+    assert [row["external_id"] for row in selected] == ["due"]

@@ -182,9 +182,9 @@ def write_state(root: Path, quality: dict, manifest: dict) -> dict:
             "integration_mode": registry_item.get("integration_mode", "registered_source"),
             "quality": report["fields"],
             "detail_enrichment": (
-                "verified_detail_adapter"
+                "verified_source_specific_adapter"
                 if source in {"bluejetty", "fedora-packages"}
-                else "source_metadata_backfill_only"
+                else "generic_official_page_adapter_available_for_https_source_urls"
             ),
             "status": "indexed",
         }
@@ -241,8 +241,11 @@ async def main() -> None:
         "pipeline_stage": stage,
         "source_quality": quality,
         "detail_adapters_verified": ["bluejetty", "fedora-packages", "generic_official_html_schema_org"],
-        "detail_adapters_pending": sorted(
+        "source_specific_adapters_pending": sorted(
             source for source in quality if source not in {"bluejetty", "fedora-packages"}
+        ),
+        "generic_official_page_adapter_scope": (
+            "Available to records with HTTPS source_url; only explicit HTML metadata and Schema.org values are accepted."
         ),
         "state_file": "catalogue_data/enrichment_state.json",
     }
