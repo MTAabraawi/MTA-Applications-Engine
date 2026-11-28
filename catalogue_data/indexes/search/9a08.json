@@ -1,1 +1,1 @@
-{"bfd":["fedora-packages:binutils/binutils-devel","fedora-packages:binutils/binutils-gold","fedora-packages:bird/bird","fedora-packages:bird/bird-doc","fedora-packages:frr/frr"]}
+{"bfd":["fedora-packages:binutils/binutils-devel","fedora-packages:binutils/binutils-gold","fedora-packages:bird/bird","fedora-packages:bird/bird-doc","fedora-packages:frr/frr","snap-store:keepalived"]}
