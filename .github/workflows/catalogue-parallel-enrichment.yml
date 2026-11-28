@@ -65,10 +65,12 @@ jobs:
       MTA_GIT_CHECKPOINT: "true"
       GITHUB_CATALOGUE_DIR: catalogue_data
       BLUEJETTY_ENRICH_BATCH_SIZE: "500"
-      FEDORA_ENRICH_BATCH_SIZE: "100"
-      ENRICH_CONCURRENCY: "4"
+      FEDORA_ENRICH_BATCH_SIZE: "500"
+      ENRICH_CONCURRENCY: "8"
       ENRICHMENT_MAX_BATCHES: "1000"
       ENRICHMENT_MAX_RUNTIME_MINUTES: "320"
+      ENRICH_REQUEST_DELAY: "0.15"
+      ENRICH_CHECKPOINT_BATCHES: "10"
     steps:
       - name: Check out selected development branch
         uses: actions/checkout@v4
