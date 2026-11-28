@@ -201,36 +201,38 @@ def icon_provider_index(records):
 
 
 def crossmatch_icons(records, provider_index, now):
-    """Match only exact Apple listing IDs where a matching Apple icon provider exists.
+    """Match exact mobile store listing IDs without recursively walking all metadata.
 
-    The previous implementation recursively walked metadata for every missing
-    Android/iOS record. It spent hours scanning nearly 200k Blue Jetty rows,
-    even though there was no Google Play provider and it produced zero matches.
-    Blue Jetty records retain their exact store URL in source_url when present,
-    so this fast path only examines iOS rows with an explicit App Store URL.
+    Only rows with an explicit official store URL are examined. This avoids the
+    previous multi-hour scan of unrelated Android/iOS records while preserving
+    exact Google Play package-ID and Apple App Store numeric-ID matches.
     """
     counts = {"scanned": 0, "matched": 0, "unmatched": 0, "ambiguous": 0}
     updates = []
-    if not any(platform == "ios" for platform, _external_id in provider_index):
+    available_platforms = {platform for platform, _external_id in provider_index}
+    if not available_platforms:
         return updates, counts
 
     excluded = {"google-play", "apple-itunes", "apple-appbrain", "fdroid", "izzyondroid"}
     for row in records:
-        if has_value(row.get("icon_url")) or row.get("platform") != "ios":
+        platform = row.get("platform")
+        if has_value(row.get("icon_url")) or platform not in available_platforms:
             continue
         if row.get("source_key") in excluded:
             continue
+
         urls = (row.get("source_url"), row.get("app_url"))
-        if not any(isinstance(value, str) and "apps.apple.com/" in value for value in urls):
+        required_host = "apps.apple.com/" if platform == "ios" else "play.google.com/"
+        if not any(isinstance(value, str) and required_host in value for value in urls):
             continue
 
         candidates = []
-        for platform, external_id in store_ids(urls):
-            if platform != "ios":
+        for matched_platform, external_id in store_ids(urls):
+            if matched_platform != platform:
                 continue
-            provider = provider_index.get((platform, external_id))
+            provider = provider_index.get((matched_platform, external_id))
             if provider:
-                candidates.append((platform, external_id, provider["source_key"], provider["icon_url"]))
+                candidates.append((matched_platform, external_id, provider["source_key"], provider["icon_url"]))
         unique_icons = {item[3] for item in candidates}
         counts["scanned"] += 1
         if not unique_icons:
@@ -240,12 +242,12 @@ def crossmatch_icons(records, provider_index, now):
         item = dict(row)
         metadata = metadata_object(item.get("metadata_json"))
         if len(unique_icons) == 1:
-            platform, external_id, source, icon = sorted(candidates)[0]
+            matched_platform, external_id, source, icon = sorted(candidates)[0]
             item["icon_url"] = icon
             metadata["icon_crossmatch"] = {
                 "status": "matched",
-                "method": "exact_apple_app_store_listing_id",
-                "store_platform": platform,
+                "method": "exact_official_store_listing_id",
+                "store_platform": matched_platform,
                 "store_external_id": external_id,
                 "provider_source": source,
                 "matched_at": now,
@@ -254,7 +256,7 @@ def crossmatch_icons(records, provider_index, now):
         else:
             metadata["icon_crossmatch"] = {
                 "status": "ambiguous",
-                "method": "exact_apple_app_store_listing_id",
+                "method": "exact_official_store_listing_id",
                 "checked_at": now,
             }
             counts["ambiguous"] += 1
