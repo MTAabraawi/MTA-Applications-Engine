@@ -2,7 +2,7 @@ name: MTA Parallel Catalogue Completion
 
 on:
   push:
-    branches: [feature/catalogue-parallel-enrichment]
+    branches: [feature/catalogue-parallel-enrichment, feature/catalogue-bluejetty-apple-enrichment]
     paths:
       - ".github/workflows/catalogue-parallel-enrichment.yml"
   workflow_dispatch:
