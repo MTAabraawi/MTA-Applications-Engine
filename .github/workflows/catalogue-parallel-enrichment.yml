@@ -1,3 +1,4 @@
+# Isolated catalogue-only workflow; never deploys the website or Worker.
 name: MTA Parallel Catalogue Completion
 
 on:
