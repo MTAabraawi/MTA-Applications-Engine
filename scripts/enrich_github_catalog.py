@@ -227,7 +227,7 @@ def crossmatch_icons(records, provider_index, now):
             continue
 
         candidates = []
-        for matched_platform, external_id in store_ids(urls):
+        for matched_platform, external_id in store_ids(list(urls)):
             if matched_platform != platform:
                 continue
             provider = provider_index.get((matched_platform, external_id))
