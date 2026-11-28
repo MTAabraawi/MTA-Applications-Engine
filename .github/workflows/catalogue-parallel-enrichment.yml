@@ -1,4 +1,5 @@
 # Isolated catalogue-only workflow; never deploys the website or Worker.
+# Exact store-ID matching is restricted to verified official listing URLs.
 name: MTA Parallel Catalogue Completion
 
 on:
