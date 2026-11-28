@@ -247,6 +247,136 @@ def crossmatch_icons(records, provider_index, now):
     return updates, counts
 
 
+async def enrich_bluejetty_ios_from_apple(store, records, client):
+    """Batch-enrich Blue Jetty iOS records from Apple's public Lookup API.
+
+    Blue Jetty supplies exact App Store listing IDs in its publisher-authorized
+    store observations. Apple's lookup endpoint accepts multiple exact IDs in
+    one request and returns the app artwork and publisher metadata. No names
+    or fuzzy matches are used.
+    """
+    rows_by_id = {}
+    for row in records:
+        if row.get("source_key") != "bluejetty" or row.get("platform") != "ios" or has_value(row.get("icon_url")):
+            continue
+        evidence = {
+            "source_url": row.get("source_url"),
+            "app_url": row.get("app_url"),
+            "metadata_json": metadata_object(row.get("metadata_json")),
+        }
+        ids = sorted(external_id for platform, external_id in store_ids(evidence)
+                     if platform == "ios" and str(external_id).isdigit())
+        if len(ids) != 1:
+            continue
+        rows_by_id.setdefault(ids[0], []).append(row)
+
+    app_ids = sorted(rows_by_id)
+    if not app_ids:
+        return {"selected": 0, "requests": 0, "matched": 0, "icons_filled": 0,
+                "descriptions_filled": 0, "developers_filled": 0, "categories_filled": 0}
+
+    batch_size = 200
+    concurrency = 3
+    country = os.getenv("APPLE_COUNTRY", "us").strip().lower() or "us"
+    totals = {"selected": len(app_ids), "requests": 0, "matched": 0,
+              "icons_filled": 0, "descriptions_filled": 0,
+              "developers_filled": 0, "categories_filled": 0}
+    now = datetime.now(timezone.utc).isoformat()
+    batches = [app_ids[i:i + batch_size] for i in range(0, len(app_ids), batch_size)]
+
+    async def lookup(batch):
+        last_error = None
+        for attempt in range(4):
+            try:
+                response = await client.get(
+                    "https://itunes.apple.com/lookup",
+                    params={"id": ",".join(batch), "entity": "software", "country": country},
+                    timeout=httpx.Timeout(40.0, connect=12.0),
+                    headers={"User-Agent": HEADERS["User-Agent"], "Accept": "application/json"},
+                )
+                if response.status_code == 429 or response.status_code >= 500:
+                    response.raise_for_status()
+                response.raise_for_status()
+                payload = response.json()
+                return payload.get("results", []) if isinstance(payload, dict) else []
+            except (httpx.HTTPError, ValueError) as exc:
+                last_error = exc
+                if attempt == 3:
+                    break
+                await asyncio.sleep(min(2 ** attempt, 12))
+        log.warning("Apple Lookup batch failed (%d IDs): %s", len(batch), last_error)
+        return []
+
+    for offset in range(0, len(batches), concurrency):
+        group = batches[offset:offset + concurrency]
+        responses = await asyncio.gather(*(lookup(batch) for batch in group))
+        totals["requests"] += len(group)
+        updates_by_key = {}
+        for results in responses:
+            for app in results:
+                if not isinstance(app, dict):
+                    continue
+                track_id = str(app.get("trackId") or "").strip()
+                if not track_id or track_id not in rows_by_id:
+                    continue
+                artwork = app.get("artworkUrl512") or app.get("artworkUrl100") or app.get("artworkUrl60")
+                developer = app.get("sellerName") or app.get("artistName")
+                description = app.get("description")
+                category = app.get("primaryGenreName")
+                app_url = app.get("trackViewUrl")
+                for row in rows_by_id[track_id]:
+                    item = dict(row)
+                    changed = False
+                    if not has_value(item.get("icon_url")) and has_value(artwork):
+                        item["icon_url"] = artwork
+                        totals["icons_filled"] += 1
+                        changed = True
+                    if not has_value(item.get("developer")) and has_value(developer):
+                        item["developer"] = developer
+                        totals["developers_filled"] += 1
+                        changed = True
+                    if not has_value(item.get("description")) and has_value(description):
+                        item["description"] = description
+                        changed = True
+                    if not has_value(item.get("summary")) and has_value(description):
+                        item["summary"] = str(description)[:1000]
+                        totals["descriptions_filled"] += 1
+                        changed = True
+                    if not has_value(item.get("category")) and has_value(category):
+                        item["category"] = category
+                        totals["categories_filled"] += 1
+                        changed = True
+                    if not has_value(item.get("app_url")) and has_value(app_url):
+                        item["app_url"] = app_url
+                        changed = True
+                    if changed:
+                        metadata = metadata_object(item.get("metadata_json"))
+                        metadata["apple_lookup_enrichment"] = {
+                            "source": "Apple iTunes Lookup API",
+                            "track_id": track_id,
+                            "country": country,
+                            "checked_at": now,
+                        }
+                        item["metadata_json"] = metadata
+                        updates_by_key[(item["source_key"], item["external_id"])] = item
+
+        if updates_by_key:
+            updates = list(updates_by_key.values())
+            store.upsert_many(updates, rebuild_indexes=False)
+            for index, row in enumerate(records):
+                replacement = updates_by_key.get((row.get("source_key"), row.get("external_id")))
+                if replacement is not None:
+                    records[index] = replacement
+            totals["matched"] += len(updates)
+        if (offset // concurrency + 1) % 25 == 0:
+            store.checkpoint_git("Checkpoint Blue Jetty iOS Apple Lookup enrichment")
+            log.info("Blue Jetty Apple Lookup progress: requests=%d/%d matched=%d icons=%d",
+                     totals["requests"], len(batches), totals["matched"], totals["icons_filled"])
+
+    store.checkpoint_git("Checkpoint completed Blue Jetty iOS Apple Lookup enrichment")
+    return totals
+
+
 async def main():
     store = GitHubCatalogueStore(os.getenv("GITHUB_CATALOGUE_DIR", "catalogue_data"))
     records = list(store.iter_records())
@@ -275,6 +405,8 @@ async def main():
         log.info("Exact official-store icon cross-match: %s", cross_counts)
 
     async with httpx.AsyncClient(follow_redirects=False) as client:
+        apple_lookup_totals = await enrich_bluejetty_ios_from_apple(store, records, client)
+        log.info("Blue Jetty iOS exact Apple Lookup enrichment: %s", apple_lookup_totals)
         for batch in range(max_batches):
             if time.monotonic() >= deadline:
                 log.warning("Enrichment runtime limit reached; saved progress is resumable.")
